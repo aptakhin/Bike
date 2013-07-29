@@ -184,7 +184,7 @@ public:
 		S11N_RENAME(std::string);
 	}
 
-	static std::string Static::normalize_class(const std::type_index& index)
+	static std::string normalize_class(const std::type_index& index)
 	{
 		Renames::RenamesMapConstIter found = Renames::map().find(index);
 		if (found != Renames::map().end())
@@ -193,30 +193,31 @@ public:
 			return std::string(index.name());
 	}
 
-	static std::string Static::normalize_name(const char* var)
+	static std::string normalize_name(const char* var)
 	{
 		std::string name = var;
 		return name;
 	}
 
-	template <typename _T>
-	void reg_type() {
-		Types::Type t(typeid(_T));
-		t.ctor = (Types::Type::Ctor) &Ctor<_T*, InputTextSerializerNode>::ctor;
-		Types::t().push_back(t);
-	}
-
-	template <typename _T>
-	bool is_registered() {
-		const std::type_index type = typeid(_T); 
-		std::vector<Types::Type>::const_iterator i = Types::t().begin();
-		for (; i != Types::t().end(); ++i) {
-			if (i->info == type) 
-				return true;
-		}
-		return false;
-	}
 };
+
+template <typename _T>
+void reg_type() {
+	Types::Type t(typeid(_T));
+	t.ctor = (Types::Type::Ctor) &Ctor<_T*, InputTextSerializerNode>::ctor;
+	Types::t().push_back(t);
+}
+
+template <typename _T>
+bool is_registered() {
+	const std::type_index type = typeid(_T); 
+	std::vector<Types::Type>::const_iterator i = Types::t().begin();
+	for (; i != Types::t().end(); ++i) {
+		if (i->info == type) 
+			return true;
+	}
+	return false;
+}
 
 template <class _T>
 class Typeid {
