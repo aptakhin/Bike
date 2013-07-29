@@ -3,69 +3,112 @@
 #pragma once
 
 #	include <cstring>
+
+extern "C" {
 #	include "jsmn.h"
+}
 
 namespace bike {
 
-class ParserToken
+class Reader
 {
+public:
+	virtual int read(void* buf, int to_read) = 0;
 
+	bool seek(int seek);
+};
+
+class ReaderIter
+{
+};
+
+class ParserIter
+{
+public:
+		
+	jsmntok_t* tok() { return token_; }
+
+	bool is_object() const
+	{
+		return token_->type == JSMN_OBJECT;
+	}
+
+	bool is_array() const
+	{
+		return token_->type == JSMN_ARRAY;
+	}
+
+	ParserIter begin() const 
+	{
+		return ParserIter(token_ + 1, token_ + 1); 
+	}
+
+	const ParserIter end() const 
+	{
+		return ParserIter(token_ + 1, token_ + token_->size); 
+	}
+
+
+protected:
+	ParserIter(jsmntok_t* pool, jsmntok_t* token) 
+	:	pool_(pool), 
+		token_(token) 
+	{
+	}
+
+	ParserIter(const ParserIter& cpy) 
+	:	token_(cpy.token_) 
+	{
+	}
+
+	ParserIter& operator ++ ()
+	{
+		token_ += token_->size;
+		return *this;
+	}
+
+	ParserIter operator ++ (int)
+	{
+		ParserIter cpy(*this);
+		++cpy;
+		return cpy;
+	}
+
+	friend class Parser;
+
+protected:
+
+protected:
+	jsmntok_t* pool_;
+	jsmntok_t* token_;
 };
 
 class Parser
 {
 public:
 	Parser(void* buffer, size_t buf_sz)
-	:	tokens_(nullptr),
-		end_(nullptr)
+	:	tokens_(reinterpret_cast<jsmntok_t*>(buffer)),
+		end_(tokens_, tokens_ + (buf_sz + sizeof(jsmntok_t) - 1) / sizeof(jsmntok_t))
 	{
-		memset(buffer, 0, buf_sz);
+		memset(tokens_, 0, buf_sz);
+		jsmn_init(&parser_);
 	}
 
-	void parse(const char* src, size_t src_sz)
+	void parse(const char* src)
 	{
-	}
+		jsmn_parse(&parser_, src, tokens_, end_.tok() - tokens_);
+	}	
 
-	class const_iterator
-	{
-	public:
-		
-		jsmntok_t* get_token() { return token_; }
-
-	protected:
-		const_iterator(jsmntok_t* token) : token_(token) {}
-
-		friend class Parser;
-
-	protected:
-		jsmntok_t* token_;
-	};
-
-	const_iterator begin() const { return const_iterator(&tokens_[0]); }
-	const_iterator end() const { return end_; }
+	ParserIter begin() const { return ParserIter(tokens_, tokens_); }
+	const ParserIter& end() const { return end_; }
 
 protected:
 	jsmn_parser parser_;
 
 	jsmntok_t* tokens_;
 
-	const_iterator end_;
+	ParserIter end_;
 };
-
-
-
-//struct jsmn_parser parser;
-//
-//jsmn_init_parser(&parser);
-//This will initialize (reset) the parser.
-//
-//Later, you can use jsmn_parse() function to process JSON string with the parser:
-//
-//jsmntok_t tokens[256];
-//const char *js;
-//js = ...;
-//
-//r = jsmn_parse(&parser, js, tokens, 256);
 
 class Emitter
 {
