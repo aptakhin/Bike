@@ -171,7 +171,7 @@ public:
 		// Miss least desc and return.
 		Nodes::iterator i = by_name(attr_name, _nodes);
 		if (i != _nodes.end()) {
-			miss_desc<int>();
+			miss_desc();
 			return *this;
 		}
 
@@ -244,7 +244,7 @@ public:
 				return true;
 			}
 			else {
-				node.miss_desc<int>();
+				node.miss_desc();
 			}
 		}
 		return false;
@@ -322,10 +322,7 @@ protected:
 		return name;
 	}
 
-	// Templated because uses InputTextSerializerCall, which can't be defined before
-	template <class _Useless>
 	void miss_desc() {
-		_Useless t = 42;
 		int depth = 1;// We've already in not finished desc
 		std::string token;
 		while(in_) {
