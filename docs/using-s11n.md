@@ -1,9 +1,15 @@
 Using s11n
 ====================
 
+[TOC]
+
 Currently s11n has support of one format s11n-text.
 
-First example:
+Examples
+---------------------
+
+### First example
+
 ```cpp
 #include <fstream>
 #include <iostream>
@@ -41,6 +47,9 @@ int main()
 — Hey stop! I can do this with simple standard streams!
 
 — Yep, we go next.
+
+
+### Structures
 
 ```cpp
 // headers missed...
@@ -85,7 +94,10 @@ int main()
 
 — It's not a problem at all! I can define operators << and >> for streams for my type!
 
-— Yep, but you have to keep structure of format in two places: reading and writing. It's simple for small structures, but not for big, nested, so next example.
+— Yep, but you have to keep structure of format in two places: reading and writing. It's simple for small structures, but not for big and nested ones.
+
+
+### Non-default constructors and declaring out of class
 
 ```cpp
 // headers missed...
@@ -103,7 +115,7 @@ protected:
 	std::string name_;
 };
 
-— We will show in this example two features.
+// I will show in this example two features
 
 // First is serialization method is out of class, which seems to be more useful for any cases
 template <typename Node>
