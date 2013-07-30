@@ -3,6 +3,8 @@ Using s11n
 
 Currently s11n has support of one format s11n-text.
 
+[Structures example](#Structures)
+
 Examples
 ---------------------
 
@@ -54,9 +56,9 @@ struct Vector2
 {
 	double x, y;
 
-	// Just implement ser method
-	template <class _Node>
-	void ser(_Node& node, int version) 
+	// Just implement serialization method
+	template <class Node>
+	void ser(Node& node, int version) 
 	{
 		node & x & y;
 	}
@@ -106,21 +108,28 @@ public:
 	// (It seems every human must have name)
 	Human(const std::string& name) : name_(name) {}	
 
+	const std::string& name() const { return name_; }
+
 protected:
 	std::string name_;
 };
 
+//
 // I will show in this example two features
-
-// First is serialization method is out of class, which seems to be more useful for any cases
+//
+// First serialization method is out of class, which is needed in some cases
+// (Feature doesn't ready)
+//
 template <typename Node>
 void serialize(Node& node, Human& human)
 {
 	node.version(1);
 
+	//
 	// Second is initialization with non-default constructor
-	// Name name member by name name
-	node.named(name_, "name");
+	// And name name member by name name
+	//
+	node.write(human.name(), "name");
 }
 
 // Define (or exactly specialize) this template class
@@ -137,23 +146,28 @@ public:
 	}
 };
 
-### Basing
+### Inheritance
+
+I continue [previous](#non-default-constructors-and-declaring-out-of-class) example
 ```cpp
-// headers missed...
-#include <string> // Ok, add one
-
-class Human
-{
-public:
-	Human(const std::string& name) : name_(name) {}	
-
-protected:
-	std::string name_;
-};
-
+//
+// I continue previous example
+//
 class Superman : public Human
 {
 public:
-	Superman() : Human("Clark Kent") {}	
-};
+	Superman() : Human("Clark Kent"), superpower_(100000) {}	
 
+	void fly();
+
+	template <class Node>
+	void ser(Node& node, int version) 
+	{
+		node.base(node);
+		node & superpower_;
+	}
+
+protected:
+	int superpower_;
+};
+```cpp
