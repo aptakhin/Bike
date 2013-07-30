@@ -106,6 +106,8 @@ public:
 	// (It seems every human must have name)
 	Human(const std::string& name) : name_(name) {}	
 
+	virtual ~Human() {}
+
 	const std::string& name() const { return name_; }
 
 protected:
@@ -149,9 +151,8 @@ public:
 
 I continue previous example
 ```cpp
-//
-// I continue previous example
-//
+// ... from previous series
+
 class Superman : public Human
 {
 public:
@@ -162,11 +163,26 @@ public:
 	template <class Node>
 	void ser(Node& node, int version) 
 	{
-		node.base(node);
-		node & superpower_;
+		// Serialize base class and value of super power too
+		node.base<Human>(this) & superpower_;
 	}
 
 protected:
 	int superpower_;
 };
+```
+
+— Is that all?
+
+— Unfortunately, not. In C++ we haven't any tools to bind information about type with it's constructing. So we have to register new derived type.
+
 ```cpp
+int main()
+{
+	bike::reg_type<Superman>();
+
+	// Then we can save and load any types, which Superman derives
+
+	return 0;
+}
+```
