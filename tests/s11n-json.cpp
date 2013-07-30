@@ -18,6 +18,6 @@ TEST(Parser, 0) {
 	char json[] = "{ \"server\": \"example.com\" }";
 	size_t sz = strlen(json);
 
-	parser.parse(json, sz);
+	//parser.parse(json, sz);
 
 }

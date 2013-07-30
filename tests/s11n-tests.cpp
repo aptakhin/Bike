@@ -1,9 +1,9 @@
 #include <iostream>
 #include <fstream>
 
-#include "gtest/gtest.h"
-#include "bike/s11n.h"
-#include "bike/s11n-text.h"
+#include <gtest/gtest.h>
+#include <bike/s11n.h>
+#include <bike/s11n-text.h>
 #include <cmath>
 #include <limits>
 
@@ -13,6 +13,25 @@ bool real_eq(_T a, _T b) {
 }
 
 using namespace bike;
+
+TEST(Int, 0) {
+	int x = 5;
+
+	{
+	std::ofstream fout("test.txt");
+	OutputTextSerializer out(fout);
+	out << x;
+	}
+
+	int nx;
+	{
+	std::ifstream fin("test.txt");
+	InputTextSerializer in(fin);
+	in >> nx;
+	}
+
+	ASSERT_EQ(x, nx);
+}
 
 struct Vec2 {
 	

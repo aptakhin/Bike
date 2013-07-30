@@ -35,6 +35,6 @@ source_group("gtest" FILES
   tests/gtest/gtest-all.cc
 )
 
-add_definitions(-DJSMN_STRICT)
+add_definitions(-DJSMN_STRICT -D_VARIADIC_MAX=10)
 
 add_executable(s11n_tests ${S11NT_SRC})
