@@ -11,6 +11,7 @@ C++ serialization library with Boost.Serialization-like interface with such impr
 
 Common features:
 - Non-default constructors support
-- 
+- Serialization of inherited classes
+- Serialization of shared classes
 
 [Read how to use s11n](docs/using-s11n.md)
