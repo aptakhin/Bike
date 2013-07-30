@@ -13,16 +13,16 @@ namespace bike {
 class OutputTextSerializerNode {
 public:
 	OutputTextSerializerNode(OutputTextSerializerNode* parent, ReferencesPtr* refs) 
-	:	_parent(parent),
-		_out(parent->_out),
+	:	parent_(parent),
+		out_(parent->out_),
 		version_(),
-		_refs(refs) {
+		refs_(refs) {
 	}
 
 	OutputTextSerializerNode(std::ostream& out, ReferencesPtr* refs) 
-	:	_parent(nullptr),
-		_out(out),
-		_refs(refs) {
+	:	parent_(nullptr),
+		out_(out),
+		refs_(refs) {
 	}
 
 	void version(unsigned int ver) { version_.version(ver); }
@@ -33,62 +33,59 @@ public:
 		return *this & (*base);
 	}
 
-	template <typename _T>
-	OutputTextSerializerNode& ver(bool expr, _T& t) {
+	template <typename T>
+	OutputTextSerializerNode& ver(bool expr, T& t) {
 		if (expr)
 			*this & t;
 		return *this;
 	}
 
-	template <class _T>
-	OutputTextSerializerNode& operator & (const _T& t) {
+	template <class T>
+	OutputTextSerializerNode& operator & (const T& t) {
 		return named(t, "");
 	}
 
-	template <class _T>
-	OutputTextSerializerNode& named(const _T& t, const std::string& name) {
-		OutputTextSerializerNode node(this, _refs);
-		_out << "( "; 
+	template <class T>
+	OutputTextSerializerNode& named(const T& t, const std::string& name) {
+		OutputTextSerializerNode node(this, refs_);
+		out_ << "( "; 
 		OutputTextSerializerCall<std::string&> str_ser;
 		str_ser.call(const_cast<std::string&>(name), node);
 
-		_out << " ";
+		out_ << " ";
 
-		const type_info& info = Typeid<_T>::type(t);
+		const type_info& info = Typeid<T>::type(t);
 		std::string full_type(Static::normalize_class(info));
 
-		if (std::is_pointer<_T>::value)
-		{
+		if (std::is_pointer<T>::value)
 			full_type += " *";
-		}
 
 		str_ser.call(full_type, node);
 
-		unsigned int ref = ReferencesPtrSetter<const _T&>::set(t, _refs);
-		//ref = _refs->set<_T>(t);
-		_out << " " << ref;
+		unsigned int ref = ReferencesPtrSetter<const T&>::set(t, refs_);
+		out_ << " " << ref;
 
-		_out << " " << version_.version() << " ";
+		out_ << " " << version_.version() << " ";
 
-		OutputTextSerializerCall<_T&> ser;
-		ser.call(const_cast<_T&>(t), node);
-		_out << " ) ";
+		OutputTextSerializerCall<T&> ser;
+		ser.call(const_cast<T&>(t), node);
+		out_ << " ) ";
 		return *this;
 	}
 
-	std::ostream& _out_impl() { return _out; }
+	std::ostream& _out_impl() { return out_; }
 
 protected:
-	OutputTextSerializerNode* _parent;
-	std::ostream& _out;
+	OutputTextSerializerNode* parent_;
+	std::ostream& out_;
 	Version version_;
-	ReferencesPtr* _refs;
+	ReferencesPtr* refs_;
 };
 
-template <class _T>
+template <class T>
 class OutputTextSerializerCall {
 public:
-	void call(_T& t, OutputTextSerializerNode& node) {
+	void call(T& t, OutputTextSerializerNode& node) {
 		// Implement ser method
 		t.ser(node, -1);
 	};
@@ -97,18 +94,17 @@ public:
 class OutputTextSerializer : public OutputTextSerializerNode {
 public:
 	OutputTextSerializer(std::ostream& out) 
-	: 	OutputTextSerializerNode(out, &_refs) {
+	: 	OutputTextSerializerNode(out, &refs_) {
 	}
 
-	template <class _T>
-	OutputTextSerializer& operator << (const _T& t) {
+	template <class T>
+	OutputTextSerializer& operator << (const T& t) {
 		return static_cast<OutputTextSerializer&>(*this & t);
 	}
 
 protected:
-	ReferencesPtr _refs;
+	ReferencesPtr refs_;
 };
-
 
 class InputTextSerializerNode {
 protected:
@@ -119,15 +115,15 @@ public:
 	:	name_(name),
 		in_(in),
 		version_(),
-		_read_version(),
-		_stream_save(0),
-		_null_object(false),
-		_refs(refs) {
+		read_version_(),
+		stream_save_(0),
+		null_object_(false),
+		refs_(refs) {
 	}
 
 	void version(unsigned int ver) { version_.version(ver); }
 
-	bool null() const { return _null_object; }
+	bool null() const { return null_object_; }
 
 	template <typename _Base>
 	InputTextSerializerNode& base(_Base* base) {
@@ -136,13 +132,13 @@ public:
 		return *this & (*base);
 	}
 
-	template <class _T>
-	InputTextSerializerNode& operator & (_T& t) {
+	template <class T>
+	InputTextSerializerNode& operator & (T& t) {
 		return named(t, "");
 	}
 
-	template <typename _T>
-	InputTextSerializerNode& ver(bool expr, _T& t) {
+	template <typename T>
+	InputTextSerializerNode& ver(bool expr, T& t) {
 		if (expr) *this & t;
 		return *this;
 	}
@@ -151,15 +147,15 @@ public:
 	{
 	};
 
-	template <class _T>
-	InputTextSerializerNode& named(_T& t, const std::string& attr_name) {
-		InputTextSerializerNode node(in_, _refs, attr_name);
+	template <class T>
+	InputTextSerializerNode& named(T& t, const std::string& attr_name) {
+		InputTextSerializerNode node(in_, refs_, attr_name);
 
 		std::type_index info = typeid(UnknownType);
 		
 		try
 		{
-			info = Typeid<_T>::type(t);
+			info = Typeid<T>::type(t);
 		}
 		catch (std::bad_typeid&)
 		{
@@ -169,31 +165,31 @@ public:
 
 		// If we have read this attribute earlier then it was already loaded. 
 		// Miss least desc and return.
-		Nodes::iterator i = by_name(attr_name, _nodes);
-		if (i != _nodes.end()) {
+		Nodes::iterator i = by_name(attr_name, nodes_);
+		if (i != nodes_.end()) {
 			miss_desc();
 			return *this;
 		}
 
 		std::streamoff pos = in_.tellg();
-		InputTextSerializerCall<_T&> ser;
+		InputTextSerializerCall<T&> ser;
 		ser.call(t, node);
 		read_closing();
 
 		if (attr_name == "" || (attr_name != "" && attr_name == name)) {
-			_nodes.emplace_back(node);
+			nodes_.emplace_back(node);
 		}
 		return *this;
 	}
 
-	template <class _T>
-	bool search(_T& t, const std::string& attr_name) {
-		assert(_stream_save != 0 && "Illegal use of search");
+	template <class T>
+	bool search(T& t, const std::string& attr_name) {
+		assert(stream_save_ != 0 && "Illegal use of search");
 		assert(attr_name   != "" && "Illegal case of search");
 
 		bool once_again = false;
 		while (true) {
-			InputTextSerializerNode node(in_, _refs, attr_name);
+			InputTextSerializerNode node(in_, refs_, attr_name);
 
 			char c;
 			in_ >> c;
@@ -214,7 +210,7 @@ public:
 
 			if (in_.peek() == ')') {
 				in_.get(c);
-				_null_object = true;
+				null_object_ = true;
 				// Empty object => Exit.
 				return false;
 			}
@@ -223,12 +219,13 @@ public:
 			InputTextSerializerCall<std::string&> str_ser;
 			str_ser.call(name, *this);
 
-			unsigned int ref = 0;
-			in_ >> ref;
-
 			// Read least of header anycase.
 			std::string full_type;
 			str_ser.call(full_type, *this);
+
+			unsigned int ref = 0;
+			in_ >> ref;
+
 			int version;
 			in_ >> version;
 
@@ -236,11 +233,11 @@ public:
 				assert(Static::normalize_class(typeid(t)) == full_type);
 				version_.version(version);
 
-				InputTextSerializerCall<_T&> ser;
+				InputTextSerializerCall<T&> ser;
 				ser.call(t, *this);
 				read_closing();
 
-				_nodes.emplace_back(node); // Save my pretty
+				nodes_.emplace_back(node); // Save my pretty
 				return true;
 			}
 			else {
@@ -250,35 +247,35 @@ public:
 		return false;
 	}
 
-	template <class _Ctor, class _T>
-	void custom_ctor(_T& t, const std::type_info& type, bool has_header) {
+	template <class Ctor, class T>
+	void custom_ctor(T& t, const std::type_info& type, bool has_header) {
 		if (!has_header)
 			read_header(type, "");
 		save_pos();
 		// Read parameters needed for constructing object
-		t = _Ctor::ctor(*this);
+		t = Ctor::ctor(*this);
 
-		if (!_null_object) {
+		if (!null_object_) {
 			// Start once again and read all parameters
 			restore_pos();
 			(*t).ser(*this, -1);
 		}
-		//InputTextSerializerCall<_T*> ser;
+		//InputTextSerializerCall<T*> ser;
 		//ser.call(t, *this);
 		if (!has_header)
 			read_closing();
 	}
 
-	template <class _Ctor, class _T>
-	_T read_ctor_entity(const std::type_info& type, bool has_header) {
+	template <class Ctor, class T>
+	T read_ctor_entity(const std::type_info& type, bool has_header) {
 		if (!has_header)
 			read_header(type, "");
 		save_pos();
 		// Read parameters needed for constructing object
-		_T t = _Ctor::ctor(*this);
+		T t = Ctor::ctor(*this);
 		// Start once again and read all parameters
 		restore_pos();
-		InputTextSerializerCall<_T&> ser;
+		InputTextSerializerCall<T&> ser;
 		ser.call(t, *this);
 		if (!has_header)
 			read_closing();
@@ -286,10 +283,10 @@ public:
 	}
 
 	// Sometimes it easier not to hide. But remember. It's internal!
-	std::istream& _in_impl() { return in_; }
+	std::istream& in_impl() { return in_; }
 
 	void _notify_null_object() { 
-		_null_object = true;
+		null_object_ = true;
 	}
 
 protected:
@@ -340,9 +337,9 @@ protected:
 	}
 
 	// Templated because uses InputTextSerializerCall, which can't be defined before
-	template <class _Useless>
+	template <class Useless>
 	std::string next_token() {
-		_Useless t = 42;
+		Useless t = 42;
 		std::string token;
 		
 		char c;
@@ -367,42 +364,42 @@ protected:
 	}
 
 	void save_pos() {
-		_stream_save = in_.tellg();
+		stream_save_ = in_.tellg();
 	}
 
 	void restore_pos() {
 		std::streamoff t = in_.tellg();
-		assert(_stream_save > 0);
-		in_.seekg(_stream_save, std::ios::beg);
+		assert(stream_save_ > 0);
+		in_.seekg(stream_save_, std::ios::beg);
 	}
 
 	Nodes::iterator by_name(const std::string& name, const Nodes& nodes) {
 		if (name == "")
-			return _nodes.end();
+			return nodes_.end();
 
-		Nodes::iterator i = _nodes.begin();
-		for (; i != _nodes.end(); ++i) {
+		Nodes::iterator i = nodes_.begin();
+		for (; i != nodes_.end(); ++i) {
 			if (i->name_ == name)
 				return i;
 		}
-		return _nodes.end();
+		return nodes_.end();
 	}
 
 protected:
 	std::string name_;
 	std::istream& in_;
 	Version version_;
-	Version _read_version;
-	std::streamoff _stream_save;
-	Nodes _nodes;
-	bool _null_object;
-	ReferencesId* _refs;
+	Version read_version_;
+	std::streamoff stream_save_;
+	Nodes nodes_;
+	bool null_object_;
+	ReferencesId* refs_;
 };
 
-template <class _T>
+template <class T>
 class InputTextSerializerCall {
 public:
-	void call(_T& t, InputTextSerializerNode& node) {
+	void call(T& t, InputTextSerializerNode& node) {
 		t.ser(node, -1);
 	};
 };
@@ -413,8 +410,8 @@ public:
 	: 	InputTextSerializerNode(in, &refs) {
 	}
 
-	template <class _T>
-	InputTextSerializer& operator >> (_T& t) {
+	template <class T>
+	InputTextSerializer& operator >> (T& t) {
 		return static_cast<InputTextSerializer&>(*this & t);
 	}
 
@@ -427,7 +424,7 @@ protected:
 	class InputTextSerializerCall<_Type&> {\
 	public:\
 		void call(_Type& t, InputTextSerializerNode& node) {\
-			node._in_impl() >> t;\
+			node.in_impl() >> t;\
 		};\
 	};\
 	\
@@ -445,28 +442,28 @@ TS_SIMPLE(float);
 TS_SIMPLE(double);
 
 // Make pointers work!
-template <class _T>
-class InputTextSerializerCall<_T*&> {
+template <class T>
+class InputTextSerializerCall<T*&> {
 public:
-	void call(_T*& t, InputTextSerializerNode& node) {
+	void call(T*& t, InputTextSerializerNode& node) {
 		char c1, c2;
-		node._in_impl() >> c1;
-		if (c1 == '(' && node._in_impl().peek() == ')') {
+		node.in_impl() >> c1;
+		if (c1 == '(' && node.in_impl().peek() == ')') {
 			t = nullptr;
 			node._notify_null_object();
-			node._in_impl().get(c2);
+			node.in_impl().get(c2);
 		}
 		else {
-			node._in_impl().putback(c1).putback(' ');
-			node.custom_ctor<Ctor<_T*, InputTextSerializerNode > >(t, typeid(_T), true);
+			node.in_impl().putback(c1).putback(' ');
+			node.custom_ctor<Ctor<T*, InputTextSerializerNode > >(t, typeid(T), true);
 		}
 	};
 };
 
-template <class _T>\
-class OutputTextSerializerCall<_T*&> {
+template <class T>\
+class OutputTextSerializerCall<T*&> {
 public:
-	void call(_T*& t, OutputTextSerializerNode& node) {
+	void call(T*& t, OutputTextSerializerNode& node) {
 		if (t != nullptr)
 			(*t).ser(node, -1);
 		else
@@ -505,10 +502,10 @@ public:
 	void call(std::string& t, InputTextSerializerNode& node) {
 		t = "";
 		char c = 0, p = 0;
-		node._in_impl() >> c;
+		node.in_impl() >> c;
 		assert(c == '"');
 		while (true) {
-			node._in_impl().get(c);
+			node.in_impl().get(c);
 
 			if (p == '\\' && c == '\\')
 				t += '\\', p = 0;
@@ -550,27 +547,27 @@ private:
 // std::vector
 //
 
-template <class _D>
-class InputTextSerializerCall<std::vector<_D>&> {
+template <class D>
+class InputTextSerializerCall<std::vector<D>&> {
 public:
-	void call(std::vector<_D>& t, InputTextSerializerNode& node) {
+	void call(std::vector<D>& t, InputTextSerializerNode& node) {
 		char c;
-		node._in_impl() >> c;
-		node._in_impl().unget();
+		node.in_impl() >> c;
+		node.in_impl().unget();
 		while (c != ')') {
-			_D read = node.read_ctor_entity<Ctor<_D, InputTextSerializerNode >, _D >(Typeid<_D>::type(), false);
+			D read = node.read_ctor_entity<Ctor<D, InputTextSerializerNode >, D >(Typeid<D>::type(), false);
 			t.push_back(read);
-			node._in_impl() >> c;
-			node._in_impl().unget();
+			node.in_impl() >> c;
+			node.in_impl().unget();
 		}
 	};
 };
 
-template <class _D>
-class OutputTextSerializerCall<std::vector<_D>&> {
+template <class D>
+class OutputTextSerializerCall<std::vector<D>&> {
 public:
-	void call(std::vector<_D>& t, OutputTextSerializerNode& node) {
-		std::vector<_D>::iterator i = t.begin();
+	void call(std::vector<D>& t, OutputTextSerializerNode& node) {
+		std::vector<D>::iterator i = t.begin();
 		for (; i != t.end(); ++i) {
 			node & *i;
 		}
@@ -581,27 +578,27 @@ public:
 // std::list
 //
 
-template <class _D>
-class InputTextSerializerCall<std::list<_D>&> {
+template <class D>
+class InputTextSerializerCall<std::list<D>&> {
 public:
-	void call(std::list<_D>& t, InputTextSerializerNode& node) {
+	void call(std::list<D>& t, InputTextSerializerNode& node) {
 		char c;
-		node._in_impl() >> c;
-		node._in_impl().unget();
+		node.in_impl() >> c;
+		node.in_impl().unget();
 		while (c != ')') {
-			_D read = node.read_ctor_entity<Ctor<_D, InputTextSerializerNode>, _D>(Typeid<_D>::type(), false);
+			D read = node.read_ctor_entity<Ctor<D, InputTextSerializerNode>, D>(Typeid<D>::type(), false);
 			t.push_back(read);
-			node._in_impl() >> c;
-			node._in_impl().unget();
+			node.in_impl() >> c;
+			node.in_impl().unget();
 		}
 	};
 };
 
-template <class _D>
-class OutputTextSerializerCall<std::list<_D>&> {
+template <class D>
+class OutputTextSerializerCall<std::list<D>&> {
 public:
-	void call(std::list<_D>& t, OutputTextSerializerNode& node) {
-		std::list<_D>::iterator i = t.begin();
+	void call(std::list<D>& t, OutputTextSerializerNode& node) {
+		std::list<D>::iterator i = t.begin();
 		for (; i != t.end(); ++i) {
 			node & *i;
 		}
@@ -612,18 +609,18 @@ public:
 // std::shared_ptr
 //
 
-template <class _D>
-class InputTextSerializerCall<std::shared_ptr<_D>&> {
+template <class D>
+class InputTextSerializerCall<std::shared_ptr<D>&> {
 public:
-	void call(std::shared_ptr<_D>& t, InputTextSerializerNode& node) {
-		node.custom_ctor<Ctor<std::shared_ptr<_D>, InputTextSerializerNode > >(t, Typeid<_D*>::type(), false);
+	void call(std::shared_ptr<D>& t, InputTextSerializerNode& node) {
+		node.custom_ctor<Ctor<std::shared_ptr<D>, InputTextSerializerNode > >(t, Typeid<D*>::type(), false);
 	};
 };
 
-template <class _D>
-class OutputTextSerializerCall<std::shared_ptr<_D>&> {
+template <class D>
+class OutputTextSerializerCall<std::shared_ptr<D>&> {
 public:
-	void call(std::shared_ptr<_D>& t, OutputTextSerializerNode& node) {
+	void call(std::shared_ptr<D>& t, OutputTextSerializerNode& node) {
 		node & t.get();
 	};
 };

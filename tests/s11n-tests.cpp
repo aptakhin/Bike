@@ -275,24 +275,24 @@ TEST(Vector, 1) {
 class A2 {
 public:
 
-	A2(const std::string& name) : name_(name), _boo(15) { std::cout << "A2()\n"; }
+	A2(const std::string& name) : name_(name), boo_(15) { std::cout << "A2()\n"; }
 
 	virtual ~A2() { std::cout << "~A2()\n"; }
 
 	bool operator == (const A2& r) const {
-		return name_ == r.name_ && _boo == r._boo;
+		return name_ == r.name_ && boo_ == r.boo_;
 	}
 
 	template <class _Node>
 	void ser(_Node& node, int version) {
 		node.version(1);
-		node.named(_boo, "boo");
+		node.named(boo_,  "boo");
 		node.named(name_, "name");
 	}
 
 private:
 	std::string name_;
-	int _boo;
+	int boo_;
 };
 
 template <class _Node>

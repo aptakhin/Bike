@@ -70,20 +70,18 @@ public:
 
 	ReferencesId() {}
 
-	void* get(unsigned int key) const
-	{
-		RefMapConstIter found = _refs.find(key);
-		return found != _refs.end()? found->second : nullptr;
+	void* get(unsigned int key) const {
+		RefMapConstIter found = refs_.find(key);
+		return found != refs_.end()? found->second : nullptr;
 	}
 
-	template <typename _T>
-	unsigned int set(unsigned int key, void* val)
-	{
-		_refs.insert(std::make_pair(key, val));
+	template <typename T>
+	unsigned int set(unsigned int key, void* val) {
+		refs_.insert(std::make_pair(key, val));
 	}
 
 protected:
-	RefMap _refs;
+	RefMap refs_;
 };
 
 
@@ -93,42 +91,40 @@ public:
 	typedef std::map<void*, unsigned int> RefMap;
 	typedef std::map<void*, unsigned int>::const_iterator RefMapConstIter;
 
-	ReferencesPtr() : _id(1) {}
+	ReferencesPtr() : id_(1) {}
 
-	unsigned int get(void* key) const
-	{
-		RefMapConstIter found = _refs.find(key);
-		return found != _refs.end()? found->second : 0;
+	unsigned int get(void* key) const {
+		RefMapConstIter found = refs_.find(key);
+		return found != refs_.end()? found->second : 0;
 	}
 
-	template <typename _T>
-	unsigned int set(_T* key)
-	{
+	template <typename T>
+	unsigned int set(T* key) {
 		unsigned int id = get(key);
 		if (id == 0)
-			_refs.insert(std::make_pair(key, _id));
+			refs_.insert(std::make_pair(key, id_));
 		else
-			id = _id++;
+			id = id_++;
 		return id;
 	}
 
 protected:
-	RefMap _refs;
-	unsigned int _id;
+	RefMap refs_;
+	unsigned int id_;
 };
 
-template <typename _T>
+template <typename T>
 class ReferencesPtrSetter
 {
 public:
-	static unsigned int set(_T, ReferencesPtr*) { return 0; }
+	static unsigned int set(T, ReferencesPtr*) { return 0; }
 };
 
-#define S11N_ITS_PTR(t, to_ptr) template <typename _T> class ReferencesPtrSetter<t> {\
-	public:	static unsigned int set(_T* key, ReferencesPtr* refs) { return refs->set(to_ptr); } };
+#define S11N_ITS_PTR(t, to_ptr) template <typename T> class ReferencesPtrSetter<t> {\
+	public:	static unsigned int set(T* key, ReferencesPtr* refs) { return refs->set(to_ptr); } };
 
-S11N_ITS_PTR(_T*, key);
-S11N_ITS_PTR(std::shared_ptr<_T>, key.get());
+S11N_ITS_PTR(T*, key);
+S11N_ITS_PTR(std::shared_ptr<T>, key.get());
 
 class Renames
 {
@@ -150,22 +146,19 @@ class Static
 {
 public:
 	
-	static bool starts_with(const std::string& str, const std::string& prefix)
-	{
+	static bool starts_with(const std::string& str, const std::string& prefix) {
 		size_t sz = prefix.size();
 		if (str.size() < sz)
 			return false;
 
-		for (size_t i = 0; i < sz; ++i)
-		{
+		for (size_t i = 0; i < sz; ++i) {
 			if (str[i] != prefix[i])
 				return false;
 		}
 		return true;
 	}
 
-	static void add_rename(const std::type_index& index, const char* crename)
-	{
+	static void add_rename(const std::type_index& index, const char* crename) {
 		std::string rename;
 
 		std::string maybe_monstrous_name = index.name();
@@ -179,13 +172,11 @@ public:
 		Renames::map().insert(std::make_pair(index, rename));
 	}
 
-	static void add_std_renames()
-	{
+	static void add_std_renames() {
 		S11N_RENAME(std::string);
 	}
 
-	static std::string normalize_class(const std::type_index& index)
-	{
+	static std::string normalize_class(const std::type_index& index) {
 		Renames::RenamesMapConstIter found = Renames::map().find(index);
 		if (found != Renames::map().end())
 			return found->second;
@@ -193,24 +184,22 @@ public:
 			return std::string(index.name());
 	}
 
-	static std::string normalize_name(const char* var)
-	{
+	static std::string normalize_name(const char* var) {
 		std::string name = var;
 		return name;
 	}
-
 };
 
-template <typename _T>
+template <typename T>
 void reg_type() {
-	Types::Type t(typeid(_T));
-	t.ctor = (Types::Type::Ctor) &Ctor<_T*, InputTextSerializerNode>::ctor;
+	Types::Type t(typeid(T));
+	t.ctor = static_cast<Types::Type::Ctor>(&Ctor<T*, InputTextSerializerNode>::ctor);
 	Types::t().push_back(t);
 }
 
-template <typename _T>
+template <typename T>
 bool is_registered() {
-	const std::type_index type = typeid(_T); 
+	const std::type_index type = typeid(T); 
 	std::vector<Types::Type>::const_iterator i = Types::t().begin();
 	for (; i != Types::t().end(); ++i) {
 		if (i->info == type) 
@@ -219,79 +208,44 @@ bool is_registered() {
 	return false;
 }
 
-template <class _T>
+template <class T>
 class Typeid {
 public:
-	static const std::type_info& type(const _T& t) {
+	static const std::type_info& type(const T& t) {
 		return typeid(t);
 	}
 
 	static const std::type_info& type() {
-		return typeid(_T);
+		return typeid(T);
 	}
 };
 
-template <class _T>
-class Typeid<_T*> {
+template <class T>
+class Typeid<T*> {
 public:
-	static const std::type_info& type(const _T* t) {
+	static const std::type_info& type(const T* t) {
 		return typeid(*t);
 	}
 
 	static const std::type_info& type() {
-		return typeid(_T*);
+		return typeid(T*);
 	}
 };
 
 /// All objects constructor. Specialize template to make non-default constructor.
-template <class _T, class _Node>
+template <class T, class _Node>
 class Ctor {
 public:
-	static _T ctor(_Node& node) {
-		return _T();
+	static T ctor(_Node& node) {
+		return T();
 	}
 };
 
-template <class _T, class _Node>
-class Ctor<_T*, _Node> {
+template <class T, class _Node>
+class Ctor<T*, _Node> {
 public:
-	static _T* ctor(_Node& node) {
-		return new _T();
-	}
-};
-
-struct DelayedReference
-{
-	std::vector<unsigned int> req_refs;
-	std::streamoff pos;
-	std::streamoff end;// for debugging only
-
-	bool ready(ReferencesId* refs)
-	{
-		size_t sz = req_refs.size();
-		for (size_t i = 0; i < sz; ++i)
-		{
-			if (refs->get(req_refs[i]) == nullptr)
-				return false;
-		}
-		return true;
-	}
-};
-
-struct DelayedInit
-{
-	std::vector<DelayedReference> delay_refs;
-
-	/// nullptr means empty delayed reference or has cycle reference
-	DelayedReference* find_ready(ReferencesId* refs)
-	{
-		size_t sz = delay_refs.size();
-		for (size_t i = 0; i < sz; ++i)
-		{
-			if (delay_refs[i].ready(refs))
-				return &delay_refs[i];
-		}
-		return nullptr;
+	static T* ctor(_Node& node) {
+		return new T();
 	}
 };
 
@@ -300,35 +254,35 @@ struct DelayedInit
 class HierarchyNode {
 public:
 	HierarchyNode(HierarchyNode* parent) 
-	:	_parent(parent),
+	:	parent_(parent),
 		version_() {
 	}
 
 	void version(unsigned int ver) { version_.version(ver); }
 
-	template <typename _Base>
-	HierarchyNode& base(_Base* base_ptr) {
-		_Base* base = static_cast<_Base*>(base_ptr);
+	template <typename Base>
+	HierarchyNode& base(Base* base_ptr) {
+		Base* base = static_cast<Base*>(base_ptr);
 		return *this & (*base);
 	}
 
-	template <typename _T>
-	HierarchyNode& ver(bool expr, _T& t) {
+	template <typename T>
+	HierarchyNode& ver(bool expr, T& t) {
 		return *this;
 	}
 
-	template <class _T>
-	HierarchyNode& operator & (const _T& t) {
+	template <class T>
+	HierarchyNode& operator & (const T& t) {
 		return named(t, "");
 	}
 
-	template <class _T>
-	HierarchyNode& named(const _T& t, const std::string& name) {
+	template <class T>
+	HierarchyNode& named(const T& t, const std::string& name) {
 		return *this;
 	}
 
 protected:
-	HierarchyNode* _parent;
+	HierarchyNode* parent_;
 	Version version_;
 };
 
