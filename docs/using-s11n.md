@@ -1,15 +1,12 @@
 Using s11n
 ====================
 
-[TOC]
-
 Currently s11n has support of one format s11n-text.
 
 Examples
 ---------------------
 
 ### First example
-
 ```cpp
 #include <fstream>
 #include <iostream>
@@ -50,7 +47,6 @@ int main()
 
 
 ### Structures
-
 ```cpp
 // headers missed...
 
@@ -98,7 +94,6 @@ int main()
 
 
 ### Non-default constructors and declaring out of class
-
 ```cpp
 // headers missed...
 #include <string> // Ok, add one
@@ -108,7 +103,7 @@ class Human
 {
 public:
 	// Also only non-default constructor was made
-	// It seems every human must have name
+	// (It seems every human must have name)
 	Human(const std::string& name) : name_(name) {}	
 
 protected:
@@ -133,12 +128,32 @@ template <typename Node>
 class Ctor<Human*, Node>
 {
 public:
-	static Human* ctor(_Node& node) 
+	static Human* ctor(Node& node) 
 	{
 		std::string name;
 		// It searches between all members for our name
 		node.search(name, "name");
 		return new Human(name); // We did it
 	}
+};
+
+### Basing
+```cpp
+// headers missed...
+#include <string> // Ok, add one
+
+class Human
+{
+public:
+	Human(const std::string& name) : name_(name) {}	
+
+protected:
+	std::string name_;
+};
+
+class Superman : public Human
+{
+public:
+	Superman() : Human("Clark Kent") {}	
 };
 
