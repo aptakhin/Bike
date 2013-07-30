@@ -158,6 +158,19 @@ public:
 		return true;
 	}
 
+	static bool ends_with(const std::string& str, const std::string& suffix) {
+		size_t sz = suffix.size();
+		if (str.size() < sz)
+			return false;
+
+		size_t offset = str.length() - suffix.length();
+		for (size_t i = 0; i < sz; ++i) {
+			if (str[offset + i] != suffix[i])
+				return false;
+		}
+		return true;
+	}
+
 	static void add_rename(const std::type_index& index, const char* crename) {
 		std::string rename;
 
@@ -224,6 +237,8 @@ template <class T>
 class Typeid<T*> {
 public:
 	static const std::type_info& type(const T* t) {
+		if (t == nullptr)
+			return type();
 		return typeid(*t);
 	}
 

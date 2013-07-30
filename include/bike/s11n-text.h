@@ -57,7 +57,7 @@ public:
 		const type_info& info = Typeid<T>::type(t);
 		std::string full_type(Static::normalize_class(info));
 
-		if (std::is_pointer<T>::value)
+		if (Static::ends_with(full_type, " *") || std::is_pointer<T>::value)
 			full_type += " *";
 
 		str_ser.call(full_type, node);
@@ -73,7 +73,7 @@ public:
 		return *this;
 	}
 
-	std::ostream& _out_impl() { return out_; }
+	std::ostream& out() { return out_; }
 
 protected:
 	OutputTextSerializerNode* parent_;
@@ -219,7 +219,7 @@ public:
 			InputTextSerializerCall<std::string&> str_ser;
 			str_ser.call(name, *this);
 
-			// Read least of header anycase.
+			// Read least of header in any case
 			std::string full_type;
 			str_ser.call(full_type, *this);
 
@@ -282,8 +282,7 @@ public:
 		return t;
 	}
 
-	// Sometimes it easier not to hide. But remember. It's internal!
-	std::istream& in_impl() { return in_; }
+	std::istream& in() { return in_; }
 
 	void _notify_null_object() { 
 		null_object_ = true;
@@ -306,6 +305,7 @@ protected:
 
 		if (type != typeid(UnknownType))
 		{
+			auto q = Static::normalize_class(type);
 			assert(Static::normalize_class(type) == full_type && "Reading wrong object!");
 		}
 
@@ -424,7 +424,7 @@ protected:
 	class InputTextSerializerCall<_Type&> {\
 	public:\
 		void call(_Type& t, InputTextSerializerNode& node) {\
-			node.in_impl() >> t;\
+			node.in() >> t;\
 		};\
 	};\
 	\
@@ -432,7 +432,7 @@ protected:
 	class OutputTextSerializerCall<_Type&> {\
 	public:\
 		void call(_Type& t, OutputTextSerializerNode& node) {\
-			node._out_impl() << t;\
+			node.out() << t;\
 		};\
 	}
 
@@ -447,14 +447,14 @@ class InputTextSerializerCall<T*&> {
 public:
 	void call(T*& t, InputTextSerializerNode& node) {
 		char c1, c2;
-		node.in_impl() >> c1;
-		if (c1 == '(' && node.in_impl().peek() == ')') {
+		node.in() >> c1;
+		if (c1 == '(' && node.in().peek() == ')') {
 			t = nullptr;
 			node._notify_null_object();
-			node.in_impl().get(c2);
+			node.in().get(c2);
 		}
 		else {
-			node.in_impl().putback(c1).putback(' ');
+			node.in().putback(c1).putback(' ');
 			node.custom_ctor<Ctor<T*, InputTextSerializerNode > >(t, typeid(T), true);
 		}
 	};
@@ -467,7 +467,7 @@ public:
 		if (t != nullptr)
 			(*t).ser(node, -1);
 		else
-			node._out_impl() << "() ";
+			node.out() << "() ";
 	};
 };
 
@@ -502,10 +502,10 @@ public:
 	void call(std::string& t, InputTextSerializerNode& node) {
 		t = "";
 		char c = 0, p = 0;
-		node.in_impl() >> c;
+		node.in() >> c;
 		assert(c == '"');
 		while (true) {
-			node.in_impl().get(c);
+			node.in().get(c);
 
 			if (p == '\\' && c == '\\')
 				t += '\\', p = 0;
@@ -525,7 +525,7 @@ template <>
 class OutputTextSerializerCall<std::string&> {
 public:
 	void call(std::string& t, OutputTextSerializerNode& node) {
-		node._out_impl() << '"' << escape_str(t) << '"';
+		node.out() << '"' << escape_str(t) << '"';
 	};
 private:
 	std::string escape_str(const std::string& str) {
@@ -552,13 +552,13 @@ class InputTextSerializerCall<std::vector<D>&> {
 public:
 	void call(std::vector<D>& t, InputTextSerializerNode& node) {
 		char c;
-		node.in_impl() >> c;
-		node.in_impl().unget();
+		node.in() >> c;
+		node.in().unget();
 		while (c != ')') {
 			D read = node.read_ctor_entity<Ctor<D, InputTextSerializerNode >, D >(Typeid<D>::type(), false);
 			t.push_back(read);
-			node.in_impl() >> c;
-			node.in_impl().unget();
+			node.in() >> c;
+			node.in().unget();
 		}
 	};
 };
@@ -583,13 +583,13 @@ class InputTextSerializerCall<std::list<D>&> {
 public:
 	void call(std::list<D>& t, InputTextSerializerNode& node) {
 		char c;
-		node.in_impl() >> c;
-		node.in_impl().unget();
+		node.in() >> c;
+		node.in().unget();
 		while (c != ')') {
 			D read = node.read_ctor_entity<Ctor<D, InputTextSerializerNode>, D>(Typeid<D>::type(), false);
 			t.push_back(read);
-			node.in_impl() >> c;
-			node.in_impl().unget();
+			node.in() >> c;
+			node.in().unget();
 		}
 	};
 };

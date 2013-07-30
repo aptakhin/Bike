@@ -410,24 +410,24 @@ TEST(List, 0) {
 class A3 {
 public:
 
-	A3(const std::string& name, int boo) : name_(name), _boo(boo) { std::cout << "A3()\n"; }
+	A3(const std::string& name, int boo) : name_(name), boo_(boo) { std::cout << "A3()\n"; }
 
 	virtual ~A3() { std::cout << "~A3()\n"; }
 
 	bool operator == (const A3& r) const {
-		return name_ == r.name_ && _boo == r._boo;
+		return name_ == r.name_ && boo_ == r.boo_;
 	}
 
 	template <class _Node>
 	void ser(_Node& node, int version) {
 		node.version(1);
-		node.named(_boo, "boo");
+		node.named(boo_, "boo");
 		node.named(name_, "name");
 	}
 
 private:
 	std::string name_;
-	int _boo;
+	int boo_;
 };
 
 template <class _Node>
@@ -478,24 +478,24 @@ TEST(Usual_ptr, Null) {
 class A4 {
 public:
 
-	A4(const std::string& name, int boo) : name_(name), _boo(boo) { std::cout << "A4()\n"; }
+	A4(const std::string& name, int boo) : name_(name), boo_(boo) { std::cout << "A4()\n"; }
 
 	virtual ~A4() { std::cout << "~A4()\n"; }
 
 	bool operator == (const A4& r) const {
-		return name_ == r.name_ && _boo == r._boo;
+		return name_ == r.name_ && boo_ == r.boo_;
 	}
 
 	template <class _Node>
 	void ser(_Node& node, int version) {
 		node.version(1);
-		node.named(_boo, "boo");
+		node.named(boo_, "boo");
 		node.named(name_, "name");
 	}
 
 private:
 	std::string name_;
-	int _boo;
+	int boo_;
 };
 
 template <class _Node>
