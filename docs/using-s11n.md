@@ -3,8 +3,6 @@ Using s11n
 
 Currently s11n has support of one format s11n-text.
 
-[Structures example](#Structures)
-
 Examples
 ---------------------
 
@@ -145,10 +143,11 @@ public:
 		return new Human(name); // We did it
 	}
 };
+```
 
 ### Inheritance
 
-I continue [previous](#non-default-constructors-and-declaring-out-of-class) example
+I continue previous example
 ```cpp
 //
 // I continue previous example

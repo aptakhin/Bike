@@ -3,9 +3,6 @@ Bike stuff
 
 Different stuff. Currently consists of one library — s11n.
 
-Libraries:
-[s11n (unstable)](#s11n-unstable)
-
 s11n (unstable)
 ---------------------
 C++ serialization library with Boost.Serialization-like interface with such improvements:
