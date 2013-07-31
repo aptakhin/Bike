@@ -239,7 +239,7 @@ public:
 	static const std::type_info& type(const T* t) {
 		if (t == nullptr)
 			return type();
-		return typeid(*t);
+		return typeid(const_cast<T*>(t));
 	}
 
 	static const std::type_info& type() {

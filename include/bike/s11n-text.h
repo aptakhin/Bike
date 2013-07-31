@@ -57,9 +57,6 @@ public:
 		const type_info& info = Typeid<T>::type(t);
 		std::string full_type(Static::normalize_class(info));
 
-		if (Static::ends_with(full_type, " *") || std::is_pointer<T>::value)
-			full_type += " *";
-
 		str_ser.call(full_type, node);
 
 		unsigned int ref = ReferencesPtrSetter<const T&>::set(t, refs_);
