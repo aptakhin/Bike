@@ -35,8 +35,8 @@ TEST(Int, 0) {
 
 struct Vec2 {
 	
-	template <class _Node>
-	void ser(_Node& node, int version) {
+	template <class Node>
+	void ser(Node& node, int version) {
 		node & x & y;
 	}
 
@@ -84,14 +84,14 @@ TEST(Vec2, 1) {
 	in >> nvec >> nvec2;
 	}
 
-	ASSERT_EQ(vec, nvec);
+	ASSERT_EQ(vec,  nvec);
 	ASSERT_EQ(vec2, nvec2);
 }
 
 struct Vec2F {
 	
-	template <class _Node>
-	void ser(_Node& node, int version) {
+	template <class Node>
+	void ser(Node& node, int version) {
 		//node & x & y;
 		S11N_VAR(x, node);
 		S11N_VAR(y, node);
@@ -127,7 +127,7 @@ TEST(Vec2F, 0) {
 	ASSERT_EQ(vec2, nvec2);
 }
 
-TEST(Vec2F, Invalid_read) {
+TEST(Vec2F, InvalidRead) {
 	Vec2F vec(1.5f, 2.f);
 	Vec2F vec2(-324.34525f, 0.88888886f);
 
@@ -147,8 +147,8 @@ TEST(Vec2F, Invalid_read) {
 
 struct Vec2D {
 	
-	template <class _Node>
-	void ser(_Node& node, int version) {
+	template <class Node>
+	void ser(Node& node, int version) {
 		node & x & y;
 	}
 
@@ -187,8 +187,10 @@ class A {
 public:
 	A(const std::string& name) : name_(name) {}
 
-	template <class _Node>
-	void ser(_Node& node, int version) {
+	virtual ~A() {}
+
+	template <class Node>
+	void ser(Node& node, int version) {
 		node.version(1);
 		node & name_;
 	}
@@ -199,15 +201,15 @@ private:
 
 class B : public A {
 public:
-	B(const std::string& name, int n) : A(name), _num(n) {}
+	B(const std::string& name, int n) : A(name), num_(n) {}
 
-	template <class _Node>
-	void ser(_Node& node, int version) {
-		node.base<A>(this) & _num;
+	template <class Node>
+	void ser(Node& node, int version) {
+		node.base<A>(this) & num_;
 	}
 
 private:
-	int _num;
+	int num_;
 };
 
 TEST(AB, 0) {
@@ -283,8 +285,8 @@ public:
 		return name_ == r.name_ && boo_ == r.boo_;
 	}
 
-	template <class _Node>
-	void ser(_Node& node, int version) {
+	template <class Node>
+	void ser(Node& node, int version) {
 		node.version(1);
 		node.named(boo_,  "boo");
 		node.named(name_, "name");
@@ -295,10 +297,10 @@ private:
 	int boo_;
 };
 
-template <class _Node>
-class Ctor<std::shared_ptr<A2>, _Node> {
+template <class Node>
+class Ctor<std::shared_ptr<A2>, Node> {
 public:
-	static std::shared_ptr<A2> ctor(_Node& node) {
+	static std::shared_ptr<A2> ctor(Node& node) {
 		std::string name;
 		node.search(name, "name");
 		if (!node.null()) 
@@ -308,7 +310,7 @@ public:
 	}
 };
 
-TEST(Shared_ptr, 1) {
+TEST(SharedPtr, 1) {
 	std::shared_ptr<A2> a, b;
 	{
 	a = std::make_shared<A2>("cool a");
@@ -326,7 +328,7 @@ TEST(Shared_ptr, 1) {
 	ASSERT_EQ(*a, *b);
 }
 
-TEST(Shared_ptr, Null) {
+TEST(SharePtr, Null) {
 	std::shared_ptr<A2> a, b;
 	{
 	std::ofstream fout("test.txt");
@@ -343,17 +345,17 @@ TEST(Shared_ptr, Null) {
 	ASSERT_EQ(b.get(), nullptr);
 }
 
-template <class _Node>
-class Ctor<A2*, _Node> {
+template <class Node>
+class Ctor<A2*, Node> {
 public:
-	static A2* ctor(_Node& node) {
+	static A2* ctor(Node& node) {
 		std::string name;
 		node.search(name, "name");
 		return new A2(name);
 	}
 };
 
-TEST(Usual_ptr, 1) {
+TEST(UsualPtr, 1) {
 	A2* a = new A2("cool a");
 	std::ofstream fout("test.txt");
 	OutputTextSerializer out(fout);
@@ -387,26 +389,6 @@ TEST(List, 0) {
 	//ASSERT_EQ(l, nl);
 }
 
-//TEST(List, Invalid) {
-//	std::list<A2*> v;
-//	v.push_back(new A2("a"));
-//	v.push_back(new A2("b"));
-//
-//	std::ofstream fout("test.txt");
-//	OutputTextSerializer out(fout);
-//	out << v;
-//	fout.close();
-//
-//	std::vector<A2*> nv;
-//	std::ifstream fin("test.txt");
-//	InputTextSerializer in(fin);
-//	in >> nv;
-//
-//	int p  =0;
-//	//ASSERT_EQ(v, nv);
-//}
-
-
 class A3 {
 public:
 
@@ -418,10 +400,10 @@ public:
 		return name_ == r.name_ && boo_ == r.boo_;
 	}
 
-	template <class _Node>
-	void ser(_Node& node, int version) {
+	template <class Node>
+	void ser(Node& node, int version) {
 		node.version(1);
-		node.named(boo_, "boo");
+		node.named(boo_,  "boo");
 		node.named(name_, "name");
 	}
 
@@ -430,10 +412,10 @@ private:
 	int boo_;
 };
 
-template <class _Node>
-class Ctor<A3*, _Node> {
+template <class Node>
+class Ctor<A3*, Node> {
 public:
-	static A3* ctor(_Node& node) {
+	static A3* ctor(Node& node) {
 		std::string name;
 		int boo;
 		node.search(name, "name");
@@ -442,8 +424,8 @@ public:
 	}
 };
 
-TEST(Usual_ptr, 2) {
-	A3* a = new A3("cool a", 15);
+TEST(UsualPtr, 2) {
+	A3* a  = new A3("cool a",  15);
 	A3* a2 = new A3("cool b", -15);
 	std::ofstream fout("test.txt");
 	OutputTextSerializer out(fout);
@@ -458,8 +440,8 @@ TEST(Usual_ptr, 2) {
 	ASSERT_EQ(*a, *b);
 }
 
-TEST(Usual_ptr, Null) {
-	A3* a = new A3("cool a", 15);
+TEST(UsualPtr, Null) {
+	A3* a  = new A3("cool a", 15);
 	A3* a2 = nullptr;
 	std::ofstream fout("test.txt");
 	OutputTextSerializer out(fout);
@@ -486,8 +468,8 @@ public:
 		return name_ == r.name_ && boo_ == r.boo_;
 	}
 
-	template <class _Node>
-	void ser(_Node& node, int version) {
+	template <class Node>
+	void ser(Node& node, int version) {
 		node.version(1);
 		node.named(boo_, "boo");
 		node.named(name_, "name");
@@ -498,20 +480,20 @@ private:
 	int boo_;
 };
 
-template <class _Node>
-class Ctor<A4*, _Node> {
+template <class Node>
+class Ctor<A4*, Node> {
 public:
-	static A4* ctor(_Node& node) {
+	static A4* ctor(Node& node) {
 		std::string name;
 		int boo;
-		node.named(boo, "boo");
+		node.named(boo,  "boo");
 		node.named(name, "name");
 		return new A4(name, boo);
 	}
 };
 
 TEST(A4, 0) {
-	A4* a = new A4("cool a", 15);
+	A4* a  = new A4("cool a",  15);
 	A4* a2 = new A4("cool b", -15);
 	std::ofstream fout("test.txt");
 	OutputTextSerializer out(fout);
@@ -527,7 +509,7 @@ TEST(A4, 0) {
 }
 
 TEST(A4, 1) {
-	A4* a = new A4("cool a", 15);
+	A4* a  = new A4("cool a", 15);
 	A4* a2 = nullptr;
 	std::ofstream fout("test.txt");
 	OutputTextSerializer out(fout);
@@ -547,5 +529,7 @@ GTEST_API_ int main(int argc, char **argv) {
 	bike::Static::add_std_renames();
 	testing::InitGoogleTest(&argc, argv);
 	int code = RUN_ALL_TESTS();
+	if (code != 0)
+		int p = 0; // Breakpoint here
 	return code;
 }

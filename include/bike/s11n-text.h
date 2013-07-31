@@ -269,7 +269,7 @@ public:
 			read_header(type, "");
 		save_pos();
 		// Read parameters needed for constructing object
-		T t = Ctor::ctor(*this);
+		T t(Ctor::ctor(*this));
 		// Start once again and read all parameters
 		restore_pos();
 		InputTextSerializerCall<T&> ser;
@@ -301,10 +301,7 @@ protected:
 		std::string real_type(type.name());
 
 		if (type != typeid(UnknownType))
-		{
-			auto q = Static::normalize_class(type);
 			assert(Static::normalize_class(type) == full_type && "Reading wrong object!");
-		}
 
 		unsigned int ref = 0;
 		in_ >> ref;
@@ -375,7 +372,8 @@ protected:
 			return nodes_.end();
 
 		Nodes::iterator i = nodes_.begin();
-		for (; i != nodes_.end(); ++i) {
+		Nodes::iterator e = nodes_.end();
+		for (; i != e; ++i) {
 			if (i->name_ == name)
 				return i;
 		}
