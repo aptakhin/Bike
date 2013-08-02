@@ -189,14 +189,31 @@ public:
 
 	virtual ~A() {}
 
+	const std::string& name() const { return name_; }
+
 	template <class Node>
 	void ser(Node& node, int version) {
 		node.version(1);
-		node & name_;
+		node.named(name_, "name");
 	}
 
 private:
 	std::string name_;
+};
+
+bool operator == (const A& l, const A& r)
+{
+	return l.name() == r.name();
+}
+
+template <class Node>
+class Ctor<A*, Node> {
+public:
+	static A* ctor(Node& node) {
+		std::string name;
+		node.search(name, "name");
+		return new A(name);
+	}
 };
 
 class B : public A {
@@ -205,11 +222,31 @@ public:
 
 	template <class Node>
 	void ser(Node& node, int version) {
-		node.base<A>(this) & num_;
+		node.base<A>(this);
+		node.named(num_, "num");
 	}
+
+	int num() const { return num_; }
 
 private:
 	int num_;
+};
+
+bool operator == (const B& l, const B& r)
+{
+	return l.name() == r.name() && l.num() == r.num();
+}
+
+template <class Node>
+class Ctor<B*, Node> {
+public:
+	static B* ctor(Node& node) {
+		std::string name;
+		int num;
+		node.search(name, "name");
+		node.search(num, "num");
+		return new B(name);
+	}
 };
 
 TEST(AB, 0) {
@@ -227,6 +264,8 @@ TEST(AB, 0) {
 	std::ifstream fin("test.txt");
 	InputTextSerializer in(fin);
 	in >> nb;
+
+	ASSERT_EQ(b, nb);
 }
 
 TEST(AB, 1) {
@@ -244,6 +283,25 @@ TEST(AB, 1) {
 	std::ifstream fin("test.txt");
 	InputTextSerializer in(fin);
 	in >> nb;
+
+	ASSERT_EQ(b, nb);
+}
+
+template <typename T>
+bool operator == (const std::vector<T>& l, const std::vector<T>& r)
+{
+	return std::equal(l.begin(), l.end(), r.begin());
+}
+
+template <typename T>
+bool deref_eq (const T* l, const T* r) {
+	return *l == *r;
+}
+
+template <typename T>
+bool operator == (const std::vector<T*>& l, const std::vector<T*>& r)
+{
+	return std::equal(l.begin(), l.end(), r.begin(), deref_eq<T>);
 }
 
 TEST(Vector, 0) {
@@ -256,6 +314,8 @@ TEST(Vector, 0) {
 	std::ifstream fin("test.txt");
 	InputTextSerializer in(fin);
 	in >> nq;
+
+	ASSERT_EQ(q, nq);
 }
 
 TEST(Vector, 1) {
@@ -272,6 +332,30 @@ TEST(Vector, 1) {
 	std::ifstream fin("test.txt");
 	InputTextSerializer in(fin);
 	in >> nv;
+
+	ASSERT_EQ(v, nv);
+}
+
+TEST(ABInherit, 0) {
+	A* a = new A("a object");
+	A* b = new B("b object", 3);
+
+	std::ofstream fout("test.txt");
+
+	OutputTextSerializer out(fout);
+	out << a << b;
+
+	fout.close();
+
+	A* na = nullptr, *nb = nullptr;
+	std::ifstream fin("test.txt");
+	InputTextSerializer in(fin);
+	in >> na >> nb;
+
+	ASSERT_NE(nullptr, dynamic_cast<A*>(na));
+	ASSERT_NE(nullptr, dynamic_cast<B*>(nb));
+	ASSERT_EQ(*a, *na);
+	ASSERT_EQ(*b, *nb);
 }
 
 class A2 {
@@ -370,6 +454,18 @@ TEST(UsualPtr, 1) {
 	ASSERT_EQ(*a, *b);
 }
 
+template <typename T>
+bool operator == (const std::list<T>& l, const std::list<T>& r)
+{
+	return std::equal(l.begin(), l.end(), r.begin());
+}
+
+template <typename T>
+bool operator == (const std::list<T*>& l, const std::list<T*>& r)
+{
+	return std::equal(l.begin(), l.end(), r.begin(), deref_eq<T>);
+}
+
 TEST(List, 0) {
 	std::list<A2*> l;
 	l.push_back(new A2("a"));
@@ -385,8 +481,7 @@ TEST(List, 0) {
 	InputTextSerializer in(fin);
 	in >> nl;
 
-	int p = 0;
-	//ASSERT_EQ(l, nl);
+	ASSERT_EQ(l, nl);
 }
 
 class A3 {

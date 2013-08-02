@@ -255,6 +255,7 @@ public:
 	}
 };
 
+/// Specialize template to make non-default constructor.
 template <class T, class Node>
 class Ctor<T*, Node> {
 public:
