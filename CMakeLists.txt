@@ -8,17 +8,24 @@ set(S11NT_SRC
   include/bike/s11n.h
   include/bike/s11n-text.h
   tests/s11n-tests.cpp
+  tests/s11n-text-tests.h
   tests/gtest/gtest.h
   tests/gtest/gtest-all.cc
 )
 
 source_group("s11n" FILES 
   include/bike/s11n.h 
+  include/bike/s11n-text.h
 )
 
 source_group("gtest" FILES 
   tests/gtest/gtest.h 
   tests/gtest/gtest-all.cc
+)
+
+source_group("tests" FILES 
+  tests/s11n-tests.cpp
+  tests/s11n-text-tests.h
 )
 
 add_definitions(-D_VARIADIC_MAX=10)
