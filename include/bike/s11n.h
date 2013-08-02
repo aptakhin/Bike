@@ -84,7 +84,6 @@ protected:
 	RefMap refs_;
 };
 
-
 class ReferencesPtr
 {
 public:
@@ -248,18 +247,18 @@ public:
 };
 
 /// All objects constructor. Specialize template to make non-default constructor.
-template <class T, class _Node>
+template <class T, class Node>
 class Ctor {
 public:
-	static T ctor(_Node& node) {
+	static T ctor(Node& node) {
 		return T();
 	}
 };
 
-template <class T, class _Node>
-class Ctor<T*, _Node> {
+template <class T, class Node>
+class Ctor<T*, Node> {
 public:
-	static T* ctor(_Node& node) {
+	static T* ctor(Node& node) {
 		return new T();
 	}
 };

@@ -27,9 +27,9 @@ public:
 
 	void version(unsigned int ver) { version_.version(ver); }
 
-	template <typename _Base>
-	OutputTextSerializerNode& base(_Base* base_ptr) {
-		_Base* base = static_cast<_Base*>(base_ptr);
+	template <typename Base>
+	OutputTextSerializerNode& base(Base* base_ptr) {
+		Base* base = static_cast<Base*>(base_ptr);
 		return *this & (*base);
 	}
 
@@ -436,7 +436,7 @@ TS_SIMPLE(unsigned int);
 TS_SIMPLE(float);
 TS_SIMPLE(double);
 
-// Make pointers work!
+// Let pointers work!
 template <class T>
 class InputTextSerializerCall<T*&> {
 public:
