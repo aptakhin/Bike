@@ -14,6 +14,56 @@ bool real_eq(_T a, _T b) {
 
 using namespace bike;
 
+class TextSerializationTester
+{
+public:
+	TextSerializationTester(const std::string orig)
+	:	orig_(orig)
+	{
+		std::ostringstream out;
+		OutputTextSerializerNode node(out, nullptr);
+		OutputTextSerializerCall<std::string&> str_out;
+		str_out.call(orig_, node);
+
+		std::istringstream in(out.str());
+		InputTextSerializerNode in_node(in, nullptr, "");
+		InputTextSerializerCall<std::string&> str_in;
+		str_in.call(read_, in_node);
+	}
+
+	const std::string& orig() const { return orig_; }
+	const std::string& read() const { return read_; }
+
+protected:
+	std::string orig_;
+	std::string read_;
+};
+
+TEST(StrSerialization, 0) {
+	//TextSerializationTester test("test");
+	//ASSERT_EQ(test.orig(), test.read());
+}
+
+TEST(StrSerialization, 1) {
+	TextSerializationTester test("\"test");
+	ASSERT_EQ(test.orig(), test.read());
+}
+
+TEST(StrSerialization, 2) {
+	TextSerializationTester test("\"test\"");
+	ASSERT_EQ(test.orig(), test.read());
+}
+
+TEST(StrSerialization, 3) {
+	TextSerializationTester test("\\\"test\"");
+	ASSERT_EQ(test.orig(), test.read());
+}
+
+TEST(StrSerialization, 4) {
+	TextSerializationTester test("my \"cool\" string // \\!");
+	ASSERT_EQ(test.orig(), test.read());
+}
+
 TEST(Int, 0) {
 	int x = 5;
 
@@ -270,7 +320,7 @@ TEST(AB, 0) {
 
 TEST(AB, 1) {
 	
-	B b("my \"cool\" string // \\!", 3);
+	B b("my", 3);
 
 	std::ofstream fout("test.txt");
 

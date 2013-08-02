@@ -506,10 +506,13 @@ public:
 				t += '\\', p = 0;
 			else if (p == '\\' && c == '"')
 				t += '"', p = 0;
+			else if (p == '\\' && c == '\\')
+				t += '\\', p = 0;
 			else if (c == '"')
 				break;
 			else {
-				t += c;
+				if (c != '\\')
+					t += c;
 				p = c;
 			}
 		}
@@ -522,7 +525,7 @@ public:
 	void call(std::string& t, OutputTextSerializerNode& node) {
 		node.out() << '"' << escape_str(t) << '"';
 	};
-private:
+//private:
 	std::string escape_str(const std::string& str) {
 		std::string res;
 		std::string::const_iterator i = str.begin();
