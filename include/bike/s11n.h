@@ -202,24 +202,6 @@ public:
 	}
 };
 
-template <typename T>
-void reg_type() {
-	Types::Type t(typeid(T));
-	t.ctor = static_cast<Types::Type::Ctor>(&Ctor<T*, InputTextSerializerNode>::ctor);
-	Types::t().push_back(t);
-}
-
-template <typename T>
-bool is_registered() {
-	const std::type_index type = typeid(T); 
-	std::vector<Types::Type>::const_iterator i = Types::t().begin();
-	for (; i != Types::t().end(); ++i) {
-		if (i->info == type) 
-			return true;
-	}
-	return false;
-}
-
 template <class T>
 class Typeid {
 public:

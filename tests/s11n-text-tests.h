@@ -40,8 +40,8 @@ protected:
 };
 
 TEST(StrSerialization, 0) {
-	//TextSerializationTester test("test");
-	//ASSERT_EQ(test.orig(), test.read());
+	TextSerializationTester test("test");
+	ASSERT_EQ(test.orig(), test.read());
 }
 
 TEST(StrSerialization, 1) {
@@ -384,28 +384,6 @@ TEST(Vector, 1) {
 	in >> nv;
 
 	ASSERT_EQ(v, nv);
-}
-
-TEST(ABInherit, 0) {
-	A* a = new A("a object");
-	A* b = new B("b object", 3);
-
-	std::ofstream fout("test.txt");
-
-	OutputTextSerializer out(fout);
-	out << a << b;
-
-	fout.close();
-
-	A* na = nullptr, *nb = nullptr;
-	std::ifstream fin("test.txt");
-	InputTextSerializer in(fin);
-	in >> na >> nb;
-
-	ASSERT_NE(nullptr, dynamic_cast<A*>(na));
-	ASSERT_NE(nullptr, dynamic_cast<B*>(nb));
-	ASSERT_EQ(*a, *na);
-	ASSERT_EQ(*b, *nb);
 }
 
 class A2 {
