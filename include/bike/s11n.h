@@ -5,7 +5,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <typeindex>
+#ifdef S11N_CPP11
+#	include <typeindex>
+#endif
 #include <type_traits>
 #include <list>
 #include <memory>
@@ -24,6 +26,45 @@
 
 namespace bike {
 
+class type_index
+{
+public:
+	type_index(const std::type_info* info) : info_(info) {}
+
+	type_index(const type_index& index) : info_(index.info_) {}
+
+	type_index& operator = (const type_index& index)
+	{
+		info_ = index.info_;
+		return *this;
+    }
+
+	bool operator < (const type_index& index) const
+	{
+		return info_->before(*index.info_);
+	}
+
+	bool operator == (const type_index& index) const
+	{
+		return *info_ == *index.info_;
+	}
+
+	bool operator != (const type_index& index) const
+	{
+		return *info_ != *index.info_;
+	}
+
+	const char* name() const
+	{
+        return info_->name();
+    }
+
+protected:
+	const std::type_info* info_;
+};
+
+#define S11N_NULLPTR 0
+
 class Version {
 public:
 	Version() : version_(0) {}
@@ -36,6 +77,12 @@ public:
 		assert(!last());
 		return version_;
 	}
+
+	Version& operator = (const Version& cpy)
+	{
+		version_ = cpy.version_;
+        return *this;
+    }
 
 	bool operator < (int r) const {
 		return version_ < r && !last();
@@ -72,7 +119,7 @@ public:
 
 	void* get(unsigned int key) const {
 		RefMapConstIter found = refs_.find(key);
-		return found != refs_.end()? found->second : nullptr;
+		return found != refs_.end()? found->second : S11N_NULLPTR;
 	}
 
 	template <typename T>
@@ -123,14 +170,14 @@ public:
 	public:	static unsigned int set(T* key, ReferencesPtr* refs) { return refs->set(to_ptr); } };
 
 S11N_ITS_PTR(T*, key);
-S11N_ITS_PTR(std::shared_ptr<T>, key.get());
+//S11N_ITS_PTR(std::shared_ptr<T>, key.get());
 
 class Renames
 {
 public:
 
-	typedef std::map<std::type_index, std::string> RenamesMap;
-	typedef std::map<std::type_index, std::string>::const_iterator RenamesMapConstIter;
+	typedef std::map<type_index, std::string> RenamesMap;
+	typedef std::map<type_index, std::string>::const_iterator RenamesMapConstIter;
 
 	static RenamesMap& map()
 	{
@@ -170,9 +217,8 @@ public:
 		return true;
 	}
 
-	static void add_rename(const std::type_index& index, const char* crename) {
+	static void add_rename(const type_index& index, const char* crename) {
 		std::string rename;
-
 		std::string maybe_monstrous_name = index.name();
 
 		if (starts_with(maybe_monstrous_name, "class"))
@@ -185,10 +231,10 @@ public:
 	}
 
 	static void add_std_renames() {
-		S11N_RENAME(std::string);
+		//S11N_RENAME(std::string);
 	}
 
-	static std::string normalize_class(const std::type_index& index) {
+	static std::string normalize_class(const type_index& index) {
 		Renames::RenamesMapConstIter found = Renames::map().find(index);
 		if (found != Renames::map().end())
 			return found->second;

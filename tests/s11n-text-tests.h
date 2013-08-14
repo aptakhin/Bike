@@ -26,7 +26,7 @@ public:
 		str_out.call(orig_, node);
 
 		std::istringstream in(out.str());
-		InputTextSerializerNode in_node(in, nullptr, "");
+		InputTextSerializerNode in_node(&in, nullptr, "");
 		InputTextSerializerCall<std::string&> str_in;
 		str_in.call(read_, in_node);
 	}
