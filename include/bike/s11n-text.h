@@ -470,7 +470,7 @@ public:
 		char c1, c2;
 		node.in() >> c1;
 		if (c1 == '(' && node.in().peek() == ')') {
-			t = nullptr;
+			t = S11N_NULLPTR;
 			node._notify_null_object();
 			node.in().get(c2);
 		}
@@ -485,7 +485,7 @@ template <class T>\
 class OutputTextSerializerCall<T*&> {
 public:
 	void call(T*& t, OutputTextSerializerNode& node) {
-		if (t != nullptr)
+		if (t != S11N_NULLPTR)
 			(*t).ser(node, -1);
 		else
 			node.out() << "() ";

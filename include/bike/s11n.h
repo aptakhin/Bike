@@ -271,7 +271,7 @@ template <class T>
 class Typeid<T*> {
 public:
 	static const std::type_info& type(const T* t) {
-		if (t == nullptr)
+		if (t == S11N_NULLPTR)
 			return type();
 		return typeid(const_cast<T*>(t));
 	}
