@@ -2,16 +2,20 @@
 //
 #pragma once
 
-#include <iostream>
+#include <iosfwd>
+#include <type_traits>
 #include <string>
 #include <vector>
+#include <memory>
+#include <map>
+
 #ifdef S11N_CPP11
 #	include <typeindex>
 #endif
-#include <type_traits>
+
+// Need this for simple using vector, list
+#include <string>
 #include <list>
-#include <memory>
-#include <map>
 
 #ifdef _MSC_VER
 #	include <crtdbg.h>
@@ -24,8 +28,11 @@
 #	endif	
 #endif
 
+#define S11N_NULLPTR NULL
+
 namespace bike {
 
+/// std::type_index for C++03
 class type_index
 {
 public:
@@ -62,8 +69,6 @@ public:
 protected:
 	const std::type_info* info_;
 };
-
-#define S11N_NULLPTR 0
 
 class Version {
 public:
@@ -107,7 +112,6 @@ public:
 protected:
 	int version_;
 };
-
 
 class ReferencesId
 {
@@ -170,7 +174,10 @@ public:
 	public:	static unsigned int set(T* key, ReferencesPtr* refs) { return refs->set(to_ptr); } };
 
 S11N_ITS_PTR(T*, key);
-//S11N_ITS_PTR(std::shared_ptr<T>, key.get());
+
+#ifdef S11N_CPP11
+S11N_ITS_PTR(std::shared_ptr<T>, key.get());
+#endif
 
 class Renames
 {
@@ -186,7 +193,7 @@ public:
 	}
 };
 
-#define S11N_RENAME(cl) Static::add_rename(typeid(cl), #cl);
+#define S11N_RENAME(cl) Static::add_rename(&typeid(cl), #cl);
 
 class Static
 {
@@ -231,7 +238,7 @@ public:
 	}
 
 	static void add_std_renames() {
-		//S11N_RENAME(std::string);
+		S11N_RENAME(std::string);
 	}
 
 	static std::string normalize_class(const type_index& index) {
