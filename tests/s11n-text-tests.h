@@ -26,7 +26,7 @@ public:
 		str_out.call(orig_, node);
 
 		std::istringstream in(out.str());
-		InputTextSerializerNode in_node(in, nullptr, "");
+		InputTextSerializerNode in_node(&in, nullptr, "");
 		InputTextSerializerCall<std::string&> str_in;
 		str_in.call(read_, in_node);
 	}
@@ -86,7 +86,7 @@ TEST(Int, 0) {
 struct Vec2 {
 	
 	template <class Node>
-	void ser(Node& node, int version) {
+	void ser(Node& node, Version vers) {
 		node & x & y;
 	}
 
@@ -141,7 +141,7 @@ TEST(Vec2, 1) {
 struct Vec2F {
 	
 	template <class Node>
-	void ser(Node& node, int version) {
+	void ser(Node& node, Version vers) {
 		//node & x & y;
 		S11N_VAR(x, node);
 		S11N_VAR(y, node);
@@ -198,7 +198,7 @@ TEST(Vec2F, InvalidRead) {
 struct Vec2D {
 	
 	template <class Node>
-	void ser(Node& node, int version) {
+	void ser(Node& node, Version vers) {
 		node & x & y;
 	}
 
@@ -242,7 +242,7 @@ public:
 	const std::string& name() const { return name_; }
 
 	template <class Node>
-	void ser(Node& node, int version) {
+	void ser(Node& node, Version vers) {
 		node.version(1);
 		node.named(name_, "name");
 	}
@@ -271,7 +271,7 @@ public:
 	B(const std::string& name, int n) : A(name), num_(n) {}
 
 	template <class Node>
-	void ser(Node& node, int version) {
+	void ser(Node& node, Version vers) {
 		node.base<A>(this);
 		node.named(num_, "num");
 	}
@@ -386,32 +386,6 @@ TEST(Vector, 1) {
 	ASSERT_EQ(v, nv);
 }
 
-bike::Register1<InputTextSerializerNode> reg1;
-
-TEST(ABInherit, 0) {
-	A* a = new A("a object");
-	A* b = new B("b object", 3);
-
-	reg1.reg_type<B>();
-
-	std::ofstream fout("test.txt");
-
-	OutputTextSerializer out(fout);
-	out << a << b;
-
-	fout.close();
-
-	A* na = nullptr, *nb = nullptr;
-	std::ifstream fin("test.txt");
-	InputTextSerializer in(fin);
-	in >> na >> nb;
-
-	ASSERT_NE(nullptr, dynamic_cast<A*>(na));
-	ASSERT_NE(nullptr, dynamic_cast<B*>(nb));
-	ASSERT_EQ(*a, *na);
-	ASSERT_EQ(*b, *nb);
-}
-
 class A2 {
 public:
 
@@ -424,7 +398,7 @@ public:
 	}
 
 	template <class Node>
-	void ser(Node& node, int version) {
+	void ser(Node& node, Version vers) {
 		node.version(1);
 		node.named(boo_,  "boo");
 		node.named(name_, "name");
@@ -550,7 +524,7 @@ public:
 	}
 
 	template <class Node>
-	void ser(Node& node, int version) {
+	void ser(Node& node, Version vers) {
 		node.version(1);
 		node.named(boo_,  "boo");
 		node.named(name_, "name");
@@ -618,7 +592,7 @@ public:
 	}
 
 	template <class Node>
-	void ser(Node& node, int version) {
+	void ser(Node& node, Version vers) {
 		node.version(1);
 		node.named(boo_, "boo");
 		node.named(name_, "name");
@@ -673,3 +647,4 @@ TEST(A4, 1) {
 	ASSERT_EQ(*a, *b);
 	ASSERT_EQ(a2, b2);
 }
+

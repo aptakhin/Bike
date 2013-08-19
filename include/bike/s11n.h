@@ -2,14 +2,21 @@
 //
 #pragma once
 
-#include <iostream>
+#include <iosfwd>
+#include <type_traits>
 #include <string>
 #include <vector>
-#include <typeindex>
-#include <type_traits>
-#include <list>
 #include <memory>
 #include <map>
+#include <assert.h>
+
+#ifdef S11N_CPP11
+#	include <typeindex>
+#endif
+
+// Need this for simple using vector, list
+#include <string>
+#include <list>
 
 #ifdef _MSC_VER
 #	include <crtdbg.h>
@@ -22,45 +29,91 @@
 #	endif	
 #endif
 
+#define S11N_NULLPTR NULL
+
 namespace bike {
+
+/// std::type_index for C++03
+class type_index
+{
+public:
+	type_index(const std::type_info* info) : info_(info) {}
+
+	type_index(const type_index& index) : info_(index.info_) {}
+
+	type_index& operator = (const type_index& index)
+	{
+		info_ = index.info_;
+		return *this;
+    }
+
+	bool operator < (const type_index& index) const
+	{
+		return info_->before(*index.info_);
+	}
+
+	bool operator == (const type_index& index) const
+	{
+		return *info_ == *index.info_;
+	}
+
+	bool operator != (const type_index& index) const
+	{
+		return *info_ != *index.info_;
+	}
+
+	const char* name() const
+	{
+        return info_->name();
+    }
+
+protected:
+	const std::type_info* info_;
+};
 
 class Version {
 public:
 	Version() : version_(0) {}
+	Version(int v) : version_(v) {}
 
 	void version(int version) {
 		version_ = version;
 	}
 
 	int version() {
-		assert(!last());
+		assert(!latest());
 		return version_;
 	}
 
+	Version& operator = (const Version& cpy)
+	{
+		version_ = cpy.version_;
+        return *this;
+    }
+
 	bool operator < (int r) const {
-		return version_ < r && !last();
+		return version_ < r && !latest();
 	};
 
 	bool operator <= (int r) const {
-		return version_ <= r && !last();
+		return version_ <= r && !latest();
 	};
 
 	bool operator > (int r) const {
-		return version_ > r || last();
+		return version_ > r || latest();
 	};
 
 	bool operator >= (int r) const {
-		return version_ >= r || last();
+		return version_ >= r || latest();
 	};
 
-	bool last() const {
+	bool latest() const {
 		return version_ == -1;
 	};
 
 protected:
 	int version_;
 };
-
 
 class ReferencesId
 {
@@ -72,7 +125,7 @@ public:
 
 	void* get(unsigned int key) const {
 		RefMapConstIter found = refs_.find(key);
-		return found != refs_.end()? found->second : nullptr;
+		return found != refs_.end()? found->second : S11N_NULLPTR;
 	}
 
 	template <typename T>
@@ -123,14 +176,17 @@ public:
 	public:	static unsigned int set(T* key, ReferencesPtr* refs) { return refs->set(to_ptr); } };
 
 S11N_ITS_PTR(T*, key);
+
+#ifdef S11N_CPP11
 S11N_ITS_PTR(std::shared_ptr<T>, key.get());
+#endif
 
 class Renames
 {
 public:
 
-	typedef std::map<std::type_index, std::string> RenamesMap;
-	typedef std::map<std::type_index, std::string>::const_iterator RenamesMapConstIter;
+	typedef std::map<type_index, std::string> RenamesMap;
+	typedef std::map<type_index, std::string>::const_iterator RenamesMapConstIter;
 
 	static RenamesMap& map()
 	{
@@ -139,7 +195,7 @@ public:
 	}
 };
 
-#define S11N_RENAME(cl) Static::add_rename(typeid(cl), #cl);
+#define S11N_RENAME(cl) Static::add_rename(&typeid(cl), #cl);
 
 class Static
 {
@@ -170,9 +226,8 @@ public:
 		return true;
 	}
 
-	static void add_rename(const std::type_index& index, const char* crename) {
+	static void add_rename(const type_index& index, const char* crename) {
 		std::string rename;
-
 		std::string maybe_monstrous_name = index.name();
 
 		if (starts_with(maybe_monstrous_name, "class"))
@@ -188,7 +243,7 @@ public:
 		S11N_RENAME(std::string);
 	}
 
-	static std::string normalize_class(const std::type_index& index) {
+	static std::string normalize_class(const type_index& index) {
 		Renames::RenamesMapConstIter found = Renames::map().find(index);
 		if (found != Renames::map().end())
 			return found->second;
@@ -346,7 +401,7 @@ template <class T>
 class Typeid<T*> {
 public:
 	static const std::type_info& type(const T* t) {
-		if (t == nullptr)
+		if (t == S11N_NULLPTR)
 			return type();
 		return typeid(const_cast<T*>(t));
 	}
@@ -383,7 +438,7 @@ public:
 		version_() {
 	}
 
-	void version(unsigned int ver) { version_.version(ver); }
+	void version(int ver) { version_.version(ver); }
 
 	template <typename Base>
 	HierarchyNode& base(Base* base_ptr) {

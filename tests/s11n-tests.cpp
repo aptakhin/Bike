@@ -1,11 +1,12 @@
 #include <iostream>
 #include <fstream>
+#include <cmath>
+#include <limits>
+#include <memory>
 
 #include <gtest/gtest.h>
 #include <bike/s11n.h>
 #include <bike/s11n-text.h>
-#include <cmath>
-#include <limits>
 
 #include "s11n-text-tests.h"
 
