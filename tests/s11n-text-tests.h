@@ -386,32 +386,6 @@ TEST(Vector, 1) {
 	ASSERT_EQ(v, nv);
 }
 
-bike::Register1<InputTextSerializerNode> reg1;
-
-TEST(ABInherit, 0) {
-	A* a = new A("a object");
-	A* b = new B("b object", 3);
-
-	reg1.reg_type<B>();
-
-	std::ofstream fout("test.txt");
-
-	OutputTextSerializer out(fout);
-	out << a << b;
-
-	fout.close();
-
-	A* na = nullptr, *nb = nullptr;
-	std::ifstream fin("test.txt");
-	InputTextSerializer in(fin);
-	in >> na >> nb;
-
-	ASSERT_NE(nullptr, dynamic_cast<A*>(na));
-	ASSERT_NE(nullptr, dynamic_cast<B*>(nb));
-	ASSERT_EQ(*a, *na);
-	ASSERT_EQ(*b, *nb);
-}
-
 class A2 {
 public:
 
