@@ -25,7 +25,7 @@ public:
 		refs_(refs) {
 	}
 
-	void version(unsigned int ver) { version_.version(ver); }
+	void version(int ver) { version_.version(ver); }
 
 	template <typename Base>
 	OutputTextSerializerNode& base(Base* base_ptr) {
@@ -86,7 +86,7 @@ public:
 		/*
 		 * Please implement this method in your class.
 		 */
-		t.ser(node, -1);
+		t.ser(node, Version(-1));
 	};
 };
 
@@ -132,7 +132,7 @@ public:
 		return *this;
     }
 
-	void version(unsigned int ver) { version_.version(ver); }
+	void version(int ver) { version_.version(ver); }
 
 	bool null() const { return null_object_; }
 
@@ -413,7 +413,7 @@ public:
 		/*
 		 * Please implement this method in your class.
 		 */
-		t.ser(node, -1);
+		t.ser(node, Version(-1));
 	};
 };
 
@@ -462,6 +462,8 @@ TS_SIMPLE(unsigned long);
 TS_SIMPLE(float);
 TS_SIMPLE(double);
 
+#undef TS_SIMPLE
+
 // Let pointers work!
 template <class T>
 class InputTextSerializerCall<T*&> {
@@ -486,7 +488,7 @@ class OutputTextSerializerCall<T*&> {
 public:
 	void call(T*& t, OutputTextSerializerNode& node) {
 		if (t != S11N_NULLPTR)
-			(*t).ser(node, -1);
+			(*t).ser(node, Version(-1));
 		else
 			node.out() << "() ";
 	};

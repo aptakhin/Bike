@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <assert.h>
 
 #ifdef S11N_CPP11
 #	include <typeindex>
@@ -73,13 +74,14 @@ protected:
 class Version {
 public:
 	Version() : version_(0) {}
+	Version(int v) : version_(v) {}
 
 	void version(int version) {
 		version_ = version;
 	}
 
 	int version() {
-		assert(!last());
+		assert(!latest());
 		return version_;
 	}
 
@@ -90,22 +92,22 @@ public:
     }
 
 	bool operator < (int r) const {
-		return version_ < r && !last();
+		return version_ < r && !latest();
 	};
 
 	bool operator <= (int r) const {
-		return version_ <= r && !last();
+		return version_ <= r && !latest();
 	};
 
 	bool operator > (int r) const {
-		return version_ > r || last();
+		return version_ > r || latest();
 	};
 
 	bool operator >= (int r) const {
-		return version_ >= r || last();
+		return version_ >= r || latest();
 	};
 
-	bool last() const {
+	bool latest() const {
 		return version_ == -1;
 	};
 
@@ -308,7 +310,7 @@ public:
 		version_() {
 	}
 
-	void version(unsigned int ver) { version_.version(ver); }
+	void version(int ver) { version_.version(ver); }
 
 	template <typename Base>
 	HierarchyNode& base(Base* base_ptr) {
