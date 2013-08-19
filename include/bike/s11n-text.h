@@ -494,26 +494,6 @@ public:
 	};
 };
 
-class Types {
-public:
-	struct Type {
-		const std::type_info& info;
-		
-		typedef void* (*Ctor)(InputTextSerializerNode&);
-		Ctor ctor;
-		std::vector<Type*> base;
-
-		Type(const std::type_info& info) : info(info) {}
-	};
-
-public:
-	static std::vector<Type>& t() {
-		static std::vector<Type> types;
-		return types;
-	}
-};
-
-
 //
 // std::string
 //
