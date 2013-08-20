@@ -107,6 +107,12 @@ class InputTextSerializerNode {
 protected:
 	typedef std::vector<InputTextSerializerNode> Nodes;
 
+	struct Header
+	{
+		std::string name;
+		std::string type;
+	};
+
 public:
 	InputTextSerializerNode(std::istream& in, ReferencesId* refs, const std::string& name = "") 
 	:	name_(name),
@@ -158,7 +164,7 @@ public:
 		{
 		}
 
-		std::string name = node.read_header(info, attr_name);
+		Header header = node.read_header(info, attr_name);
 
 		// If we have read this attribute earlier then it was already loaded. 
 		// Miss least desc and return.
@@ -169,14 +175,26 @@ public:
 		}
 
 		std::streamoff pos = in_.tellg();
-		InputTextSerializerCall<T&> ser;
-		ser.call(t, node);
+		read_object<T&>(header, node, t);
 		read_closing();
 
-		if (attr_name == "" || (attr_name != "" && attr_name == name)) {
+		if (attr_name == "" || (attr_name != "" && attr_name == header.name)) {
 			nodes_.emplace_back(node);
 		}
 		return *this;
+	}
+
+	template <typename T>
+	void read_object(const Header& header, InputTextSerializerNode& node, T& t)
+	{
+		InputTextSerializerCall<T&> ser;
+		ser.call(t, node);
+
+		//if (header.type != type_index())
+		{
+			// Looking for a factory... plant
+
+		}
 	}
 
 	template <class T>
@@ -286,22 +304,21 @@ public:
 	}
 
 protected:
-	template <class _TypeIndex>
-	std::string read_header(_TypeIndex& type, const std::string& attr_name) {
+	template <class TypeIndex>
+	Header read_header(TypeIndex& type, const std::string& attr_name) {
+		Header header;
 		char c;
 		in_ >> c;
 		assert(c == '(');
 
-		std::string name;
 		InputTextSerializerCall<std::string&> str_ser;
-		str_ser.call(name, *this);
+		str_ser.call(header.name, *this);
 
-		std::string full_type;
-		str_ser.call(full_type, *this);
+		str_ser.call(header.type, *this);
 		std::string real_type(type.name());
 
 		if (type != typeid(UnknownType))
-			assert(Static::normalize_class(type) == full_type && "Reading wrong object!");
+			assert(Static::normalize_class(type) == header.type && "Reading wrong object!");
 
 		unsigned int ref = 0;
 		in_ >> ref;
@@ -310,7 +327,7 @@ protected:
 		in_ >> version;
 		version_.version(version);
 
-		return name;
+		return header;
 	}
 
 	void miss_desc() {
