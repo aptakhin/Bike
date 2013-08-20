@@ -29,5 +29,6 @@ source_group("tests" FILES
 )
 
 add_definitions(-D_VARIADIC_MAX=10)
+add_definitions(-DS11N_CPP11)
 
 add_executable(s11n_tests ${S11NT_SRC})
