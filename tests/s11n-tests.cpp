@@ -9,6 +9,7 @@
 #include <bike/s11n-text.h>
 
 #include "s11n-text-tests.h"
+#include "s11n-xml-tests.h"
 
 GTEST_API_ int main(int argc, char **argv) {
 	bike::Static::add_std_renames();
