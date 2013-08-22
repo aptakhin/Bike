@@ -23,7 +23,7 @@ public:
 };
 
 template <typename Serializer>
-class SimpleTest : public ::testing::Test {
+class BaseTest : public ::testing::Test {
 public:
 	typedef typename Serializer::Input  Input; 
 	typedef typename Serializer::Output Output; 
@@ -37,11 +37,17 @@ public:
 	}
 
 	template <typename T>
+	void test_val_impl(const T& write, T& read)
+	{
+		io_impl(write, read);
+		ASSERT_EQ(write, read);
+	}
+
+	template <typename T>
 	void test_val(const T& write)
 	{
 		T read;
-		io_impl(write, read);
-		ASSERT_EQ(write, read);
+		test_val_impl(write, read);
 	}
 
 	template <typename T, typename P1, typename P2>
@@ -64,15 +70,101 @@ protected:
 	}
 };
 
-TYPED_TEST_CASE_P(SimpleTest);
+TYPED_TEST_CASE_P(BaseTest);
 
-TYPED_TEST_P(SimpleTest, Base) {
+TYPED_TEST_P(BaseTest, Base) {
 	test_val<int>(1);
 	test_val<unsigned int>(2);
 	test_val<short>(3);
 	test_val<unsigned short>(4);
 }
-REGISTER_TYPED_TEST_CASE_P(SimpleTest, Base);
+
+template <typename T>
+struct Vec2 {
+	
+	template <class Node>
+	void ser(Node& node, Version vers) {
+		node & x & y;
+	}
+
+	Vec2() : x(0), y(0) {}
+	Vec2(T x, T y) : x(x), y(y) {}
+
+	bool operator == (const Vec2& rhs) const { return x == rhs.x && y == rhs.y; }
+
+	T x, y;
+};
+
+TYPED_TEST_P(BaseTest, Structs) {
+	test_val<Vec2<int> >   (1,   2);
+	test_val<Vec2<float> > (3.f, 4.f);
+	test_val<Vec2<double> >(5.,  6.);
+}
+
+class Human
+{
+public:
+    Human(const std::string& name) : name_(name) {} 
+
+    virtual ~Human() {}
+
+    const std::string& name() const { return name_; }
+
+	template <typename Node>
+	void ser(Node& node, Version vers)
+	{
+		node.version(1);
+		node & name_;
+	}
+
+protected:
+    std::string name_;
+};
+
+template <typename Node>
+class Ctor<Human*, Node>
+{
+public:
+    static Human* ctor(Node& node) 
+    {
+        std::string name;
+        node.search(name, "name");
+        return new Human(name);
+    }
+};
+
+bool operator == (const Human& l, const Human& r)
+{
+	return l.name() == r.name();
+}
+
+class Superman : public Human
+{
+public:
+    Superman() 
+	:	Human("Clark Kent"), 
+		superpower_(100000) {
+	}    
+
+    void fly();
+
+    template <class Node>
+    void ser(Node& node, int version) 
+    {
+        node.base<Human>(this) & superpower_;
+    }
+
+protected:
+    int superpower_;
+};
+
+TYPED_TEST_P(BaseTest, Classes) {
+	Human base_human("Number 0");
+	Human named_human("Peter Petrov");
+	test_val_impl(named_human, base_human);
+}
+
+REGISTER_TYPED_TEST_CASE_P(BaseTest, Base, Structs, Classes);
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;
-INSTANTIATE_TYPED_TEST_CASE_P(Test, SimpleTest, TestSerializers);
+INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);

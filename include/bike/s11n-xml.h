@@ -106,7 +106,6 @@ public:
 		version_(),
 		read_version_(),
 		refs_(refs) {
-		current_child_ = *xml_.begin();
 	}
 
 	InputXmlSerializerNode& operator = (const InputXmlSerializerNode& node)	{
@@ -139,7 +138,8 @@ public:
 
 	template <class T>
 	InputXmlSerializerNode& named(T& t, const std::string& attr_name) {
-		InputXmlSerializerNode node(this, parent_->next_node(), refs_, attr_name);
+
+		InputXmlSerializerNode node(this, next_child_node(), refs_, attr_name);
 
 		InputXmlSerializerCall<T&> ser;
 		ser.call(t, node);
@@ -152,12 +152,18 @@ public:
 		return false;
 	}
 
-	pugi::xml_node next_node()
-	{
-		return current_child_ = current_child_.next_sibling();
-	}
-
 	pugi::xml_node xml() { return xml_; }
+
+protected:
+	pugi::xml_node next_child_node()
+	{
+		if (current_child_.empty())
+			current_child_ = *xml_.begin();
+		else
+			current_child_ = current_child_.next_sibling();
+
+		return current_child_;
+	}
 
 protected:
 	InputXmlSerializerNode* parent_;
@@ -173,7 +179,7 @@ protected:
 template <class T>
 class InputXmlSerializerCall {
 public:
-	void call(T& t, InputXmlSerializerCall& node) {
+	void call(T& t, InputXmlSerializerNode& node) {
 		/*
 		 * Please implement this method in your class.
 		 */
@@ -223,6 +229,26 @@ SN_RAW(unsigned int, as_uint);
 
 SN_RAW(short, as_int); 
 SN_RAW(unsigned short, as_uint); 
+
+SN_RAW(float, as_float); 
+SN_RAW(double, as_double); 
+
+
+template <>
+class OutputXmlSerializerCall<std::string&> {
+public:
+	void call(std::string& t, OutputXmlSerializerNode& node) {
+		node.xml().append_attribute("value").set_value(t.c_str());
+	};
+};
+template <>
+class InputXmlSerializerCall<std::string&> {
+public:
+	void call(std::string& t, InputXmlSerializerNode& node) {
+		pugi::xml_attribute attr = node.xml().attribute("value");
+		t = std::string(attr.as_string());
+	};
+};
 
 #undef SN_RAW
 
