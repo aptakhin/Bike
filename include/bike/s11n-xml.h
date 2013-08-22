@@ -39,6 +39,9 @@ public:
 		OutputXmlSerializerCall<T&> ser;
 		ser.call(t, node);
 
+		if (!node.version_.latest())
+			xml_node.append_attribute("ver").set_value(node.version_.version());
+
 		return *this;
 	}
 
@@ -210,7 +213,6 @@ SN_RAW(unsigned short, as_uint);
 
 SN_RAW(float, as_float); 
 SN_RAW(double, as_double); 
-
 
 template <>
 class OutputXmlSerializerCall<std::string&> {

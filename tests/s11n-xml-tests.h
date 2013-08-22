@@ -108,7 +108,7 @@ public:
 	template <typename Node>
 	void ser(Node& node, Version vers) {
 		node.version(1);
-		node & name_;
+		node.named(name_, "name");
 	}
 
 protected:
@@ -141,7 +141,7 @@ public:
     void fly();
 
     template <class Node>
-    void ser(Node& node, int version) {
+    void ser(Node& node, Version version) {
         node.base<Human>(this) & superpower_;
     }
 
@@ -150,9 +150,12 @@ protected:
 };
 
 TYPED_TEST_P(BaseTest, Classes) {
-	Human base_human("Number 0");
+	Human base_human("");
 	Human named_human("Peter Petrov");
 	test_val_impl(named_human, base_human);
+
+	Superman singleton, superman_clone;
+	test_val_impl(singleton, superman_clone);
 }
 
 REGISTER_TYPED_TEST_CASE_P(BaseTest, Base, Structs, Classes);
