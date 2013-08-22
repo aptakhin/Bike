@@ -8,15 +8,13 @@
 
 using namespace bike;
 
-class XmlSerializer
-{
+class XmlSerializer {
 public:
 	typedef InputXmlSerializer  Input;
 	typedef OutputXmlSerializer Output;
 };
 
-class TextSerializer
-{
+class TextSerializer {
 public:
 	typedef InputTextSerializer  Input;
 	typedef OutputTextSerializer Output;
@@ -37,22 +35,19 @@ public:
 	}
 
 	template <typename T>
-	void test_val_impl(const T& write, T& read)
-	{
+	void test_val_impl(const T& write, T& read)	{
 		io_impl(write, read);
 		ASSERT_EQ(write, read);
 	}
 
 	template <typename T>
-	void test_val(const T& write)
-	{
+	void test_val(const T& write) {
 		T read;
 		test_val_impl(write, read);
 	}
 
 	template <typename T, typename P1, typename P2>
-	void test_val(const P1& p1, const P2& p2)
-	{
+	void test_val(const P1& p1, const P2& p2) {
 		test_val<T>(T(p1, p2));
 	}
 
@@ -111,8 +106,7 @@ public:
     const std::string& name() const { return name_; }
 
 	template <typename Node>
-	void ser(Node& node, Version vers)
-	{
+	void ser(Node& node, Version vers) {
 		node.version(1);
 		node & name_;
 	}
@@ -125,16 +119,14 @@ template <typename Node>
 class Ctor<Human*, Node>
 {
 public:
-    static Human* ctor(Node& node) 
-    {
+    static Human* ctor(Node& node) {
         std::string name;
         node.search(name, "name");
         return new Human(name);
     }
 };
 
-bool operator == (const Human& l, const Human& r)
-{
+bool operator == (const Human& l, const Human& r) {
 	return l.name() == r.name();
 }
 
@@ -149,8 +141,7 @@ public:
     void fly();
 
     template <class Node>
-    void ser(Node& node, int version) 
-    {
+    void ser(Node& node, int version) {
         node.base<Human>(this) & superpower_;
     }
 

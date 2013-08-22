@@ -9,17 +9,10 @@ namespace bike {
 
 class OutputXmlSerializerNode {
 public:
-	OutputXmlSerializerNode(pugi::xml_node node, OutputXmlSerializerNode* parent, ReferencesPtr* refs) 
+	OutputXmlSerializerNode(OutputXmlSerializerNode* parent, pugi::xml_node node, ReferencesPtr* refs) 
 	:	parent_(parent),
-		out_(parent->out_),
 		refs_(refs),
 		xml_(node) {
-	}
-
-	OutputXmlSerializerNode(std::ostream* out, ReferencesPtr* refs, int dummy) 
-	:	parent_(S11N_NULLPTR),
-		out_(out),
-		refs_(refs) {
 	}
 
 	void version(int ver) { version_.version(ver); }
@@ -38,7 +31,7 @@ public:
 	template <class T>
 	OutputXmlSerializerNode& named(T& t, const std::string& name) {
 		pugi::xml_node xml_node = xml_.append_child("object");
-		OutputXmlSerializerNode node(xml_node, this, refs_);
+		OutputXmlSerializerNode node(this, xml_node, refs_);
 
 		if (!name.empty())
 			xml_node.append_attribute("name").set_value(name.c_str());
@@ -49,16 +42,13 @@ public:
 		return *this;
 	}
 
-	std::ostream& out() { return *out_; }
-
 	pugi::xml_node xml() { return xml_; }
 
 protected:
 	OutputXmlSerializerNode* parent_;
-	std::ostream* out_;
-	Version version_;
-	ReferencesPtr* refs_;
 	pugi::xml_node xml_;
+	ReferencesPtr* refs_;
+	Version version_;
 };
 
 template <class T>
@@ -66,7 +56,7 @@ class OutputXmlSerializerCall {
 public:
 	void call(T& t, OutputXmlSerializerNode& node) {
 		/*
-		 * Please implement this method in your class.
+		 * Please implement `ser` method in your class.
 		 */
 		t.ser(node, Version(-1));
 	};
@@ -75,7 +65,8 @@ public:
 class OutputXmlSerializer : public OutputXmlSerializerNode {
 public:
 	OutputXmlSerializer(std::ostream& out) 
-	: 	OutputXmlSerializerNode(&out, &refs_, 0) {
+	: 	OutputXmlSerializerNode(nullptr, pugi::xml_node(), &refs_),
+		out_(&out) {
 	}
 
 	template <class T>
@@ -86,12 +77,13 @@ public:
 		xml_.append_attribute("fmtver").set_value(1);
 		static_cast<OutputXmlSerializer&>(*this & t);
 
-		doc.save(out());
+		doc.save(*out_);
 		return *this; 
 	}
 
 protected:
 	ReferencesPtr refs_;
+	std::ostream* out_;
 };
 
 class InputXmlSerializerNode {
@@ -99,22 +91,11 @@ protected:
 	typedef std::vector<InputXmlSerializerNode> Nodes;
 
 public:
-	InputXmlSerializerNode(InputXmlSerializerNode* parent, pugi::xml_node node, ReferencesId* refs, const std::string& name = "")
+	InputXmlSerializerNode(InputXmlSerializerNode* parent, pugi::xml_node node, ReferencesId* refs)
 	:	parent_(parent),
-		name_(name),
 		xml_(node),
-		version_(),
-		read_version_(),
 		refs_(refs) {
 	}
-
-	InputXmlSerializerNode& operator = (const InputXmlSerializerNode& node)	{
-		name_         = node.name_;
-		version_      = node.version_;
-		read_version_ = node.read_version_;
-		refs_         = node.refs_;
-		return *this;
-    }
 
 	void version(int ver) { version_.version(ver); }
 
@@ -139,7 +120,7 @@ public:
 	template <class T>
 	InputXmlSerializerNode& named(T& t, const std::string& attr_name) {
 
-		InputXmlSerializerNode node(this, next_child_node(), refs_, attr_name);
+		InputXmlSerializerNode node(this, next_child_node(), refs_);
 
 		InputXmlSerializerCall<T&> ser;
 		ser.call(t, node);
@@ -167,13 +148,10 @@ protected:
 
 protected:
 	InputXmlSerializerNode* parent_;
-	std::string name_;
 	pugi::xml_node xml_;
+	ReferencesId* refs_;
 	pugi::xml_node current_child_;
 	Version version_;
-	Version read_version_;
-	Nodes nodes_;
-	ReferencesId* refs_;
 };
 
 template <class T>
@@ -181,7 +159,7 @@ class InputXmlSerializerCall {
 public:
 	void call(T& t, InputXmlSerializerNode& node) {
 		/*
-		 * Please implement this method in your class.
+		 * Please implement `ser` method in your class.
 		 */
 		t.ser(node, Version(-1));
 	};
