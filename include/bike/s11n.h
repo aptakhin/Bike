@@ -49,7 +49,7 @@ public:
 
 	bool operator < (const type_index& index) const
 	{
-		return info_->before(*index.info_);
+		return info_->before(*index.info_) != 0;
 	}
 
 	bool operator == (const type_index& index) const

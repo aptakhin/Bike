@@ -3,6 +3,7 @@ project(BIKE)
 
 include_directories("include/")
 include_directories("tests/")
+include_directories("tests/pugixml")
 
 set(S11NT_SRC
   include/bike/s11n.h

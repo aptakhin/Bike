@@ -39,34 +39,40 @@ public:
 	template <typename T>
 	void test_val(const T& write)
 	{
-		fout_.open("test.txt");
-		out_.reset(new Output(fout_));
-		*out_ << write;
-		fout_.close();
-
-		fin_.open("test.txt");
 		T read;
-		in_.reset(new Input(fin_));
-		*in_ >> read;
-
-		ASSERT_EQ(read, write);
+		io_impl(write, read);
+		ASSERT_EQ(write, read);
 	}
 
-public:
-	std::unique_ptr<Input> in_;
-	std::ifstream fin_;
+	template <typename T, typename P1, typename P2>
+	void test_val(const P1& p1, const P2& p2)
+	{
+		test_val<T>(T(p1, p2));
+	}
 
-	std::unique_ptr<Output> out_;
-	std::ofstream fout_;
+protected:
+	template <typename T>
+	void io_impl(const T& write, T& read) {
+		std::ofstream fout("test.txt");
+		Output out(fout);
+		out << const_cast<T&>(write);
+		fout.close();
+
+		std::ifstream fin("test.txt");
+		Input in(fin);
+		in >> read;
+	}
 };
 
 TYPED_TEST_CASE_P(SimpleTest);
 
-TYPED_TEST_P(SimpleTest, Int5) {
-	int x = 5;
-	test_val(x);
+TYPED_TEST_P(SimpleTest, Base) {
+	test_val<int>(1);
+	test_val<unsigned int>(2);
+	test_val<short>(3);
+	test_val<unsigned short>(4);
 }
-REGISTER_TYPED_TEST_CASE_P(SimpleTest, Int5);
+REGISTER_TYPED_TEST_CASE_P(SimpleTest, Base);
 
-typedef ::testing::Types<TextSerializer> TestSerializers;
+typedef ::testing::Types<XmlSerializer> TestSerializers;
 INSTANTIATE_TYPED_TEST_CASE_P(Test, SimpleTest, TestSerializers);

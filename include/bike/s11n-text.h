@@ -109,6 +109,12 @@ class InputTextSerializerNode {
 protected:
 	typedef std::vector<InputTextSerializerNode> Nodes;
 
+	struct Header
+	{
+		std::string name;
+		std::string type;
+	};
+
 public:
 	InputTextSerializerNode(std::istream* in, ReferencesId* refs, const std::string& name = "")
 	:	name_(name),
@@ -131,7 +137,7 @@ public:
 		refs_         = node.refs_;
 		return *this;
     }
-
+	
 	void version(int ver) { version_.version(ver); }
 
 	bool null() const { return null_object_; }
@@ -172,7 +178,8 @@ public:
 		{
 		}
 
-		std::string name = node.read_header(info, attr_name);
+		Header header;
+		node.read_header(info, attr_name, header);
 
 		// If we have read this attribute earlier then it was already loaded. 
 		// Miss least desc and return.
@@ -187,7 +194,7 @@ public:
 		ser.call(t, node);
 		read_closing();
 
-		if (attr_name == "" || (attr_name != "" && attr_name == name)) {
+		if (attr_name == "" || (attr_name != "" && attr_name == header.name)) {
 			nodes_.push_back(node);
 		}
 		return *this;
@@ -260,8 +267,9 @@ public:
 
 	template <class Ctor, class T>
 	void custom_ctor(T& t, const std::type_info& type, bool has_header) {
+		Header header;
 		if (!has_header)
-			read_header(type_index(&type), "");
+			read_header(type_index(&type), "", header);
 		save_pos();
 		// Read parameters needed for constructing object
 		t = Ctor::ctor(*this);
@@ -279,8 +287,9 @@ public:
 
 	template <class Ctor, class T>
 	T read_ctor_entity(const std::type_info& type, bool has_header) {
+		Header header;
 		if (!has_header)
-			read_header(type_index(&type), "");
+			read_header(type_index(&type), "", header);
 		save_pos();
 		// Read parameters needed for constructing object
 		T t(Ctor::ctor(*this));
@@ -301,22 +310,20 @@ public:
 
 protected:
 	template <class TypeIndex>
-	std::string read_header(const TypeIndex& type, const std::string& attr_name) {
+	void read_header(const TypeIndex& type, const std::string& attr_name, Header& header) {
 		char c;
 		*in_ >> c;
 		assert(c == '(');
 
-		std::string name;
 		InputTextSerializerCall<std::string&> str_ser;
-		str_ser.call(name, *this);
+		str_ser.call(header.name, *this);
 
-		std::string full_type;
-		str_ser.call(full_type, *this);
+		str_ser.call(header.type, *this);
 		std::string real_type(type.name());
 
 		type_index cmp(&typeid(UnknownType));
-		if (type != cmp)
-			assert(Static::normalize_class(type) == full_type && "Reading wrong object!");
+		//if (type != cmp)
+		//	assert(Static::normalize_class(type) == header.type && "Reading wrong object!");
 
 		unsigned int ref = 0;
 		*in_ >> ref;
@@ -324,8 +331,6 @@ protected:
 		int version;
 		*in_ >> version;
 		version_.version(version);
-
-		return name;
 	}
 
 	void miss_desc() {
