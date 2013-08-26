@@ -41,6 +41,12 @@ public:
 	}
 
 	template <typename T>
+	void test_val() {
+		T read, write;
+		test_val_impl(write, read);
+	}
+
+	template <typename T>
 	void test_val(const T& write) {
 		T read;
 		test_val_impl(write, read);
@@ -154,8 +160,7 @@ TYPED_TEST_P(BaseTest, Classes) {
 	Human named_human("Peter Petrov");
 	test_val_impl(named_human, base_human);
 
-	Superman singleton, superman_clone;
-	test_val_impl(singleton, superman_clone);
+	test_val<Superman>();
 }
 
 REGISTER_TYPED_TEST_CASE_P(BaseTest, Base, Structs, Classes);
