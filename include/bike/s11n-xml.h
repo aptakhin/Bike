@@ -4,6 +4,7 @@
 
 #include "s11n.h"
 #include <pugixml.hpp>
+#include <iterator>
 
 namespace bike {
 
@@ -117,6 +118,7 @@ protected:
 	typedef std::vector<InputXmlSerializerNode> Nodes;
 
 public:
+
 	InputXmlSerializerNode(InputXmlSerializerNode* parent, pugi::xml_node node, ReferencesId* refs)
 	:	parent_(parent),
 		xml_(node),
@@ -180,6 +182,8 @@ public:
 
 		t = reinterpret_cast<T*>(ptr);
 	}
+
+	ReferencesId* refs() { return refs_; }
 
 protected:
 	pugi::xml_node next_child_node()
@@ -285,19 +289,92 @@ public:
 	}
 };
 
+class OutputXmlSequence
+{
+public:
+	OutputXmlSequence(OutputXmlSerializerNode* node) : node_(node) {}
+
+	template <class FwdIter>
+	void write(FwdIter begin, FwdIter end) {
+		node_->xml().append_attribute("concept") = "SEQ";
+
+		for (; begin != end; ++begin)
+			node_->named(*begin, "");
+	}
+
+protected:
+	OutputXmlSerializerNode* node_;
+};
+
+template <class T>
+class InputXmlIter : public std::iterator<std::input_iterator_tag, T>
+{
+public:
+	InputXmlIter(InputXmlSerializerNode* parent, pugi::xml_node::iterator iter) 
+	:	parent_(parent),
+		iter_(iter) {
+	}
+
+	InputXmlIter(const InputXmlIter& i) 
+	:	parent_(i.parent_),
+		iter_(i.iter_) {
+	}
+
+	InputXmlIter operator ++() {
+		++iter_;
+		return *this;
+	}
+
+	InputXmlIter operator ++ (int) {
+		iter_++;
+		return *this;
+	}
+
+	T operator *()
+	{
+		InputXmlSerializerNode node(parent_, *iter_, parent_->refs());
+		T t(Ctor<T, InputXmlSerializerNode>::ctor(node));
+
+		InputXmlSerializerCall<T&> ser;
+		ser.call(t, node);
+		return t;
+	}
+
+	T* operator ->()
+	{
+		return 0;
+	}
+
+	bool operator == (const InputXmlIter& i) const {
+		return iter_ == i.iter_;
+	}
+
+	bool operator != (const InputXmlIter& i) const {
+		return iter_ != i.iter_;
+	}
+
+protected:
+	InputXmlSerializerNode*  parent_;
+	pugi::xml_node::iterator iter_;
+};
+
 // ****** <vector> ext ******
 template <class T>
 class OutputXmlSerializerCall<std::vector<T>&> {
 public:
 	void call(std::vector<T>& t, OutputXmlSerializerNode& node) {
-
+		OutputXmlSequence seq(&node);
+		seq.write(t.begin(), t.end());
 	}
 };
 template <class T>
 class InputXmlSerializerCall<std::vector<T>&> {
 public:
 	void call(std::vector<T>& t, InputXmlSerializerNode& node) {
-
+		InputXmlIter<T> begin(&node, node.xml().begin());
+		InputXmlIter<T>   end(&node, node.xml().end());
+		std::vector<T> made(begin, end);
+		t.swap(made);
 	}
 };
 
