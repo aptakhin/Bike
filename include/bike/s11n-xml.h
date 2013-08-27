@@ -145,12 +145,9 @@ public:
 
 	template <class T>
 	InputXmlSerializerNode& named(T& t, const std::string& attr_name) {
-
 		InputXmlSerializerNode node(this, next_child_node(), refs_);
-
 		InputXmlSerializerCall<T&> ser;
 		ser.call(t, node);
-
 		return *this;
 	}
 

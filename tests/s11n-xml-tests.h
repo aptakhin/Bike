@@ -181,8 +181,10 @@ TYPED_TEST_P(BaseTest, Classes) {
 }
 
 TYPED_TEST_P(BaseTest, Pointers) {
-	Human* base_human = new Human("Ivan Ivanov"), *read_human = S11N_NULLPTR;
-	test_ptr_impl(base_human, read_human);
+	Human* ivan = new Human("Ivan Ivanov"), *read = S11N_NULLPTR;
+	test_ptr_impl(ivan, read);
+	delete read;
+	delete ivan;
 }
 
 REGISTER_TYPED_TEST_CASE_P(BaseTest, Base, Structs, Classes, Pointers);
