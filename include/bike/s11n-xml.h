@@ -37,8 +37,7 @@ public:
 		if (!name.empty())
 			xml_node.append_attribute("name").set_value(name.c_str());
 
-		OutputXmlSerializerCall<T&> ser;
-		ser.call(t, node);
+		OutputXmlSerializerCall<T&>::call(t, node);
 
 		if (!node.version_.latest())
 			xml_node.append_attribute("ver").set_value(node.version_.version());
@@ -73,7 +72,7 @@ protected:
 template <class T>
 class OutputXmlSerializerCall {
 public:
-	void call(T& t, OutputXmlSerializerNode& node) {
+	static void call(T& t, OutputXmlSerializerNode& node) {
 		/*
 		 * Please implement `ser` method in your class.
 		 */
@@ -84,7 +83,7 @@ public:
 template <class T>
 class OutputXmlSerializerCall<T*&> {
 public:
-	void call(T*& t, OutputXmlSerializerNode& node) {
+	static void call(T*& t, OutputXmlSerializerNode& node) {
 		node.ref_impl(t);
 	}
 };
@@ -148,8 +147,7 @@ public:
 	template <class T>
 	InputXmlSerializerNode& named(T& t, const std::string& attr_name) {
 		InputXmlSerializerNode node(this, next_child_node(), refs_);
-		InputXmlSerializerCall<T&> ser;
-		ser.call(t, node);
+		InputXmlSerializerCall<T&>::call(t, node);
 		return *this;
 	}
 
@@ -157,11 +155,8 @@ public:
 	bool search(T& t, const std::string& attr_name) {
 		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name.c_str());
 		assert(!found.empty());
-
 		InputXmlSerializerNode node(this, found, refs_);
-		InputXmlSerializerCall<T&> ser;
-		ser.call(t, node);
-
+		InputXmlSerializerCall<T&>::call(t, node);
 		return true;
 	}
 
@@ -207,7 +202,7 @@ protected:
 template <class T>
 class InputXmlSerializerCall {
 public:
-	void call(T& t, InputXmlSerializerNode& node) {
+	static void call(T& t, InputXmlSerializerNode& node) {
 		/*
 		 * Please implement `ser` method in your class.
 		 */
@@ -218,7 +213,7 @@ public:
 template <class T>
 class InputXmlSerializerCall<T*&> {
 public:
-	void call(T*& t, InputXmlSerializerNode& node) {
+	static void call(T*& t, InputXmlSerializerNode& node) {
 		node.ref_impl(t);
 	}
 };
@@ -247,14 +242,14 @@ protected:
 	template <>\
 	class OutputXmlSerializerCall<Type&> {\
 	public:\
-		void call(Type& t, OutputXmlSerializerNode& node) {\
+		static void call(Type& t, OutputXmlSerializerNode& node) {\
 			node.xml().append_attribute("value") = t;\
 		}\
 	};\
 	template <>\
 	class InputXmlSerializerCall<Type&> {\
 	public:\
-		void call(Type& t, InputXmlSerializerNode& node) {\
+		static void call(Type& t, InputXmlSerializerNode& node) {\
 			pugi::xml_attribute attr = node.xml().attribute("value");\
 			t = static_cast<Type>(attr.Retrieve());\
 		}\
@@ -275,35 +270,18 @@ SN_RAW(double, as_double);
 template <>
 class OutputXmlSerializerCall<std::string&> {
 public:
-	void call(std::string& t, OutputXmlSerializerNode& node) {
+	static void call(std::string& t, OutputXmlSerializerNode& node) {
 		node.xml().append_attribute("value").set_value(t.c_str());
 	}
 };
 template <>
 class InputXmlSerializerCall<std::string&> {
 public:
-	void call(std::string& t, InputXmlSerializerNode& node) {
+	static void call(std::string& t, InputXmlSerializerNode& node) {
 		pugi::xml_attribute attr = node.xml().attribute("value");
 		assert(!attr.empty());
 		t = std::string(attr.as_string());
 	}
-};
-
-class OutputXmlSequence
-{
-public:
-	OutputXmlSequence(OutputXmlSerializerNode* node) : node_(node) {}
-
-	template <class FwdIter>
-	void write(FwdIter begin, FwdIter end) {
-		node_->xml().append_attribute("concept") = "SEQ";
-
-		for (; begin != end; ++begin)
-			node_->named(*begin, "");
-	}
-
-protected:
-	OutputXmlSerializerNode* node_;
 };
 
 template <class T>
@@ -330,19 +308,11 @@ public:
 		return *this;
 	}
 
-	T operator *()
-	{
+	T operator *() {
 		InputXmlSerializerNode node(parent_, *iter_, parent_->refs());
 		T t(Ctor<T, InputXmlSerializerNode>::ctor(node));
-
-		InputXmlSerializerCall<T&> ser;
-		ser.call(t, node);
+		InputXmlSerializerCall<T&>::call(t, node);
 		return t;
-	}
-
-	T* operator ->()
-	{
-		return 0;
 	}
 
 	bool operator == (const InputXmlIter& i) const {
@@ -358,23 +328,65 @@ protected:
 	pugi::xml_node::iterator iter_;
 };
 
+class XmlSequence
+{
+public:
+	template <class Cont>
+	static void read(Cont& container, InputXmlSerializerNode* node) {
+		read<Cont, Cont::value_type>(container, node);
+	}
+
+	template <class Cont, class T>
+	static void read(Cont& container, InputXmlSerializerNode* node) {
+		InputXmlIter<T> begin(node, node->xml().begin());
+		InputXmlIter<T>   end(node, node->xml().end());
+		Cont tmp(begin, end);
+		std::swap(container, tmp);
+	}
+
+	template <class Cont>
+	static void write(Cont& container, OutputXmlSerializerNode* node) {
+		XmlSequence::write(container.begin(), container.end(), node);
+	}
+
+	template <class FwdIter>
+	static void write(FwdIter begin, FwdIter end, OutputXmlSerializerNode* node) {
+		node->xml().append_attribute("concept") = "SEQ";
+
+		for (; begin != end; ++begin)
+			node->named(*begin, "");
+	}
+};
+
 // ****** <vector> ext ******
 template <class T>
 class OutputXmlSerializerCall<std::vector<T>&> {
 public:
-	void call(std::vector<T>& t, OutputXmlSerializerNode& node) {
-		OutputXmlSequence seq(&node);
-		seq.write(t.begin(), t.end());
+	static void call(std::vector<T>& t, OutputXmlSerializerNode& node) {
+		XmlSequence::write(t, &node);
 	}
 };
 template <class T>
 class InputXmlSerializerCall<std::vector<T>&> {
 public:
-	void call(std::vector<T>& t, InputXmlSerializerNode& node) {
-		InputXmlIter<T> begin(&node, node.xml().begin());
-		InputXmlIter<T>   end(&node, node.xml().end());
-		std::vector<T> made(begin, end);
-		t.swap(made);
+	static void call(std::vector<T>& t, InputXmlSerializerNode& node) {
+		XmlSequence::read(t, &node);
+	}
+};
+
+// ****** <list> ext ******
+template <class T>
+class OutputXmlSerializerCall<std::list<T>&> {
+public:
+	static void call(std::list<T>& t, OutputXmlSerializerNode& node) {
+		XmlSequence::write(t, &node);
+	}
+};
+template <class T>
+class InputXmlSerializerCall<std::list<T>&> {
+public:
+	static void call(std::list<T>& t, InputXmlSerializerNode& node) {
+		XmlSequence::read(t, &node);
 	}
 };
 
@@ -382,14 +394,14 @@ public:
 template <class T>
 class OutputXmlSerializerCall<std::unique_ptr<T>& > {
 public:
-	void call(std::unique_ptr<T>& t, OutputXmlSerializerNode& node) {
+	static void call(std::unique_ptr<T>& t, OutputXmlSerializerNode& node) {
 		node.ref_impl(t.get());
 	}
 };
 template <class T>
 class InputXmlSerializerCall<std::unique_ptr<T>& > {
 public:
-	void call(std::unique_ptr<T>& t, InputXmlSerializerNode& node) {
+	static void call(std::unique_ptr<T>& t, InputXmlSerializerNode& node) {
 		T* ref = S11N_NULLPTR;
 		node.ref_impl(ref);
 		t.reset(ref);
@@ -399,14 +411,14 @@ public:
 template <class T>
 class OutputXmlSerializerCall<std::shared_ptr<T>& > {
 public:
-	void call(std::shared_ptr<T>& t, OutputXmlSerializerNode& node) {
+	static void call(std::shared_ptr<T>& t, OutputXmlSerializerNode& node) {
 		node.ref_impl(t.get());
 	}
 };
 template <class T>
 class InputXmlSerializerCall<std::shared_ptr<T>& > {
 public:
-	void call(std::shared_ptr<T>& t, InputXmlSerializerNode& node) {
+	static void call(std::shared_ptr<T>& t, InputXmlSerializerNode& node) {
 		T* ref = S11N_NULLPTR;
 		node.ref_impl(ref);
 		t.reset(ref);

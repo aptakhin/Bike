@@ -204,9 +204,13 @@ TYPED_TEST_P(BaseTest, SmartPointers) {
 }
 
 TYPED_TEST_P(BaseTest, SequenceContainers) {
-	std::vector<int> pool;
-	pool.push_back(1), pool.push_back(2), pool.push_back(3);
-	test_val(pool);
+	std::vector<int> vec;
+	vec.push_back(1), vec.push_back(2), vec.push_back(3);
+	test_val(vec);
+
+	std::list<int> list;
+	list.push_back(4), list.push_back(5), list.push_back(6);
+	test_val(list);
 }
 
 REGISTER_TYPED_TEST_CASE_P(
