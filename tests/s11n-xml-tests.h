@@ -194,9 +194,13 @@ TYPED_TEST_P(BaseTest, Pointers) {
 }
 
 TYPED_TEST_P(BaseTest, SmartPointers) {
-	std::unique_ptr<Human> ivan, read;
-	ivan.reset(new Human("Taras Tarasov"));
-	test_dis_impl(ivan, read);
+	std::unique_ptr<Human> taras, read;
+	taras.reset(new Human("Taras Tarasov"));
+	test_dis_impl(taras, read);
+
+	std::shared_ptr<Human> alex, read2;
+	alex.reset(new Human("Alex Alexandrov"));
+	test_dis_impl(alex, read2);
 }
 
 REGISTER_TYPED_TEST_CASE_P(

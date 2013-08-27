@@ -303,4 +303,21 @@ public:
 	}
 };
 
+template <class T>
+class OutputXmlSerializerCall<std::shared_ptr<T>& > {
+public:
+	void call(std::shared_ptr<T>& t, OutputXmlSerializerNode& node) {
+		node.ref_impl(t.get());
+	}
+};
+template <class T>
+class InputXmlSerializerCall<std::shared_ptr<T>& > {
+public:
+	void call(std::shared_ptr<T>& t, InputXmlSerializerNode& node) {
+		T* ref = S11N_NULLPTR;
+		node.ref_impl(ref);
+		t.reset(ref);
+	}
+};
+
 } // namespace bike {
