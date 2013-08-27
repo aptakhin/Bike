@@ -262,21 +262,21 @@ class BasePlant;
 class Types {
 public:
 	struct Type {
-		const std::type_index& info;
+		const type_index& info;
 		
 		BasePlant* ctor;
 		std::vector<Type*> base;
 
-		Type(const std::type_index& info) 
+		Type(const type_index& info)
 		:	info(info), 
-			ctor(nullptr)
+			ctor(S11N_NULLPTR)
 		{
 		}
 	};
 
 	template <typename T>
 	static bool is_registered() {
-		const std::type_index type = typeid(T); 
+		const type_index type = typeid(T);
 		std::vector<Types::Type>::const_iterator i = Types::t().begin();
 		for (; i != Types::t().end(); ++i) {
 			if (i->info == type) 

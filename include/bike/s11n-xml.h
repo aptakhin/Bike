@@ -65,6 +65,14 @@ public:
 	};
 };
 
+template <class T>
+class OutputXmlSerializerCall<T*&> {
+public:
+	void call(T*& t, OutputXmlSerializerNode& node) {
+		
+	};
+};
+
 class OutputXmlSerializer : public OutputXmlSerializerNode {
 public:
 	OutputXmlSerializer(std::ostream& out) 
@@ -165,6 +173,14 @@ public:
 		 * Please implement `ser` method in your class.
 		 */
 		t.ser(node, Version(-1));
+	};
+};
+
+template <class T>
+class InputXmlSerializerCall<T*&> {
+public:
+	void call(T*& t, InputXmlSerializerNode& node) {
+		
 	};
 };
 

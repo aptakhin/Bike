@@ -163,7 +163,12 @@ TYPED_TEST_P(BaseTest, Classes) {
 	test_val<Superman>();
 }
 
-REGISTER_TYPED_TEST_CASE_P(BaseTest, Base, Structs, Classes);
+TYPED_TEST_P(BaseTest, Pointers) {
+	Human* base_human = new Human("Ivan Ivanov"), *read_human;
+	test_val_impl(base_human, read_human);
+}
+
+REGISTER_TYPED_TEST_CASE_P(BaseTest, Base, Structs, Classes, Pointers);
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);
