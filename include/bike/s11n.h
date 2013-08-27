@@ -188,8 +188,7 @@ public:
 	typedef std::map<type_index, std::string> RenamesMap;
 	typedef std::map<type_index, std::string>::const_iterator RenamesMapConstIter;
 
-	static RenamesMap& map()
-	{
+	static RenamesMap& map() {
 		static RenamesMap map;
 		return map;
 	}

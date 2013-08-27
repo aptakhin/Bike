@@ -62,15 +62,15 @@ public:
 		 * Please implement `ser` method in your class.
 		 */
 		t.ser(node, Version(-1));
-	};
+	}
 };
 
 template <class T>
 class OutputXmlSerializerCall<T*&> {
 public:
 	void call(T*& t, OutputXmlSerializerNode& node) {
-		
-	};
+			
+	}
 };
 
 class OutputXmlSerializer : public OutputXmlSerializerNode {
@@ -173,7 +173,7 @@ public:
 		 * Please implement `ser` method in your class.
 		 */
 		t.ser(node, Version(-1));
-	};
+	}
 };
 
 template <class T>
@@ -181,7 +181,7 @@ class InputXmlSerializerCall<T*&> {
 public:
 	void call(T*& t, InputXmlSerializerNode& node) {
 		
-	};
+	}
 };
 
 class InputXmlSerializer : public InputXmlSerializerNode {
@@ -210,7 +210,7 @@ protected:
 	public:\
 		void call(Type& t, OutputXmlSerializerNode& node) {\
 			node.xml().append_attribute("value") = t;\
-		};\
+		}\
 	};\
 	template <>\
 	class InputXmlSerializerCall<Type&> {\
@@ -218,7 +218,7 @@ protected:
 		void call(Type& t, InputXmlSerializerNode& node) {\
 			pugi::xml_attribute attr = node.xml().attribute("value");\
 			t = static_cast<Type>(attr.Retrieve());\
-		};\
+		}\
 	};
 
 SN_RAW(int, as_int); 
@@ -235,7 +235,7 @@ class OutputXmlSerializerCall<std::string&> {
 public:
 	void call(std::string& t, OutputXmlSerializerNode& node) {
 		node.xml().append_attribute("value").set_value(t.c_str());
-	};
+	}
 };
 template <>
 class InputXmlSerializerCall<std::string&> {
@@ -243,7 +243,7 @@ public:
 	void call(std::string& t, InputXmlSerializerNode& node) {
 		pugi::xml_attribute attr = node.xml().attribute("value");
 		t = std::string(attr.as_string());
-	};
+	}
 };
 
 #undef SN_RAW
