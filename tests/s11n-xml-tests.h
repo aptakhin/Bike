@@ -41,6 +41,12 @@ public:
 	}
 
 	template <typename T>
+	void test_ptr_impl(const T* write, T* read)	{
+		io_ptr_impl(write, read);
+		ASSERT_EQ(*write, *read);
+	}
+
+	template <typename T>
 	void test_val() {
 		T read, write;
 		test_val_impl(write, read);
@@ -63,6 +69,18 @@ protected:
 		std::ofstream fout("test.txt");
 		Output out(fout);
 		out << const_cast<T&>(write);
+		fout.close();
+
+		std::ifstream fin("test.txt");
+		Input in(fin);
+		in >> read;
+	}
+
+	template <typename T>
+	void io_ptr_impl(const T*& write, T*& read) {
+		std::ofstream fout("test.txt");
+		Output out(fout);
+		out << const_cast<T*&>(write);
 		fout.close();
 
 		std::ifstream fin("test.txt");
@@ -159,13 +177,12 @@ TYPED_TEST_P(BaseTest, Classes) {
 	Human base_human("");
 	Human named_human("Peter Petrov");
 	test_val_impl(named_human, base_human);
-
 	test_val<Superman>();
 }
 
 TYPED_TEST_P(BaseTest, Pointers) {
-	Human* base_human = new Human("Ivan Ivanov"), *read_human;
-	test_val_impl(base_human, read_human);
+	Human* base_human = new Human("Ivan Ivanov"), *read_human = S11N_NULLPTR;
+	test_ptr_impl(base_human, read_human);
 }
 
 REGISTER_TYPED_TEST_CASE_P(BaseTest, Base, Structs, Classes, Pointers);

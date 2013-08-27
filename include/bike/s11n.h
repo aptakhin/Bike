@@ -128,8 +128,7 @@ public:
 		return found != refs_.end()? found->second : S11N_NULLPTR;
 	}
 
-	template <typename T>
-	unsigned int set(unsigned int key, void* val) {
+	void set(unsigned int key, void* val) {
 		refs_.insert(std::make_pair(key, val));
 	}
 
@@ -151,13 +150,18 @@ public:
 	}
 
 	template <typename T>
-	unsigned int set(T* key) {
+	std::pair<bool, unsigned int> set(T* key) {
 		unsigned int id = get(key);
+		bool inserted = false;
+
 		if (id == 0)
-			refs_.insert(std::make_pair(key, id_));
-		else
+		{
 			id = id_++;
-		return id;
+			refs_.insert(std::make_pair(key, id));
+			inserted = true;
+		}
+			
+		return std::make_pair(inserted, id);
 	}
 
 protected:
