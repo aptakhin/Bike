@@ -48,7 +48,7 @@ public:
 	pugi::xml_node xml() { return xml_; }
 
 	template <class T>
-	void ref_ser(T*& t) {
+	void ref_impl(T* t) {
 		unsigned int ref = 0;
 
 		if (t != S11N_NULLPTR)
@@ -64,9 +64,9 @@ public:
 
 protected:
 	OutputXmlSerializerNode* parent_;
-	pugi::xml_node xml_;
-	ReferencesPtr* refs_;
-	Version version_;
+	pugi::xml_node           xml_;
+	ReferencesPtr*           refs_;
+	Version                  version_;
 };
 
 template <class T>
@@ -84,7 +84,7 @@ template <class T>
 class OutputXmlSerializerCall<T*&> {
 public:
 	void call(T*& t, OutputXmlSerializerNode& node) {
-		node.ref_ser(t);
+		node.ref_impl(t);
 	}
 };
 
@@ -166,7 +166,7 @@ public:
 	pugi::xml_node xml() { return xml_; }
 
 	template <class T>
-	void ref_ser(T*& t) {
+	void ref_impl(T*& t) {
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
 		assert(!ref_attr.empty());
 		unsigned int ref = ref_attr.as_uint();
@@ -195,10 +195,10 @@ protected:
 
 protected:
 	InputXmlSerializerNode* parent_;
-	pugi::xml_node xml_;
-	ReferencesId* refs_;
-	pugi::xml_node current_child_;
-	Version version_;
+	pugi::xml_node          xml_;
+	ReferencesId*           refs_;
+	pugi::xml_node          current_child_;
+	Version                 version_;
 };
 
 template <class T>
@@ -216,7 +216,7 @@ template <class T>
 class InputXmlSerializerCall<T*&> {
 public:
 	void call(T*& t, InputXmlSerializerNode& node) {
-		node.ref_ser(t);
+		node.ref_impl(t);
 	}
 };
 
@@ -237,7 +237,7 @@ public:
 
 protected:
 	std::istream* in_;
-	ReferencesId refs;
+	ReferencesId  refs;
 };
 
 #define SN_RAW(Type, Retrieve) \
@@ -266,6 +266,9 @@ SN_RAW(unsigned short, as_uint);
 SN_RAW(float, as_float); 
 SN_RAW(double, as_double); 
 
+#undef SN_RAW
+
+// ****** <string> ext ******
 template <>
 class OutputXmlSerializerCall<std::string&> {
 public:
@@ -278,10 +281,24 @@ class InputXmlSerializerCall<std::string&> {
 public:
 	void call(std::string& t, InputXmlSerializerNode& node) {
 		pugi::xml_attribute attr = node.xml().attribute("value");
+		assert(!attr.empty());
 		t = std::string(attr.as_string());
 	}
 };
+// ****** <memory> ext ******
+template <class T>
+class OutputXmlSerializerCall<std::unique_ptr<T>& > {
+public:
+	void call(std::unique_ptr<T>& t, OutputXmlSerializerNode& node) {
+		
+	}
+};
+template <class T>
+class InputXmlSerializerCall<std::unique_ptr<T>& > {
+public:
+	void call(std::unique_ptr<T>& t, InputXmlSerializerNode& node) {
 
-#undef SN_RAW
+	}
+};
 
 } // namespace bike {

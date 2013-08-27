@@ -187,7 +187,19 @@ TYPED_TEST_P(BaseTest, Pointers) {
 	delete ivan;
 }
 
-REGISTER_TYPED_TEST_CASE_P(BaseTest, Base, Structs, Classes, Pointers);
+TYPED_TEST_P(BaseTest, SmartPointers) {
+	std::unique_ptr<Human> ivan, read;
+	ivan.reset(new Human("Ivan Ivanov"));
+	test_val(ivan);
+}
+
+REGISTER_TYPED_TEST_CASE_P(
+	BaseTest, 
+	Base, 
+	Structs, 
+	Classes, 
+	Pointers, 
+	SmartPointers);
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);
