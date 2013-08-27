@@ -41,6 +41,12 @@ public:
 	}
 
 	template <typename T>
+	void test_dis_impl(const T& write, T& read)	{
+		io_impl(write, read);
+		ASSERT_EQ(*write, *read);
+	}
+
+	template <typename T>
 	void test_ptr_impl(const T* write, T* read)	{
 		io_ptr_impl(write, read);
 		ASSERT_EQ(*write, *read);
@@ -189,8 +195,8 @@ TYPED_TEST_P(BaseTest, Pointers) {
 
 TYPED_TEST_P(BaseTest, SmartPointers) {
 	std::unique_ptr<Human> ivan, read;
-	ivan.reset(new Human("Ivan Ivanov"));
-	test_val(ivan);
+	ivan.reset(new Human("Taras Tarasov"));
+	test_dis_impl(ivan, read);
 }
 
 REGISTER_TYPED_TEST_CASE_P(
