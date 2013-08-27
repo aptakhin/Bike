@@ -26,14 +26,6 @@ public:
 	typedef typename Serializer::Input  Input; 
 	typedef typename Serializer::Output Output; 
 
-	void SetUp() /* override */	{
-
-	}
- 
-	void TearDown() /* override */ {
-
-	}
-
 	template <typename T>
 	void test_val_impl(const T& write, T& read)	{
 		io_impl(write, read);
@@ -121,9 +113,11 @@ struct Vec2 {
 };
 
 TYPED_TEST_P(BaseTest, Structs) {
-	test_val<Vec2<int> >   (1,   2);
-	test_val<Vec2<float> > (3.f, 4.f);
-	test_val<Vec2<double> >(5.,  6.);
+	test_val<Vec2<int> >   (1,      2);
+	test_val<Vec2<float> > (3.f,    4.f);
+	test_val<Vec2<float> > (3.5f,   4.5f);
+	test_val<Vec2<double> >(5.,     6.);
+	test_val<Vec2<double> >(5.5555, 6.6666);
 }
 
 class Human
@@ -204,9 +198,15 @@ TYPED_TEST_P(BaseTest, SmartPointers) {
 }
 
 TYPED_TEST_P(BaseTest, SequenceContainers) {
+	std::vector<int> empty_vec;
+	test_val(empty_vec);
+
 	std::vector<int> vec;
 	vec.push_back(1), vec.push_back(2), vec.push_back(3);
 	test_val(vec);
+
+	std::list<int> empty_list;
+	test_val(empty_list);
 
 	std::list<int> list;
 	list.push_back(4), list.push_back(5), list.push_back(6);

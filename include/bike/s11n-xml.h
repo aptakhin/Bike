@@ -255,14 +255,14 @@ protected:
 		}\
 	};
 
-SN_RAW(int, as_int); 
-SN_RAW(unsigned int, as_uint);
+SN_RAW(int,            as_int); 
+SN_RAW(unsigned int,   as_uint);
 
-SN_RAW(short, as_int); 
+SN_RAW(short,          as_int); 
 SN_RAW(unsigned short, as_uint); 
 
-SN_RAW(float, as_float); 
-SN_RAW(double, as_double); 
+SN_RAW(float,          as_float); 
+SN_RAW(double,         as_double); 
 
 #undef SN_RAW
 
@@ -332,29 +332,29 @@ class XmlSequence
 {
 public:
 	template <class Cont>
-	static void read(Cont& container, InputXmlSerializerNode* node) {
+	static void read(Cont& container, InputXmlSerializerNode& node) {
 		read<Cont, Cont::value_type>(container, node);
 	}
 
 	template <class Cont, class T>
-	static void read(Cont& container, InputXmlSerializerNode* node) {
-		InputXmlIter<T> begin(node, node->xml().begin());
-		InputXmlIter<T>   end(node, node->xml().end());
+	static void read(Cont& container, InputXmlSerializerNode& node) {
+		InputXmlIter<T> begin(&node, node.xml().begin());
+		InputXmlIter<T>   end(&node, node.xml().end());
 		Cont tmp(begin, end);
 		std::swap(container, tmp);
 	}
 
 	template <class Cont>
-	static void write(Cont& container, OutputXmlSerializerNode* node) {
+	static void write(Cont& container, OutputXmlSerializerNode& node) {
 		XmlSequence::write(container.begin(), container.end(), node);
 	}
 
 	template <class FwdIter>
-	static void write(FwdIter begin, FwdIter end, OutputXmlSerializerNode* node) {
-		node->xml().append_attribute("concept") = "SEQ";
+	static void write(FwdIter begin, FwdIter end, OutputXmlSerializerNode& node) {
+		node.xml().append_attribute("concept") = "SEQ";
 
 		for (; begin != end; ++begin)
-			node->named(*begin, "");
+			node.named(*begin, "");
 	}
 };
 
@@ -363,14 +363,14 @@ template <class T>
 class OutputXmlSerializerCall<std::vector<T>&> {
 public:
 	static void call(std::vector<T>& t, OutputXmlSerializerNode& node) {
-		XmlSequence::write(t, &node);
+		XmlSequence::write(t, node);
 	}
 };
 template <class T>
 class InputXmlSerializerCall<std::vector<T>&> {
 public:
 	static void call(std::vector<T>& t, InputXmlSerializerNode& node) {
-		XmlSequence::read(t, &node);
+		XmlSequence::read(t, node);
 	}
 };
 
@@ -379,14 +379,14 @@ template <class T>
 class OutputXmlSerializerCall<std::list<T>&> {
 public:
 	static void call(std::list<T>& t, OutputXmlSerializerNode& node) {
-		XmlSequence::write(t, &node);
+		XmlSequence::write(t, node);
 	}
 };
 template <class T>
 class InputXmlSerializerCall<std::list<T>&> {
 public:
 	static void call(std::list<T>& t, InputXmlSerializerNode& node) {
-		XmlSequence::read(t, &node);
+		XmlSequence::read(t, node);
 	}
 };
 
