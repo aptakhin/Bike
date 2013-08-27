@@ -203,13 +203,20 @@ TYPED_TEST_P(BaseTest, SmartPointers) {
 	test_dis_impl(alex, read2);
 }
 
+TYPED_TEST_P(BaseTest, SequenceContainers) {
+	std::vector<int> pool;
+	pool.push_back(1), pool.push_back(2), pool.push_back(3);
+	test_val(pool);
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
 	Structs, 
 	Classes, 
 	Pointers, 
-	SmartPointers);
+	SmartPointers,
+	SequenceContainers);
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);

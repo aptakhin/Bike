@@ -172,7 +172,6 @@ public:
 		unsigned int ref = ref_attr.as_uint();
 
 		void* ptr = refs_->get(ref);
-
 		if (ptr == S11N_NULLPTR)
 		{
 			ptr = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
@@ -285,6 +284,23 @@ public:
 		t = std::string(attr.as_string());
 	}
 };
+
+// ****** <vector> ext ******
+template <class T>
+class OutputXmlSerializerCall<std::vector<T>&> {
+public:
+	void call(std::vector<T>& t, OutputXmlSerializerNode& node) {
+
+	}
+};
+template <class T>
+class InputXmlSerializerCall<std::vector<T>&> {
+public:
+	void call(std::vector<T>& t, InputXmlSerializerNode& node) {
+
+	}
+};
+
 // ****** <memory> ext ******
 template <class T>
 class OutputXmlSerializerCall<std::unique_ptr<T>& > {
