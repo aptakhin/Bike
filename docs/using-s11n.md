@@ -160,22 +160,55 @@ protected:
 ```cpp
 int main()
 {
+	// Registering such way
 	bike::Register<bike::XmlSerializer> reg;
 	reg.reg_type<Superman>();
 
 	// Then we can save and load any types, which Superman derives
-	
 	Human* superman = new Superman(200000), *man = 0;
 	
+	// Writing
 	std::ofstream fout("superman.xml");
 	bike::OutputXmlSerializer out(fout);
 	out << superman;
 	fout.close();
-
+	
+	// Reading
 	std::ifstream fin("superman.xml");
 	bike::InputXmlSerializer in(fin);
 	in >> man;
-	std::cout << man.name();
+	
+	// And finally 
+	std::cout << man->name();
+	
+	// Not yet finally. Easy to forget, yes?
+	delete superman, delete man; 
 	return 0;
 }
 ```
+
+### STL-stuff
+
+— STL-support included.
+
+```cpp
+
+// Uncomment this to add C++11-specific files like <memory>
+// #define S11N_CPP11
+
+int main()
+{
+	//...
+	std::vector<int>        magic_numbers;
+	std::list<unsigned int> ip4_white_list;
+	std::unique_ptr<Human>  man;
+	
+	std::ifstream fin("stuff.xml");
+	bike::InputXmlSerializer in(fin);
+	in >> magic_numbers;
+	in >> white_list;
+	in >> man;
+	return 0;
+}
+```
+
