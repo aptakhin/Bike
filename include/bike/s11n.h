@@ -322,8 +322,13 @@ public:
 	explicit PtrHolder(T* ptr) : ptr_(ptr) {}
 
 	template <typename T>
-	T* get() {
+	T* get() const {
 		return reinterpret_cast<T*>(ptr_);
+	}
+
+	template <typename T>
+	T* get_dyn() const {
+		return dynamic_cast<T*>(ptr_);
 	}
 
 protected:
@@ -336,11 +341,19 @@ public:
 	virtual ~BasePlant() {}
 
 	virtual PtrHolder create(PtrHolder holder) = 0;
+
+	virtual void read(void* rd, PtrHolder holder) = 0;
+
+	virtual void write(void* wr, PtrHolder holder) = 0;
 };
 
-template <typename T, typename Node>
+template <typename T, typename Serializer>
 class Plant : public BasePlant
 {
+protected:
+	typedef typename Serializer::InNode  InNode;
+	typedef typename Serializer::OutNode OutNode;
+
 public:
 	Plant()
 	:	name_(typeid(T).name())	{}
@@ -348,9 +361,23 @@ public:
 	virtual ~Plant() {}
 
 	PtrHolder create(PtrHolder holder) /* override */ {
-		Node* orig = holder.get<Node>();
+		InNode* orig = holder.get<InNode>();
 		assert(orig);
-		return PtrHolder(Ctor<T*, Node>::ctor(*orig));
+		return PtrHolder(Ctor<T*, InNode>::ctor(*orig));
+	}
+
+	void read(void* rd, PtrHolder node) /* override */ {
+		InNode* orig = node.get<InNode>();
+		//assert(orig);
+		T& r = *static_cast<T*>(rd);
+		typename Serializer::input_call<T&>(r, *orig); 
+	}
+
+	void write(void* wr, PtrHolder node) /* override */ {
+		OutNode* orig = node.get<OutNode>();
+		//assert(orig);
+		T& w = *static_cast<T*>(wr);
+		typename Serializer::output_call<T&>(w, *orig); 
 	}
 
 protected:
@@ -359,15 +386,15 @@ protected:
 
 struct None {};
 
-template <typename InputNode0, typename InputNode1 = None>
+template <typename Serializer0, typename Serializer1 = None>
 class Register
 {
 protected:
-	template <typename T, typename InputNode>
+	template <typename T, typename Serializer>
 	struct Impl
 	{
 		static void reg() {
-			BasePlant* plant = new Plant<T, InputNode>;
+			BasePlant* plant = new Plant<T, Serializer>;
 			Types::register_type<T>(plant);
 		}
 	};
@@ -382,8 +409,8 @@ public:
 
 	template <typename T>
 	void reg_type() {
-		Impl<T, InputNode0>::reg();
-		Impl<T, InputNode1>::reg();
+		Impl<T, Serializer0>::reg();
+		Impl<T, Serializer1>::reg();
 	}
 };
 

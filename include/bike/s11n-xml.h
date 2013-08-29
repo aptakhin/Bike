@@ -74,7 +74,11 @@ public:
 			std::pair<bool, unsigned int> set_result = refs_->set(t);
 			ref = set_result.second;
 			if (set_result.first)
-				(*t).ser(*this, Version(-1));
+			{
+				const Types::Type* type = Types::find(typeid(*t).name());
+				PtrHolder node(this);
+				type->ctor->write(t, node);
+			}
 		}
 		
 		xml_.append_attribute("ref") = ref;
@@ -196,18 +200,16 @@ public:
 			if (type_attr)
 			{
 				const Types::Type* type = Types::find(type_attr.as_string());
-
-				PtrHolder holder(this);
-				PtrHolder got = type->ctor->create(holder);
-				ptr = got.get<T*>();
+				PtrHolder node_holder(this);
+				PtrHolder got = type->ctor->create(node_holder);
+				t = got.get<T>(); // TODO: Fixme another template adapter
+				type->ctor->read(t, node_holder);
 			}
 			else
-				ptr = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
+				t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
 				
-			refs_->set(ref, ptr);
+			refs_->set(ref, t);
 		}
-
-		t = reinterpret_cast<T*>(ptr);
 	}
 
 	ReferencesId* refs() const { return refs_; }
@@ -297,6 +299,27 @@ SN_RAW(float,          as_float);
 SN_RAW(double,         as_double); 
 
 #undef SN_RAW
+
+class XmlSerializer {
+public:
+	typedef InputXmlSerializer  Input;
+	typedef OutputXmlSerializer Output;
+
+	typedef InputXmlSerializerNode  InNode;
+	typedef OutputXmlSerializerNode OutNode;
+
+	template <typename T>
+	static void input_call(T& t, InNode& node)
+	{
+		InputXmlSerializerCall<T&>::call(t, node);
+	}
+
+	template <typename T>
+	static void output_call(T& t, OutNode& node)
+	{
+		OutputXmlSerializerCall<T&>::call(t, node);
+	}
+};
 
 // ****** <string> ext ******
 template <>

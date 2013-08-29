@@ -8,12 +8,6 @@
 
 using namespace bike;
 
-class XmlSerializer {
-public:
-	typedef InputXmlSerializer  Input;
-	typedef OutputXmlSerializer Output;
-};
-
 template <typename Serializer>
 class BaseTest : public ::testing::Test {
 public:
@@ -120,28 +114,40 @@ bool operator == (const Human& l, const Human& r) {
 class Superman : public Human
 {
 public:
-    Superman() 
+    Superman(int superpower = 100000) 
 	:	Human("Clark Kent"), 
-		superpower_(100000) {
+		superpower_(superpower) {
 	}    
 
 	void fly() { /* Clark don't need and code to fly */ }
 
     template <class Node>
     void ser(Node& node, Version version) {
-        node.base<Human>(this) & superpower_;
+        node.base<Human>(this);
+		node.named(superpower_, "power");
     }
 
 protected:
     int superpower_;
 };
 
+template <typename Node>
+class Ctor<Superman*, Node>
+{
+public:
+    static Superman* ctor(Node& node) {
+        int power;
+        node.search(power, "power");
+        return new Superman(power);
+    }
+};
+
 TYPED_TEST_P(BaseTest, Inheritance) {
-	Register<InputXmlSerializerNode> reg;
+	Register<XmlSerializer> reg;
 	reg.reg_type<Superman>();
 
 	std::unique_ptr<Human> superman, read;
-	superman.reset(new Superman);
+	superman.reset(new Superman(200000));
 	test_dis_impl(superman, read);
 	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
 }
