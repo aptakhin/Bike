@@ -19,14 +19,14 @@ Examples
 
 void write_only_int(int x)
 {
-	std::ofstream fout("integer.txt");
+	std::ofstream fout("integer.xml");
 	bike::OutputTextSerializer out(fout);
 	out << x;
 }
 
 void read_only_int(int& x)
 {
-	std::ifstream fin("integer.txt");
+	std::ifstream fin("integer.xml");
 	bike::InputTextSerializer in(fin);
 	in >> x;
 }
@@ -53,34 +53,35 @@ int main()
 struct Vector2
 {
 	double x, y;
+	
+	Vector2(double x = 0., double y = 0.) : x(x), y(y) {}
 
 	// Just implement serialization method
 	template <class Node>
-	void ser(Node& node, int version) 
+	void ser(Node& node, bike::Version version) 
 	{
 		node & x & y;
 	}
 };
 
 // Code of serialization is mostly the same
-
-void write_only_vec2(const Vector2& v)
+void write_only_vec2(Vector2& v)
 {
-	std::ofstream fout("vec2.txt");
-	bike::OutputTextSerializer out(fout);
+	std::ofstream fout("vec2.xml");
+	bike::OutputXmlSerializer out(fout);
 	out << v;
 }
 
 void read_only_vec2(Vector2& v)
 {
-	std::ifstream fin("vec2.txt");
-	bike::InputTextSerializer in(fin);
+	std::ifstream fin("vec2.xml");
+	bike::InputXmlSerializer in(fin);
 	in >> v;
 }
 
 int main()
 {
-	Vector2 saved, loaded;
+	Vector2 saved(-1, 1), loaded;
 	write_only_vec2(saved);
 	read_only_vec2(loaded);
 	return 0;
@@ -93,12 +94,11 @@ int main()
 — Yep, but you have to keep structure of format in two places: reading and writing. It's simple for small structures, but not for big and nested ones.
 
 
-### Non-default constructors and declaring out of class
+### Non-default constructors
 ```cpp
 // headers missed...
 #include <string> // Ok, add one
 
-// Someone wrote this class, but he didn't know about our serialization system
 class Human
 {
 public:
@@ -114,24 +114,6 @@ protected:
 	std::string name_;
 };
 
-//
-// I will show in this example two features
-//
-// First serialization method is out of class, which is needed in some cases
-// (Feature doesn't ready)
-//
-template <typename Node>
-void serialize(Node& node, Human& human)
-{
-	node.version(1);
-
-	//
-	// Second is initialization with non-default constructor
-	// And name name member by name name
-	//
-	node.write(human.name(), "name");
-}
-
 // Define (or exactly specialize) this template class
 template <typename Node>
 class Ctor<Human*, Node>
@@ -145,30 +127,29 @@ public:
 		return new Human(name); // We did it
 	}
 };
-```
 
 ### Inheritance
-
-I continue previous example
 ```cpp
-// ... from previous series
+// I continue previous example with human class
 
 class Superman : public Human
 {
 public:
-	Superman() : Human("Clark Kent"), superpower_(100000) {}	
+    Superman(int superpower = 100000) 
+	:	Human("Clark Kent"), 
+		superpower_(superpower) {
+	}    
 
-	void fly();
+	void fly() { /* Clark don't need and code to fly */ }
 
-	template <class Node>
-	void ser(Node& node, int version) 
-	{
-		// Serialize base class and value of super power too
-		node.base<Human>(this) & superpower_;
-	}
+    template <class Node>
+    void ser(Node& node, bike::Version version) {
+        node.base<Human>(this);
+		node.named(superpower_, "power");
+    }
 
 protected:
-	int superpower_;
+    int superpower_;
 };
 ```
 
@@ -179,10 +160,22 @@ protected:
 ```cpp
 int main()
 {
-	bike::reg_type<Superman>();
+	bike::Register<bike::XmlSerializer> reg;
+	reg.reg_type<Superman>();
 
 	// Then we can save and load any types, which Superman derives
+	
+	Human* superman = new Superman(200000), *man = 0;
+	
+	std::ofstream fout("superman.xml");
+	bike::OutputXmlSerializer out(fout);
+	out << superman;
+	fout.close();
 
+	std::ifstream fin("superman.xml");
+	bike::InputXmlSerializer in(fin);
+	in >> man;
+	std::cout << man.name();
 	return 0;
 }
 ```
