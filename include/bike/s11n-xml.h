@@ -240,14 +240,14 @@ protected:
 
 #define SN_RAW(Type, Retrieve) \
 	template <>\
-	class OutputXmlSerializerCall<Type> {\
+	class OutputXmlSerializerCall<Type&> {\
 	public:\
 		static void call(Type& t, OutputXmlSerializerNode& node) {\
 			node.xml().append_attribute("value") = t;\
 		}\
 	};\
 	template <>\
-	class InputXmlSerializerCall<Type> {\
+	class InputXmlSerializerCall<Type&> {\
 	public:\
 		static void call(Type& t, InputXmlSerializerNode& node) {\
 			pugi::xml_attribute attr = node.xml().attribute("value");\

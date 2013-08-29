@@ -14,12 +14,6 @@ public:
 	typedef OutputXmlSerializer Output;
 };
 
-class TextSerializer {
-public:
-	typedef InputTextSerializer  Input;
-	typedef OutputTextSerializer Output;
-};
-
 template <typename Serializer>
 class BaseTest : public ::testing::Test {
 public:
