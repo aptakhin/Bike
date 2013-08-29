@@ -206,6 +206,13 @@ TYPED_TEST_P(BaseTest, SequenceContainers) {
 	test_val(list);
 }
 
+TYPED_TEST_P(BaseTest, Inheritance) {
+	std::unique_ptr<Human> superman, read;
+	superman.reset(new Superman);
+	test_dis_impl(superman, read);
+	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
@@ -213,7 +220,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	Classes, 
 	Pointers, 
 	SmartPointers,
-	SequenceContainers
+	SequenceContainers,
+	Inheritance
 );
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;
