@@ -13,8 +13,7 @@ public:
 	OutputXmlSerializerNode(OutputXmlSerializerNode* parent, pugi::xml_node node, ReferencesPtr* refs) 
 	:	parent_(parent),
 		refs_(refs),
-		xml_(node) {
-	}
+		xml_(node) {}
 
 	void version(int ver) { version_.version(ver); }
 
@@ -43,20 +42,17 @@ public:
 			xml_node.append_attribute("ver").set_value(node.version_.version());
 
 		TypeWriter<T&>::write(t, xml_node);
-		
 		return *this;
 	}
 
 	template <class T>
-	class TypeWriter
-	{
+	class TypeWriter {
 	public:
 		static void write(T&, pugi::xml_node&) {}
 	};
 
 	template <class T>
-	class TypeWriter<T*&>
-	{
+	class TypeWriter<T*&> {
 	public:
 		static void write(T*& t, pugi::xml_node& xml_node) {
 			xml_node.append_attribute("type").set_value(typeid(*t).name());
@@ -69,12 +65,10 @@ public:
 	void ref_impl(T* t) {
 		unsigned int ref = 0;
 
-		if (t != S11N_NULLPTR)
-		{
+		if (t != S11N_NULLPTR) {
 			std::pair<bool, unsigned int> set_result = refs_->set(t);
 			ref = set_result.second;
-			if (set_result.first)
-			{
+			if (set_result.first) {
 				const Types::Type* type = Types::find(typeid(*t).name());
 				PtrHolder node(this);
 				type->ctor->write(t, node);
@@ -116,8 +110,7 @@ class OutputXmlSerializer : public OutputXmlSerializerNode {
 public:
 	OutputXmlSerializer(std::ostream& out) 
 	: 	OutputXmlSerializerNode(nullptr, pugi::xml_node(), &refs_),
-		out_(&out) {
-	}
+		out_(&out) {}
 
 	template <class T>
 	OutputXmlSerializer& operator << (T& t) {
@@ -137,16 +130,11 @@ protected:
 };
 
 class InputXmlSerializerNode {
-protected:
-	typedef std::vector<InputXmlSerializerNode> Nodes;
-
 public:
-
 	InputXmlSerializerNode(InputXmlSerializerNode* parent, pugi::xml_node node, ReferencesId* refs)
 	:	parent_(parent),
 		xml_(node),
-		refs_(refs) {
-	}
+		refs_(refs) {}
 
 	void version(int ver) { version_.version(ver); }
 
@@ -165,8 +153,6 @@ public:
 		if (expr) *this & t;
 		return *this;
 	}
-
-	struct UnknownType {};
 
 	template <class T>
 	InputXmlSerializerNode& named(T& t, const std::string& attr_name) {
@@ -193,12 +179,10 @@ public:
 		unsigned int ref = ref_attr.as_uint();
 
 		void* ptr = refs_->get(ref);
-		if (ptr == S11N_NULLPTR)
-		{
+		if (ptr == S11N_NULLPTR) {
 			pugi::xml_attribute type_attr = xml_.attribute("type");
 
-			if (type_attr)
-			{
+			if (type_attr) {
 				const Types::Type* type = Types::find(type_attr.as_string());
 				PtrHolder node_holder(this);
 				PtrHolder got = type->ctor->create(node_holder);
@@ -215,14 +199,9 @@ public:
 	ReferencesId* refs() const { return refs_; }
 
 protected:
-	pugi::xml_node next_child_node()
-	{
-		if (current_child_.empty())
-			current_child_ = *xml_.begin();
-		else
-			current_child_ = current_child_.next_sibling();
-
-		return current_child_;
+	pugi::xml_node next_child_node() {
+		return current_child_ = current_child_.empty() ? 
+			*xml_.begin() : current_child_.next_sibling();;
 	}
 
 protected:
@@ -256,8 +235,7 @@ class InputXmlSerializer : public InputXmlSerializerNode {
 public:
 	InputXmlSerializer(std::istream& in)
 	: 	InputXmlSerializerNode(nullptr, pugi::xml_node(), &refs),
-		in_(&in) {
-	}
+		in_(&in) {}
 
 	template <class T>
 	InputXmlSerializer& operator >> (T& t) {
@@ -309,14 +287,12 @@ public:
 	typedef OutputXmlSerializerNode OutNode;
 
 	template <typename T>
-	static void input_call(T& t, InNode& node)
-	{
+	static void input_call(T& t, InNode& node) {
 		InputXmlSerializerCall<T&>::call(t, node);
 	}
 
 	template <typename T>
-	static void output_call(T& t, OutNode& node)
-	{
+	static void output_call(T& t, OutNode& node) {
 		OutputXmlSerializerCall<T&>::call(t, node);
 	}
 };
@@ -340,18 +316,15 @@ public:
 };
 
 template <class T>
-class InputXmlIter : public std::iterator<std::input_iterator_tag, T>
-{
+class InputXmlIter : public std::iterator<std::input_iterator_tag, T> {
 public:
 	InputXmlIter(InputXmlSerializerNode* parent, pugi::xml_node::iterator iter) 
 	:	parent_(parent),
-		iter_(iter) {
-	}
+		iter_(iter) {}
 
 	InputXmlIter(const InputXmlIter& i) 
 	:	parent_(i.parent_),
-		iter_(i.iter_) {
-	}
+		iter_(i.iter_) {}
 
 	InputXmlIter operator ++() {
 		++iter_;
@@ -383,8 +356,7 @@ protected:
 	pugi::xml_node::iterator iter_;
 };
 
-class XmlSequence
-{
+class XmlSequence {
 public:
 	template <class Cont>
 	static void read(Cont& container, InputXmlSerializerNode& node) {

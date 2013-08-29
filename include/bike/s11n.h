@@ -35,36 +35,30 @@
 namespace bike {
 
 /// std::type_index for C++03
-class type_index
-{
+class type_index {
 public:
 	type_index(const std::type_info& info) : info_(&info) {}
 
 	type_index(const type_index& index) : info_(index.info_) {}
 
-	type_index& operator = (const type_index& index)
-	{
+	type_index& operator = (const type_index& index) {
 		info_ = index.info_;
 		return *this;
     }
 
-	bool operator < (const type_index& index) const
-	{
+	bool operator < (const type_index& index) const	{
 		return info_->before(*index.info_) != 0;
 	}
 
-	bool operator == (const type_index& index) const
-	{
+	bool operator == (const type_index& index) const {
 		return *info_ == *index.info_;
 	}
 
-	bool operator != (const type_index& index) const
-	{
+	bool operator != (const type_index& index) const {
 		return *info_ != *index.info_;
 	}
 
-	const char* name() const
-	{
+	const char* name() const {
         return info_->name();
     }
 
@@ -86,8 +80,7 @@ public:
 		return version_;
 	}
 
-	Version& operator = (const Version& cpy)
-	{
+	Version& operator = (const Version& cpy) {
 		version_ = cpy.version_;
         return *this;
     }
@@ -116,8 +109,7 @@ protected:
 	int version_;
 };
 
-class ReferencesId
-{
+class ReferencesId {
 public:
 	typedef std::map<unsigned int, void*> RefMap;
 	typedef std::map<unsigned int, void*>::const_iterator RefMapConstIter;
@@ -137,8 +129,7 @@ protected:
 	RefMap refs_;
 };
 
-class ReferencesPtr
-{
+class ReferencesPtr {
 public:
 	typedef std::map<void*, unsigned int> RefMap;
 	typedef std::map<void*, unsigned int>::const_iterator RefMapConstIter;
@@ -176,14 +167,12 @@ class Types {
 public:
 	struct Type {
 		type_index info;
-		
 		BasePlant* ctor;
 		std::vector<Type*> base;
 
 		Type(const type_index& info)
 		:	info(info), 
-			ctor(S11N_NULLPTR) {
-		}
+			ctor(S11N_NULLPTR) {}
 	};
 
 	template <typename T>
@@ -206,8 +195,7 @@ public:
 		Types::t().push_back(t);
 	}
 
-	static const Type* find(const std::string& type)
-	{
+	static const Type* find(const std::string& type) {
 		std::vector<Types::Type>::const_iterator i = Types::t().begin();
 		for (; i != Types::t().end(); ++i) {
 			if (i->info.name() == type) 
@@ -223,8 +211,7 @@ public:
 	}
 };
 
-class PtrHolder
-{
+class PtrHolder {
 public:
 	template <typename T>
 	explicit PtrHolder(T* ptr) : ptr_(ptr) {}
@@ -243,8 +230,7 @@ protected:
 	void* ptr_;
 };
 
-class BasePlant
-{
+class BasePlant {
 public:
 	virtual ~BasePlant() {}
 
@@ -256,8 +242,7 @@ public:
 };
 
 template <typename T, typename Serializer>
-class Plant : public BasePlant
-{
+class Plant : public BasePlant {
 protected:
 	typedef typename Serializer::InNode  InNode;
 	typedef typename Serializer::OutNode OutNode;
@@ -276,14 +261,14 @@ public:
 
 	void read(void* rd, PtrHolder node) /* override */ {
 		InNode* orig = node.get<InNode>();
-		//assert(orig);
+		assert(orig);
 		T& r = *static_cast<T*>(rd);
 		typename Serializer::input_call<T&>(r, *orig); 
 	}
 
 	void write(void* wr, PtrHolder node) /* override */ {
 		OutNode* orig = node.get<OutNode>();
-		//assert(orig);
+		assert(orig);
 		T& w = *static_cast<T*>(wr);
 		typename Serializer::output_call<T&>(w, *orig); 
 	}
@@ -295,12 +280,10 @@ protected:
 struct None {};
 
 template <typename Serializer0, typename Serializer1 = None>
-class Register
-{
+class Register {
 protected:
 	template <typename T, typename Serializer>
-	struct Impl
-	{
+	struct Impl {
 		static void reg() {
 			BasePlant* plant = new Plant<T, Serializer>;
 			Types::register_type<T>(plant);
@@ -308,8 +291,7 @@ protected:
 	};
 
 	template <typename T>
-	struct Impl<T, None>
-	{
+	struct Impl<T, None> {
 		static void reg() { /* Nothing to do */ }
 	};
 
@@ -319,32 +301,6 @@ public:
 	void reg_type() {
 		Impl<T, Serializer0>::reg();
 		Impl<T, Serializer1>::reg();
-	}
-};
-
-template <class T>
-class Typeid {
-public:
-	static const std::type_info& type(const T& t) {
-		return typeid(t);
-	}
-
-	static const std::type_info& type() {
-		return typeid(T);
-	}
-};
-
-template <class T>
-class Typeid<T*> {
-public:
-	static const std::type_info& type(const T* t) {
-		if (t == S11N_NULLPTR)
-			return type();
-		return typeid(const_cast<T*>(t));
-	}
-
-	static const std::type_info& type() {
-		return typeid(T*);
 	}
 };
 
