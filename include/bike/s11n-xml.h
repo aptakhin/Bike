@@ -240,14 +240,14 @@ protected:
 
 #define SN_RAW(Type, Retrieve) \
 	template <>\
-	class OutputXmlSerializerCall<Type&> {\
+	class OutputXmlSerializerCall<Type> {\
 	public:\
 		static void call(Type& t, OutputXmlSerializerNode& node) {\
 			node.xml().append_attribute("value") = t;\
 		}\
 	};\
 	template <>\
-	class InputXmlSerializerCall<Type&> {\
+	class InputXmlSerializerCall<Type> {\
 	public:\
 		static void call(Type& t, InputXmlSerializerNode& node) {\
 			pugi::xml_attribute attr = node.xml().attribute("value");\
@@ -393,14 +393,14 @@ public:
 #ifdef S11N_CPP11
 // ****** <memory> ext ******
 template <class T>
-class OutputXmlSerializerCall<std::unique_ptr<T>& > {
+class OutputXmlSerializerCall<std::unique_ptr<T>&> {
 public:
 	static void call(std::unique_ptr<T>& t, OutputXmlSerializerNode& node) {
 		node.ref_impl(t.get());
 	}
 };
 template <class T>
-class InputXmlSerializerCall<std::unique_ptr<T>& > {
+class InputXmlSerializerCall<std::unique_ptr<T>&> {
 public:
 	static void call(std::unique_ptr<T>& t, InputXmlSerializerNode& node) {
 		T* ref = S11N_NULLPTR;
@@ -410,14 +410,14 @@ public:
 };
 
 template <class T>
-class OutputXmlSerializerCall<std::shared_ptr<T>& > {
+class OutputXmlSerializerCall<std::shared_ptr<T>&> {
 public:
 	static void call(std::shared_ptr<T>& t, OutputXmlSerializerNode& node) {
 		node.ref_impl(t.get());
 	}
 };
 template <class T>
-class InputXmlSerializerCall<std::shared_ptr<T>& > {
+class InputXmlSerializerCall<std::shared_ptr<T>&> {
 public:
 	static void call(std::shared_ptr<T>& t, InputXmlSerializerNode& node) {
 		T* ref = S11N_NULLPTR;
