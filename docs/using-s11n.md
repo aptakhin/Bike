@@ -1,7 +1,7 @@
 Using s11n
 ====================
 
-Currently s11n has support of one format s11n-text.
+Currently s11n has support of only XML format.
 
 Examples
 ---------------------
@@ -33,7 +33,7 @@ void read_only_int(int& x)
 
 int main()
 {
-	int saved, loaded;
+	int saved = 5, loaded;
 	write_only_int(saved);
 	read_only_int(loaded);
 	return 0;
@@ -210,8 +210,8 @@ int main()
 ```
 
 ### Other shortly
-## C++03 compability
-This define turns of C++03 compability mode.
+#### C++03 compability
+This define turns on C++03 compability mode.
 ```cpp
 #define S11N_CPP03
 ```
