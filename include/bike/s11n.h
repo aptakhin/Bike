@@ -294,6 +294,16 @@ public:
 		Types::t().push_back(t);
 	}
 
+	const Type* find(const std::string& type)
+	{
+		std::vector<Types::Type>::const_iterator i = Types::t().begin();
+		for (; i != Types::t().end(); ++i) {
+			if (i->info.name() == type) 
+				return &*i;
+		}
+		return nullptr;
+	}
+
 public:
 
 	static std::vector<Type>& t() {
