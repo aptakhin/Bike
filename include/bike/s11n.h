@@ -146,8 +146,7 @@ public:
 		unsigned int id = get(key);
 		bool inserted = false;
 
-		if (id == 0)
-		{
+		if (id == 0) {
 			id = id_++;
 			refs_.insert(std::make_pair(key, id));
 			inserted = true;
@@ -171,8 +170,7 @@ public:
 		std::vector<Type*> base;
 
 		Type(const type_index& info)
-		:	info(info), 
-			ctor(S11N_NULLPTR) {}
+		:	info(info), ctor(S11N_NULLPTR) {}
 	};
 
 	template <typename T>
@@ -281,12 +279,17 @@ struct None {};
 
 template <typename Serializer0, typename Serializer1 = None>
 class Register {
+
+	typedef typename Register<Serializer0, Serializer1> ThisType;
+
 protected:
 	template <typename T, typename Serializer>
 	struct Impl {
 		static void reg() {
 			BasePlant* plant = new Plant<T, Serializer>;
 			Types::register_type<T>(plant);
+
+			HierarchyNode<ThisType> node(this, S11N_NULLPTR);
 		}
 	};
 
@@ -322,20 +325,19 @@ public:
 	}
 };
 
-#define S11N_VAR(var, arch) arch.named(var, bike::Static::normalize_name(#var));
-
+template <class Reg>
 class HierarchyNode {
 public:
-	HierarchyNode(HierarchyNode* parent) 
-	:	parent_(parent),
-		version_() {
-	}
+	HierarchyNode(Reg* reg, HierarchyNode* parent) 
+	:	reg_(reg),
+		parent_(parent) {}
 
 	void version(int ver) { version_.version(ver); }
 
 	template <typename Base>
 	HierarchyNode& base(Base* base_ptr) {
 		Base* base = static_cast<Base*>(base_ptr);
+		reg_->reg<Base>();
 		return *this & (*base);
 	}
 
@@ -355,6 +357,7 @@ public:
 	}
 
 protected:
+	Reg* reg_;
 	HierarchyNode* parent_;
 	Version version_;
 };

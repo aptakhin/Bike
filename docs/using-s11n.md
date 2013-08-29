@@ -162,6 +162,7 @@ int main()
 {
 	// Registering such way
 	bike::Register<bike::XmlSerializer> reg;
+	reg.reg_type<Human>();
 	reg.reg_type<Superman>();
 
 	// Then we can save and load any types, which Superman derives
@@ -203,7 +204,7 @@ int main()
 	std::ifstream fin("stuff.xml");
 	bike::InputXmlSerializer in(fin);
 	in >> magic_numbers;
-	in >> white_list;
+	in >> ip4_white_list;
 	in >> man;
 	return 0;
 }
