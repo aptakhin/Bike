@@ -177,8 +177,7 @@ TYPED_TEST_P(BaseTest, Classes) {
 TYPED_TEST_P(BaseTest, Pointers) {
 	Human* ivan = new Human("Ivan Ivanov"), *read = S11N_NULLPTR;
 	test_ptr_impl(ivan, read);
-	delete read;
-	delete ivan;
+	delete read, delete ivan;
 }
 
 TYPED_TEST_P(BaseTest, SmartPointers) {
@@ -214,7 +213,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	Classes, 
 	Pointers, 
 	SmartPointers,
-	SequenceContainers);
+	SequenceContainers
+);
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);

@@ -9,7 +9,7 @@ set(S11NT_SRC
   include/bike/s11n.h
   include/bike/s11n-xml.h
   tests/s11n-tests.cpp
-  tests/s11n-xml-tests.h
+  tests/s11n-base-tests.h
   tests/gtest/gtest.h
   tests/gtest/gtest-all.cc
   tests/pugixml/pugixml.hpp
@@ -29,7 +29,7 @@ source_group("gtest" FILES
 
 source_group("tests" FILES 
   tests/s11n-tests.cpp
-  tests/s11n-xml-tests.h
+  tests/s11n-base-tests.h
 )
 
 source_group("xml" FILES 
