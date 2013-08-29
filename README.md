@@ -15,3 +15,11 @@ Common features:
 - Serialization of shared classes
 
 [Read how to use s11n](docs/using-s11n.md)
+
+Acknowledgements
+====================
+This library uses pugixml library (http://pugixml.org).
+pugixml is Copyright (C) 2006-2012 Arseny Kapoulkine.
+
+This library uses Google Test library (https://code.google.com/p/googletest/).
+Google Test is Copyright 2005, Google Inc.

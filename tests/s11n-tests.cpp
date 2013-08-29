@@ -5,10 +5,10 @@
 #include <memory>
 
 #include <gtest/gtest.h>
-#include <bike/s11n.h>
-#include <bike/s11n-text.h>
 
-#include "s11n-text-tests.h"
+#include <bike/s11n.h>
+#include <bike/s11n-xml.h>
+#include "s11n-base-tests.h"
 
 GTEST_API_ int main(int argc, char **argv) {
 	bike::Static::add_std_renames();

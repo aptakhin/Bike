@@ -49,7 +49,7 @@ public:
 
 	bool operator < (const type_index& index) const
 	{
-		return info_->before(*index.info_);
+		return info_->before(*index.info_) != 0;
 	}
 
 	bool operator == (const type_index& index) const
@@ -128,8 +128,7 @@ public:
 		return found != refs_.end()? found->second : S11N_NULLPTR;
 	}
 
-	template <typename T>
-	unsigned int set(unsigned int key, void* val) {
+	void set(unsigned int key, void* val) {
 		refs_.insert(std::make_pair(key, val));
 	}
 
@@ -151,13 +150,18 @@ public:
 	}
 
 	template <typename T>
-	unsigned int set(T* key) {
+	std::pair<bool, unsigned int> set(T* key) {
 		unsigned int id = get(key);
+		bool inserted = false;
+
 		if (id == 0)
-			refs_.insert(std::make_pair(key, id_));
-		else
+		{
 			id = id_++;
-		return id;
+			refs_.insert(std::make_pair(key, id));
+			inserted = true;
+		}
+			
+		return std::make_pair(inserted, id);
 	}
 
 protected:
@@ -188,8 +192,7 @@ public:
 	typedef std::map<type_index, std::string> RenamesMap;
 	typedef std::map<type_index, std::string>::const_iterator RenamesMapConstIter;
 
-	static RenamesMap& map()
-	{
+	static RenamesMap& map() {
 		static RenamesMap map;
 		return map;
 	}
@@ -262,21 +265,21 @@ class BasePlant;
 class Types {
 public:
 	struct Type {
-		const std::type_index& info;
+		const type_index& info;
 		
 		BasePlant* ctor;
 		std::vector<Type*> base;
 
-		Type(const std::type_index& info) 
+		Type(const type_index& info)
 		:	info(info), 
-			ctor(nullptr)
+			ctor(S11N_NULLPTR)
 		{
 		}
 	};
 
 	template <typename T>
 	static bool is_registered() {
-		const std::type_index type = typeid(T); 
+		const type_index type = typeid(T);
 		std::vector<Types::Type>::const_iterator i = Types::t().begin();
 		for (; i != Types::t().end(); ++i) {
 			if (i->info == type) 
