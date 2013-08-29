@@ -79,6 +79,38 @@ protected:
 
 TYPED_TEST_CASE_P(BaseTest);
 
+TYPED_TEST_P(BaseTest, Base) {
+	test_val<int>(1);
+	test_val<unsigned int>(2);
+	test_val<short>(3);
+	test_val<unsigned short>(4);
+}
+
+template <typename T>
+struct Vec2 {
+
+	template <class Node>
+	void ser(Node& node, Version vers) {
+		node & x & y;
+	}
+
+	Vec2() : x(0), y(0) {}
+	Vec2(T x, T y) : x(x), y(y) {}
+
+	bool operator == (const Vec2& rhs) const { return x == rhs.x && y == rhs.y; }
+
+	T x, y;
+};
+
+TYPED_TEST_P(BaseTest, Structs) {
+	test_val<Vec2<int> >   (1,      2);
+	test_val<Vec2<float> > (3.f,    4.f);
+	test_val<Vec2<float> > (3.5f,   4.5f);
+	test_val<Vec2<double> >(5.,     6.);
+	test_val<Vec2<double> >(5.5555, 6.6666);
+}
+
+
 class Human
 {
 public:
@@ -144,10 +176,46 @@ public:
     }
 };
 
-TYPED_TEST_P(BaseTest, Inheritance) {
-	Register<XmlSerializer> reg;
-	reg.reg_type<Superman>();
+TYPED_TEST_P(BaseTest, Classes) {
+	Human base_human("");
+	Human named_human("Peter Petrov");
+	test_val_impl(named_human, base_human);
+	test_val<Superman>();
+}
 
+TYPED_TEST_P(BaseTest, Pointers) {
+	Human* ivan = new Human("Ivan Ivanov"), *read = S11N_NULLPTR;
+	test_ptr_impl(ivan, read);
+	delete read, delete ivan;
+}
+
+TYPED_TEST_P(BaseTest, SmartPointers) {
+	std::unique_ptr<Human> taras, read;
+	taras.reset(new Human("Taras Tarasov"));
+	test_dis_impl(taras, read);
+
+	std::shared_ptr<Human> alex, read2;
+	alex.reset(new Human("Alex Alexandrov"));
+	test_dis_impl(alex, read2);
+}
+
+TYPED_TEST_P(BaseTest, SequenceContainers) {
+	std::vector<int> empty_vec;
+	test_val(empty_vec);
+
+	std::vector<int> vec;
+	vec.push_back(1), vec.push_back(2), vec.push_back(3);
+	test_val(vec);
+
+	std::list<int> empty_list;
+	test_val(empty_list);
+
+	std::list<int> list;
+	list.push_back(4), list.push_back(5), list.push_back(6);
+	test_val(list);
+}
+
+TYPED_TEST_P(BaseTest, Inheritance) {
 	std::unique_ptr<Human> superman, read;
 	superman.reset(new Superman(200000));
 	test_dis_impl(superman, read);
@@ -156,6 +224,12 @@ TYPED_TEST_P(BaseTest, Inheritance) {
 
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
+	Base, 
+	Structs, 
+	Classes, 
+	Pointers, 
+	SmartPointers,
+	SequenceContainers,
 	Inheritance
 );
 

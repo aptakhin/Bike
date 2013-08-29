@@ -14,6 +14,10 @@
 #include "s11n-docs-tests.h"
 
 GTEST_API_ int main(int argc, char **argv) {
+	Register<XmlSerializer> reg;
+	reg.reg_type<Human>(); // FIXME: remove
+	reg.reg_type<Superman>();
+
 	testing::InitGoogleTest(&argc, argv);
 	int code = RUN_ALL_TESTS();
 	if (code != 0)

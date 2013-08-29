@@ -71,7 +71,10 @@ public:
 			if (set_result.first) {
 				const Types::Type* type = Types::find(typeid(*t).name());
 				PtrHolder node(this);
-				type->ctor->write(t, node);
+				if (type)
+					type->ctor->write(t, node);
+				else
+					(*t).ser(*this, Version(-1));
 			}
 		}
 		
