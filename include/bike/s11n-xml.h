@@ -42,10 +42,28 @@ public:
 		if (!node.version_.latest())
 			xml_node.append_attribute("ver").set_value(node.version_.version());
 
+		TypeWriter<T&>::write(t, xml_node);
+		
 		return *this;
 	}
 
-	pugi::xml_node xml() { return xml_; }
+	template <class T>
+	class TypeWriter
+	{
+	public:
+		static void write(T&, pugi::xml_node&) {}
+	};
+
+	template <class T>
+	class TypeWriter<T*&>
+	{
+	public:
+		static void write(T*& t, pugi::xml_node& xml_node) {
+			xml_node.append_attribute("type").set_value(typeid(*t).name());
+		}
+	};
+
+	pugi::xml_node xml() const { return xml_; }
 
 	template <class T>
 	void ref_impl(T* t) {
@@ -61,6 +79,8 @@ public:
 		
 		xml_.append_attribute("ref") = ref;
 	}
+
+	ReferencesPtr* refs() const { return refs_; }
 
 protected:
 	OutputXmlSerializerNode* parent_;
@@ -154,31 +174,43 @@ public:
 	template <class T>
 	bool search(T& t, const std::string& attr_name) {
 		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name.c_str());
-		assert(!found.empty());
+		assert(found);
 		InputXmlSerializerNode node(this, found, refs_);
 		InputXmlSerializerCall<T&>::call(t, node);
 		return true;
 	}
 
-	pugi::xml_node xml() { return xml_; }
+	pugi::xml_node xml() const { return xml_; }
 
 	template <class T>
 	void ref_impl(T*& t) {
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
-		assert(!ref_attr.empty());
+		assert(ref_attr);
 		unsigned int ref = ref_attr.as_uint();
 
 		void* ptr = refs_->get(ref);
 		if (ptr == S11N_NULLPTR)
 		{
-			ptr = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
+			pugi::xml_attribute type_attr = xml_.attribute("type");
+
+			if (type_attr)
+			{
+				const Types::Type* type = Types::find(type_attr.as_string());
+
+				PtrHolder holder(this);
+				PtrHolder got = type->ctor->create(holder);
+				ptr = got.get<T*>();
+			}
+			else
+				ptr = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
+				
 			refs_->set(ref, ptr);
 		}
 
 		t = reinterpret_cast<T*>(ptr);
 	}
 
-	ReferencesId* refs() { return refs_; }
+	ReferencesId* refs() const { return refs_; }
 
 protected:
 	pugi::xml_node next_child_node()
@@ -279,7 +311,7 @@ class InputXmlSerializerCall<std::string&> {
 public:
 	static void call(std::string& t, InputXmlSerializerNode& node) {
 		pugi::xml_attribute attr = node.xml().attribute("value");
-		assert(!attr.empty());
+		assert(attr);
 		t = std::string(attr.as_string());
 	}
 };
@@ -396,7 +428,9 @@ template <class T>
 class OutputXmlSerializerCall<std::unique_ptr<T>&> {
 public:
 	static void call(std::unique_ptr<T>& t, OutputXmlSerializerNode& node) {
-		node.ref_impl(t.get());
+		OutputXmlSerializerNode sub(&node, node.xml(), node.refs());
+		T* tmp = t.get();
+		sub & tmp;
 	}
 };
 template <class T>
@@ -404,7 +438,8 @@ class InputXmlSerializerCall<std::unique_ptr<T>&> {
 public:
 	static void call(std::unique_ptr<T>& t, InputXmlSerializerNode& node) {
 		T* ref = S11N_NULLPTR;
-		node.ref_impl(ref);
+		InputXmlSerializerNode sub(&node, node.xml(), node.refs());
+		sub & ref;
 		t.reset(ref);
 	}
 };

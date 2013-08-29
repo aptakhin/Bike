@@ -37,7 +37,7 @@ namespace bike {
 class type_index
 {
 public:
-	type_index(const std::type_info* info) : info_(info) {}
+	type_index(const std::type_info& info) : info_(&info) {}
 
 	type_index(const type_index& index) : info_(index.info_) {}
 
@@ -198,7 +198,7 @@ public:
 	}
 };
 
-#define S11N_RENAME(cl) Static::add_rename(&typeid(cl), #cl);
+#define S11N_RENAME(cl) Static::add_rename(typeid(cl), #cl);
 
 class Static
 {
@@ -265,7 +265,7 @@ class BasePlant;
 class Types {
 public:
 	struct Type {
-		const type_index& info;
+		type_index info;
 		
 		BasePlant* ctor;
 		std::vector<Type*> base;
@@ -297,7 +297,7 @@ public:
 		Types::t().push_back(t);
 	}
 
-	const Type* find(const std::string& type)
+	static const Type* find(const std::string& type)
 	{
 		std::vector<Types::Type>::const_iterator i = Types::t().begin();
 		for (; i != Types::t().end(); ++i) {
@@ -315,86 +315,75 @@ public:
 	}
 };
 
+class PtrHolder
+{
+public:
+	template <typename T>
+	explicit PtrHolder(T* ptr) : ptr_(ptr) {}
+
+	template <typename T>
+	T* get() {
+		return reinterpret_cast<T*>(ptr_);
+	}
+
+protected:
+	void* ptr_;
+};
 
 class BasePlant
 {
 public:
 	virtual ~BasePlant() {}
-};
 
-class PtrHolder
-{
-public:
-
-	template <typename T>
-	explicit PtrHolder(T* ptr) : holder(ptr)
-	{
-	}
-
-	template <typename T>
-	T* get()
-	{
-		return reinterpret_cast<T*>(holder);
-	}
-
-protected:
-	void* holder_;
-};
-
-class RefHolder
-{
-public:
-
-	template <typename T>
-	T& get()
-	{
-		return *reinterpret_cast<T*>(holder);
-	}
-
-protected:
-	void* holder_;
-};
-
-class NodeReaderInfo
-{
-public:
-	NodeReaderInfo(ReferencesId* refs)
-	:	refs_(refs)
-	{
-	}
-
-	virtual ~NodeReaderInfo() {}
-
-	ReferencesId* refs() { return refs_; }
-
-protected:
-	ReferencesId* refs_;
+	virtual PtrHolder create(PtrHolder holder) = 0;
 };
 
 template <typename T, typename Node>
 class Plant : public BasePlant
 {
 public:
+	Plant()
+	:	name_(typeid(T).name())	{}
+
 	virtual ~Plant() {}
 
-	PtrHolder create_ptr(NodeReaderInfo* info)
-	{
-		Node node(info);
-		return PtrHolder(Ctor<T, InputNode0>::ctor(node));
+	PtrHolder create(PtrHolder holder) /* override */ {
+		Node* orig = holder.get<Node>();
+		assert(orig);
+		return PtrHolder(Ctor<T*, Node>::ctor(*orig));
 	}
 
 protected:
 	std::string name_;
 };
 
-template <typename InputNode0>
-class Register1
+struct None {};
+
+template <typename InputNode0, typename InputNode1 = None>
+class Register
 {
+protected:
+	template <typename T, typename InputNode>
+	struct Impl
+	{
+		static void reg() {
+			BasePlant* plant = new Plant<T, InputNode>;
+			Types::register_type<T>(plant);
+		}
+	};
+
+	template <typename T>
+	struct Impl<T, None>
+	{
+		static void reg() { /* Nothing to do */ }
+	};
+
 public:
+
 	template <typename T>
 	void reg_type() {
-		BasePlant* plant = new Plant<T, InputNode0>;
-		Types::register_type<T>(plant);
+		Impl<T, InputNode0>::reg();
+		Impl<T, InputNode1>::reg();
 	}
 };
 
