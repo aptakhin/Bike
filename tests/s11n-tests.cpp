@@ -1,3 +1,5 @@
+// s11n
+//
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -12,7 +14,6 @@
 #include "s11n-docs-tests.h"
 
 GTEST_API_ int main(int argc, char **argv) {
-	bike::Static::add_std_renames();
 	testing::InitGoogleTest(&argc, argv);
 	int code = RUN_ALL_TESTS();
 	if (code != 0)

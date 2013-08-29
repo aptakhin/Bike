@@ -10,8 +10,11 @@
 #include <map>
 #include <assert.h>
 
-#ifdef S11N_CPP11
+#ifdef S11N_CPP03
+#	define S11N_NULLPTR NULL
+#else
 #	include <typeindex>
+#	define S11N_NULLPTR nullptr
 #endif
 
 // Need this for simple using vector, list
@@ -28,8 +31,6 @@
 #		define assert(_Expr) {}
 #	endif	
 #endif
-
-#define S11N_NULLPTR NULL
 
 namespace bike {
 
@@ -169,97 +170,6 @@ protected:
 	unsigned int id_;
 };
 
-template <typename T>
-class ReferencesPtrSetter
-{
-public:
-	static unsigned int set(T, ReferencesPtr*) { return 0; }
-};
-
-#define S11N_ITS_PTR(t, to_ptr) template <typename T> class ReferencesPtrSetter<t> {\
-	public:	static unsigned int set(T* key, ReferencesPtr* refs) { return refs->set(to_ptr); } };
-
-S11N_ITS_PTR(T*, key);
-
-#ifdef S11N_CPP11
-S11N_ITS_PTR(std::shared_ptr<T>, key.get());
-#endif
-
-class Renames
-{
-public:
-
-	typedef std::map<type_index, std::string> RenamesMap;
-	typedef std::map<type_index, std::string>::const_iterator RenamesMapConstIter;
-
-	static RenamesMap& map() {
-		static RenamesMap map;
-		return map;
-	}
-};
-
-#define S11N_RENAME(cl) Static::add_rename(typeid(cl), #cl);
-
-class Static
-{
-public:
-	
-	static bool starts_with(const std::string& str, const std::string& prefix) {
-		size_t sz = prefix.size();
-		if (str.size() < sz)
-			return false;
-
-		for (size_t i = 0; i < sz; ++i) {
-			if (str[i] != prefix[i])
-				return false;
-		}
-		return true;
-	}
-
-	static bool ends_with(const std::string& str, const std::string& suffix) {
-		size_t sz = suffix.size();
-		if (str.size() < sz)
-			return false;
-
-		size_t offset = str.length() - suffix.length();
-		for (size_t i = 0; i < sz; ++i) {
-			if (str[offset + i] != suffix[i])
-				return false;
-		}
-		return true;
-	}
-
-	static void add_rename(const type_index& index, const char* crename) {
-		std::string rename;
-		std::string maybe_monstrous_name = index.name();
-
-		if (starts_with(maybe_monstrous_name, "class"))
-			rename += "class ", rename += crename;
-
-		if (starts_with(maybe_monstrous_name, "struct"))
-			rename += "struct ", rename += crename;
-
-		Renames::map().insert(std::make_pair(index, rename));
-	}
-
-	static void add_std_renames() {
-		S11N_RENAME(std::string);
-	}
-
-	static std::string normalize_class(const type_index& index) {
-		Renames::RenamesMapConstIter found = Renames::map().find(index);
-		if (found != Renames::map().end())
-			return found->second;
-		else
-			return std::string(index.name());
-	}
-
-	static std::string normalize_name(const char* var) {
-		std::string name = var;
-		return name;
-	}
-};
-
 class BasePlant;
 
 class Types {
@@ -272,8 +182,7 @@ public:
 
 		Type(const type_index& info)
 		:	info(info), 
-			ctor(S11N_NULLPTR)
-		{
+			ctor(S11N_NULLPTR) {
 		}
 	};
 
@@ -308,7 +217,6 @@ public:
 	}
 
 public:
-
 	static std::vector<Type>& t() {
 		static std::vector<Type> types;
 		return types;

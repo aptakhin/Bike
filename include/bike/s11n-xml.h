@@ -445,7 +445,7 @@ public:
 	}
 };
 
-#ifdef S11N_CPP11
+#ifndef S11N_CPP03
 // ****** <memory> ext ******
 template <class T>
 class OutputXmlSerializerCall<std::unique_ptr<T>&> {
@@ -483,7 +483,6 @@ public:
 		t.reset(ref);
 	}
 };
-
-#endif // #ifdef S11N_CPP11
+#endif // #ifndef S11N_CPP03
 
 } // namespace bike {

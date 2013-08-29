@@ -189,12 +189,9 @@ int main()
 
 ### STL-stuff
 
-— STL-support included.
+STL-support included.
 
 ```cpp
-
-// Uncomment this to add C++11-specific files like <memory>
-// #define S11N_CPP11
 
 int main()
 {
@@ -212,3 +209,9 @@ int main()
 }
 ```
 
+### Other shortly
+## C++03 compability
+This define turns of C++03 compability mode.
+```cpp
+#define S11N_CPP03
+```
