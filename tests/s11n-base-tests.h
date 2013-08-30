@@ -110,7 +110,6 @@ TYPED_TEST_P(BaseTest, Structs) {
 	test_val<Vec2<double> >(5.5555, 6.6666);
 }
 
-
 class Human
 {
 public:

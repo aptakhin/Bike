@@ -127,6 +127,7 @@ public:
 		return new Human(name); // We did it
 	}
 };
+```
 
 ### Inheritance
 ```cpp

@@ -15,7 +15,7 @@
 
 GTEST_API_ int main(int argc, char **argv) {
 	Register<XmlSerializer> reg;
-	reg.reg_type<Human>(); // FIXME: remove
+	reg.reg_type<Human>();
 	reg.reg_type<Superman>();
 
 	testing::InitGoogleTest(&argc, argv);

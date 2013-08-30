@@ -193,10 +193,10 @@ public:
 		Types::t().push_back(t);
 	}
 
-	static const Type* find(const std::string& type) {
+	static const Type* find(const char* type) {
 		std::vector<Types::Type>::const_iterator i = Types::t().begin();
 		for (; i != Types::t().end(); ++i) {
-			if (i->info.name() == type) 
+			if (std::strcmp(i->info.name(), type) == 0) 
 				return &*i;
 		}
 		return nullptr;
@@ -288,8 +288,6 @@ protected:
 		static void reg() {
 			BasePlant* plant = new Plant<T, Serializer>;
 			Types::register_type<T>(plant);
-
-			HierarchyNode<ThisType> node(this, S11N_NULLPTR);
 		}
 	};
 
@@ -323,43 +321,6 @@ public:
 	static T* ctor(Node& node) {
 		return new T();
 	}
-};
-
-template <class Reg>
-class HierarchyNode {
-public:
-	HierarchyNode(Reg* reg, HierarchyNode* parent) 
-	:	reg_(reg),
-		parent_(parent) {}
-
-	void version(int ver) { version_.version(ver); }
-
-	template <typename Base>
-	HierarchyNode& base(Base* base_ptr) {
-		Base* base = static_cast<Base*>(base_ptr);
-		reg_->reg<Base>();
-		return *this & (*base);
-	}
-
-	template <typename T>
-	HierarchyNode& ver(bool expr, T& t) {
-		return *this;
-	}
-
-	template <class T>
-	HierarchyNode& operator & (const T& t) {
-		return named(t, "");
-	}
-
-	template <class T>
-	HierarchyNode& named(const T& t, const std::string& name) {
-		return *this;
-	}
-
-protected:
-	Reg* reg_;
-	HierarchyNode* parent_;
-	Version version_;
 };
 
 } // namespace bike {

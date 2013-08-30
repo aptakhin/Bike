@@ -29,12 +29,12 @@ public:
 	}
 
 	template <class T>
-	OutputXmlSerializerNode& named(T& t, const std::string& name) {
+	OutputXmlSerializerNode& named(T& t, const char* name) {
 		pugi::xml_node xml_node = xml_.append_child("object");
 		OutputXmlSerializerNode node(this, xml_node, refs_);
 
-		if (!name.empty())
-			xml_node.append_attribute("name").set_value(name.c_str());
+		if (name && name[0] != 0)
+			xml_node.append_attribute("name").set_value(name);
 
 		OutputXmlSerializerCall<T&>::call(t, node);
 
@@ -62,22 +62,21 @@ public:
 	pugi::xml_node xml() const { return xml_; }
 
 	template <class T>
-	void ref_impl(T* t) {
+	void ptr_impl(T* t) {
 		unsigned int ref = 0;
-
 		if (t != S11N_NULLPTR) {
 			std::pair<bool, unsigned int> set_result = refs_->set(t);
 			ref = set_result.second;
 			if (set_result.first) {
 				const Types::Type* type = Types::find(typeid(*t).name());
-				PtrHolder node(this);
-				if (type)
+				if (type) { // If we found type in registered types, then initialize such way
+					PtrHolder node(this);
 					type->ctor->write(t, node);
-				else
+				}
+				else // Otherwise, no choise and direct way
 					(*t).ser(*this, Version(-1));
 			}
 		}
-		
 		xml_.append_attribute("ref") = ref;
 	}
 
@@ -105,7 +104,7 @@ template <class T>
 class OutputXmlSerializerCall<T*&> {
 public:
 	static void call(T*& t, OutputXmlSerializerNode& node) {
-		node.ref_impl(t);
+		node.ptr_impl(t);
 	}
 };
 
@@ -118,11 +117,9 @@ public:
 	template <class T>
 	OutputXmlSerializer& operator << (T& t) {
 		pugi::xml_document doc;
-
 		xml_ = doc.append_child("serializable");
 		xml_.append_attribute("fmtver").set_value(1);
 		static_cast<OutputXmlSerializer&>(*this & t);
-
 		doc.save(*out_);
 		return *this; 
 	}
@@ -158,15 +155,16 @@ public:
 	}
 
 	template <class T>
-	InputXmlSerializerNode& named(T& t, const std::string& attr_name) {
+	InputXmlSerializerNode& named(T& t, const char* attr_name) {
 		InputXmlSerializerNode node(this, next_child_node(), refs_);
+		// TODO: Check attr_name
 		InputXmlSerializerCall<T&>::call(t, node);
 		return *this;
 	}
 
 	template <class T>
-	bool search(T& t, const std::string& attr_name) {
-		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name.c_str());
+	bool search(T& t, const char* attr_name) {
+		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name);
 		assert(found);
 		InputXmlSerializerNode node(this, found, refs_);
 		InputXmlSerializerCall<T&>::call(t, node);
@@ -176,15 +174,13 @@ public:
 	pugi::xml_node xml() const { return xml_; }
 
 	template <class T>
-	void ref_impl(T*& t) {
+	void ptr_impl(T*& t) {
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
 		assert(ref_attr);
 		unsigned int ref = ref_attr.as_uint();
-
 		void* ptr = refs_->get(ref);
 		if (ptr == S11N_NULLPTR) {
 			pugi::xml_attribute type_attr = xml_.attribute("type");
-
 			if (type_attr) {
 				const Types::Type* type = Types::find(type_attr.as_string());
 				PtrHolder node_holder(this);
@@ -204,7 +200,7 @@ public:
 protected:
 	pugi::xml_node next_child_node() {
 		return current_child_ = current_child_.empty() ? 
-			*xml_.begin() : current_child_.next_sibling();;
+			*xml_.begin() : current_child_.next_sibling();
 	}
 
 protected:
@@ -230,7 +226,7 @@ template <class T>
 class InputXmlSerializerCall<T*&> {
 public:
 	static void call(T*& t, InputXmlSerializerNode& node) {
-		node.ref_impl(t);
+		node.ptr_impl(t);
 	}
 };
 
@@ -382,7 +378,6 @@ public:
 	template <class FwdIter>
 	static void write(FwdIter begin, FwdIter end, OutputXmlSerializerNode& node) {
 		node.xml().append_attribute("concept") = "SEQ";
-
 		for (; begin != end; ++begin)
 			node.named(*begin, "");
 	}
@@ -446,7 +441,7 @@ template <class T>
 class OutputXmlSerializerCall<std::shared_ptr<T>&> {
 public:
 	static void call(std::shared_ptr<T>& t, OutputXmlSerializerNode& node) {
-		node.ref_impl(t.get());
+		node.ptr_impl(t.get());
 	}
 };
 template <class T>
@@ -454,7 +449,7 @@ class InputXmlSerializerCall<std::shared_ptr<T>&> {
 public:
 	static void call(std::shared_ptr<T>& t, InputXmlSerializerNode& node) {
 		T* ref = S11N_NULLPTR;
-		node.ref_impl(ref);
+		node.ptr_impl(ref);
 		t.reset(ref);
 	}
 };
