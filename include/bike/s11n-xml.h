@@ -30,6 +30,7 @@ public:
 
 	template <class T>
 	OutputXmlSerializerNode& named(T& t, const char* name) {
+		S11N_CHECK(false, Err::Runtime);
 		pugi::xml_node xml_node = xml_.append_child("object");
 		OutputXmlSerializerNode node(this, xml_node, refs_);
 
@@ -69,7 +70,7 @@ public:
 			ref = set_result.second;
 			if (set_result.first) {
 				const Types::Type* type = Types::find(typeid(*t).name());
-				if (type) { // If we found type in registered types, then initialize such way
+				if (type) { // If we found type in registered types, then initialize factory way
 					PtrHolder node(this);
 					type->ctor->write(t, node);
 				}
@@ -165,7 +166,7 @@ public:
 	template <class T>
 	bool search(T& t, const char* attr_name) {
 		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name);
-		assert(found);
+		S11N_CHECK(!found.empty(), Err::Runtime);
 		InputXmlSerializerNode node(this, found, refs_);
 		InputXmlSerializerCall<T&>::call(t, node);
 		return true;
@@ -176,7 +177,7 @@ public:
 	template <class T>
 	void ptr_impl(T*& t) {
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
-		assert(ref_attr);
+		S11N_CHECK(ref_attr, Err::Runtime);
 		unsigned int ref = ref_attr.as_uint();
 		void* ptr = refs_->get(ref);
 		if (ptr == S11N_NULLPTR) {
@@ -308,10 +309,10 @@ class InputXmlSerializerCall<char(&)[Size]> {
 public:
 	static void call(char(&t)[Size], InputXmlSerializerNode& node) {
 		pugi::xml_attribute attr = node.xml().attribute("value");
-		assert(attr);
+		S11N_CHECK(attr, Err::Runtime);
 		const pugi::char_t* orig = attr.as_string();
 		size_t size = strlen(orig);
-		assert(size < Size);
+		S11N_CHECK(size < Size, Err::Runtime);
 		memcpy(t, orig, size + 1);
 	}
 };
@@ -329,7 +330,7 @@ class InputXmlSerializerCall<std::string&> {
 public:
 	static void call(std::string& t, InputXmlSerializerNode& node) {
 		pugi::xml_attribute attr = node.xml().attribute("value");
-		assert(attr);
+		S11N_CHECK(attr, Err::Runtime);
 		t = std::string(attr.as_string());
 	}
 };

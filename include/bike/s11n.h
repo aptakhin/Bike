@@ -30,9 +30,50 @@
 #	else
 #		define assert(_Expr) {}
 #	endif	
+#	define S11N_DEBUG_BREAK _CrtDbgBreak();
+#else
+#	define S11N_DEBUG_BREAK
 #endif
 
 namespace bike {
+
+class Err
+{
+public:
+	enum Code {
+		None = 0,
+		Runtime
+	};
+};
+
+std::exception wrap_exception(Err::Code code, const char* expr, const char* file, int line)
+{
+	std::ostringstream out;
+	out << "Expression: \"" << expr << "\" in file: " << file << ":" << line;
+
+	switch (code)
+	{
+	case Err::Runtime:
+		return std::runtime_error(out.str().c_str());
+	default:
+		return std::exception();
+	}
+}
+
+#ifndef S11N_NO_EXCEPTIONS
+#	define S11N_ERR_HANDLER(Action, Expr) throw wrap_exception(Action, #Expr, __FILE__, __LINE__);
+
+#	define S11N_CHECK(Expr, Action){\
+		if (!(Expr)) {\
+			S11N_DEBUG_BREAK;\
+			S11N_ERR_HANDLER(Action, Expr);\
+		} }
+#else
+#	define S11N_CHECK(Expr, Action){\
+		if (!(Expr)) {\
+			S11N_DEBUG_BREAK;\
+		} }
+#endif
 
 /// std::type_index for C++03
 class type_index {
@@ -76,7 +117,7 @@ public:
 	}
 
 	int version() {
-		assert(!latest());
+		S11N_CHECK(!latest(), Err::Runtime);
 		return version_;
 	}
 
@@ -253,22 +294,22 @@ public:
 
 	PtrHolder create(PtrHolder holder) /* override */ {
 		InNode* orig = holder.get<InNode>();
-		assert(orig);
+		S11N_CHECK(orig != S11N_NULLPTR, Err::Runtime);
 		return PtrHolder(Ctor<T*, InNode>::ctor(*orig));
 	}
 
 	void read(void* rd, PtrHolder node) /* override */ {
 		InNode* orig = node.get<InNode>();
-		assert(orig);
+		S11N_CHECK(orig != S11N_NULLPTR, Err::Runtime);
 		T& r = *static_cast<T*>(rd);
 		typename Serializer::input_call<T&>(r, *orig); 
 	}
 
 	void write(void* wr, PtrHolder node) /* override */ {
 		OutNode* orig = node.get<OutNode>();
-		assert(orig);
+		S11N_CHECK(orig != S11N_NULLPTR, Err::Runtime);
 		T& w = *static_cast<T*>(wr);
-		typename Serializer::output_call<T&>(w, *orig); 
+		typename Serializer::output_call<T&>(w, *orig);
 	}
 
 protected:
