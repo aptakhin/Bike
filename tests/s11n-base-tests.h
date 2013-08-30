@@ -51,29 +51,37 @@ public:
 		test_val<T>(T(p1, p2));
 	}
 
+#define WRITE(Write)\
+		std::ofstream fout("test.txt");\
+		Output out(fout);\
+		out << (Write);\
+		fout.close();\
+
+#define READ(Read)\
+		std::ifstream fin("test.txt");\
+		Input in(fin);\
+		in >> (Read);\
+
 	template <typename T>
 	void io_impl(const T& write, T& read) {
-		std::ofstream fout("test.txt");
-		Output out(fout);
-		out << const_cast<T&>(write);
-		fout.close();
-
-		std::ifstream fin("test.txt");
-		Input in(fin);
-		in >> read;
+		WRITE(const_cast<T&>(write))
+		READ(read);
 	}
 
 	template <typename T>
 	void io_ptr_impl(const T*& write, T*& read) {
-		std::ofstream fout("test.txt");
-		Output out(fout);
-		out << const_cast<T*&>(write);
-		fout.close();
-
-		std::ifstream fin("test.txt");
-		Input in(fin);
-		in >> read;
+		WRITE(const_cast<T*&>(write));
+		READ(read);
 	}
+
+	template <typename T, int Size>
+	void io_arr_impl(T(&write)[Size], T(&read)[Size]) {
+		WRITE(write);
+		READ(read);
+	}
+
+#undef WRITE
+#undef READ
 };
 
 TYPED_TEST_CASE_P(BaseTest);
@@ -88,6 +96,11 @@ TYPED_TEST_P(BaseTest, Base) {
 TYPED_TEST_P(BaseTest, Strings) {
 	test_val<std::string>("");
 	test_val<std::string>("First string in test suite");
+
+	char buf[32] = "Second string";
+	char read[32];
+	io_arr_impl<char, 32>(buf, read);
+	ASSERT_EQ(0, std::strcmp(buf, read));
 }
 
 template <typename T>

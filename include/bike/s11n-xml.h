@@ -296,6 +296,26 @@ public:
 	}
 };
 
+template <int Size>
+class OutputXmlSerializerCall<char(&)[Size]> {
+public:
+	static void call(char(&t)[Size], OutputXmlSerializerNode& node) {
+		node.xml().append_attribute("value").set_value(t);
+	}
+};
+template <int Size>
+class InputXmlSerializerCall<char(&)[Size]> {
+public:
+	static void call(char(&t)[Size], InputXmlSerializerNode& node) {
+		pugi::xml_attribute attr = node.xml().attribute("value");
+		assert(attr);
+		const pugi::char_t* orig = attr.as_string();
+		size_t size = strlen(orig);
+		assert(size < Size);
+		memcpy(t, orig, size + 1);
+	}
+};
+
 // ****** <string> ext ******
 template <>
 class OutputXmlSerializerCall<std::string&> {
