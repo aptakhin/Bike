@@ -238,6 +238,47 @@ TYPED_TEST_P(BaseTest, Inheritance) {
 	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
 }
 
+class IntegerHolder
+{
+public:
+	IntegerHolder() : number_(0) {}
+
+	void set_number(int number) { number_ = number; }
+
+	int get_number() { return number_; }
+
+private:
+	int number_;
+};
+
+template <typename Node>
+void serialize(IntegerHolder& integer, Node& node)
+{
+	node.serialize(&integer, "number", &IntegerHolder::get_number, &IntegerHolder::set_number);
+}
+
+template <>
+class OutputXmlSerializerCall<IntegerHolder&> {
+public:
+	static void call(IntegerHolder& t, OutputXmlSerializerNode& node) {
+		serialize(t, node);
+	}
+};
+template <>
+class InputXmlSerializerCall<IntegerHolder&> {
+public:
+	static void call(IntegerHolder& t, InputXmlSerializerNode& node) {
+		serialize(t, node);
+	}
+};
+
+TYPED_TEST_P(BaseTest, Outofclass) {
+	IntegerHolder integer, read;
+	integer.set_number(12);
+
+	io_impl(integer, read);
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
@@ -247,7 +288,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	Pointers, 
 	SmartPointers,
 	SequenceContainers,
-	Inheritance
+	Inheritance,
+	Outofclass
 );
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;

@@ -319,5 +319,5 @@ public:
 		return new T();
 	}
 };
-
+ 
 } // namespace bike {

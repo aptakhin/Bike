@@ -80,6 +80,13 @@ public:
 		xml_.append_attribute("ref") = ref;
 	}
 
+	template <class Object, class T>
+	void serialize(Object* object, const char* name, T (Object::*get)(), void (Object::*)(T))
+	{
+		T val = (object->*get)();
+		named(val, name);
+	}
+
 	ReferencesPtr* refs() const { return refs_; }
 
 protected:
@@ -158,6 +165,7 @@ public:
 	InputXmlSerializerNode& named(T& t, const char* attr_name) {
 		InputXmlSerializerNode node(this, next_child_node(), refs_);
 		// TODO: Check attr_name
+		// TODO: Miss this if we've read this earlier (in search, for example)
 		InputXmlSerializerCall<T&>::call(t, node);
 		return *this;
 	}
@@ -196,6 +204,14 @@ public:
 	}
 
 	ReferencesId* refs() const { return refs_; }
+
+	template <class Object, class T>
+	void serialize(Object* object, const char* name, T (Object::*)(), void (Object::* set)(T))
+	{
+		T val;
+		named(val, name);
+		(object->*set)(val);
+	}
 
 protected:
 	pugi::xml_node next_child_node() {
