@@ -81,8 +81,7 @@ public:
 	}
 
 	template <class Object, class T>
-	void serialize(Object* object, const char* name, T (Object::*get)(), void (Object::*)(T))
-	{
+	void serialize(Object* object, const char* name, T (Object::*get)(), void (Object::*)(T)) {
 		T val = (object->*get)();
 		named(val, name);
 	}
@@ -206,8 +205,7 @@ public:
 	ReferencesId* refs() const { return refs_; }
 
 	template <class Object, class T>
-	void serialize(Object* object, const char* name, T (Object::*)(), void (Object::* set)(T))
-	{
+	void serialize(Object* object, const char* name, T (Object::*)(), void (Object::* set)(T)) {
 		T val;
 		named(val, name);
 		(object->*set)(val);

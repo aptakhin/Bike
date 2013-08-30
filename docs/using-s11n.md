@@ -15,19 +15,19 @@ Examples
 #include <bike/s11n.h>
 
 // Second file for specific format
-#include <bike/s11n-text.h>
+#include <bike/s11n-xml.h>
 
 void write_only_int(int x)
 {
 	std::ofstream fout("integer.xml");
-	bike::OutputTextSerializer out(fout);
+	bike::OutputXmlSerializer out(fout);
 	out << x;
 }
 
 void read_only_int(int& x)
 {
 	std::ifstream fin("integer.xml");
-	bike::InputTextSerializer in(fin);
+	bike::InputXmlSerializer in(fin);
 	in >> x;
 }
 

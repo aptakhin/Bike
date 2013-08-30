@@ -260,7 +260,7 @@ void serialize(IntegerHolder& integer, Node& node)
 
 S11N_XML_OUT(IntegerHolder, serialize);
 
-TYPED_TEST_P(BaseTest, Outofclass) {
+TYPED_TEST_P(BaseTest, OutOfClass) {
 	IntegerHolder integer, read;
 	integer.set_number(12);
 	io_impl(integer, read);
@@ -276,7 +276,7 @@ REGISTER_TYPED_TEST_CASE_P(
 	SmartPointers,
 	SequenceContainers,
 	Inheritance,
-	Outofclass
+	OutOfClass
 );
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;
