@@ -169,7 +169,7 @@ public:
 		superpower_(superpower) {
 	}    
 
-	void fly() { /* Clark don't need and code to fly */ }
+	void fly() { /* Clark don't need any code to fly */ }
 
     template <class Node>
     void ser(Node& node, Version version) {

@@ -279,9 +279,6 @@ struct None {};
 
 template <typename Serializer0, typename Serializer1 = None>
 class Register {
-
-	typedef typename Register<Serializer0, Serializer1> ThisType;
-
 protected:
 	template <typename T, typename Serializer>
 	struct Impl {
