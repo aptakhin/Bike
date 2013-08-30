@@ -51,7 +51,6 @@ public:
 		test_val<T>(T(p1, p2));
 	}
 
-protected:
 	template <typename T>
 	void io_impl(const T& write, T& read) {
 		std::ofstream fout("test.txt");
@@ -84,6 +83,11 @@ TYPED_TEST_P(BaseTest, Base) {
 	test_val<unsigned int>(2);
 	test_val<short>(3);
 	test_val<unsigned short>(4);
+}
+
+TYPED_TEST_P(BaseTest, Strings) {
+	test_val<std::string>("");
+	test_val<std::string>("First string in test suite");
 }
 
 template <typename T>
@@ -224,6 +228,7 @@ TYPED_TEST_P(BaseTest, Inheritance) {
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
+	Strings,
 	Structs, 
 	Classes, 
 	Pointers, 
