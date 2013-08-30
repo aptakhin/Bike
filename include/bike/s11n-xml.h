@@ -312,6 +312,22 @@ public:
 	}
 };
 
+#define S11N_XML_OUT(Type, Function)\
+	template <>\
+	class OutputXmlSerializerCall<Type&> {\
+	public:\
+		static void call(Type& t, OutputXmlSerializerNode& node) {\
+			Function(t, node);\
+		}\
+	};\
+	template <>\
+	class InputXmlSerializerCall<Type&> {\
+	public:\
+		static void call(Type& t, InputXmlSerializerNode& node) {\
+			Function(t, node);\
+		}\
+	};
+
 template <int Size>
 class OutputXmlSerializerCall<char(&)[Size]> {
 public:

@@ -254,28 +254,15 @@ private:
 template <typename Node>
 void serialize(IntegerHolder& integer, Node& node)
 {
-	node.serialize(&integer, "number", &IntegerHolder::get_number, &IntegerHolder::set_number);
+	node.serialize(&integer, "number", 
+		&IntegerHolder::get_number, &IntegerHolder::set_number);
 }
 
-template <>
-class OutputXmlSerializerCall<IntegerHolder&> {
-public:
-	static void call(IntegerHolder& t, OutputXmlSerializerNode& node) {
-		serialize(t, node);
-	}
-};
-template <>
-class InputXmlSerializerCall<IntegerHolder&> {
-public:
-	static void call(IntegerHolder& t, InputXmlSerializerNode& node) {
-		serialize(t, node);
-	}
-};
+S11N_XML_OUT(IntegerHolder, serialize);
 
 TYPED_TEST_P(BaseTest, Outofclass) {
 	IntegerHolder integer, read;
 	integer.set_number(12);
-
 	io_impl(integer, read);
 }
 
