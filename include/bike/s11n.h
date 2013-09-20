@@ -161,23 +161,20 @@ protected:
 
 class BasePlant;
 
+struct Type {
+	type_index info;
+	BasePlant* ctor;
+	std::vector<Type*> base;
 
-namespace type {
-	struct Type {
-		type_index info;
-		BasePlant* ctor;
-		std::vector<Type*> base;
-
-		Type(const type_index& info)
-		:	info(info), ctor(S11N_NULLPTR) {}
-	};
-} // namespace type {
+	Type(const type_index& info)
+	:	info(info), ctor(S11N_NULLPTR) {}
+};
 
 #define S11N_TYPE_STORAGE\
 	public:\
-		typedef std::vector<type::Type> TypesT;\
-		static std::vector<type::Type>& t() {\
-			static std::vector<type::Type> types;\
+		typedef std::vector<Type> TypesT;\
+		static std::vector<Type>& t() {\
+			static std::vector<Type> types;\
 			return types;\
 		}
 
@@ -199,12 +196,12 @@ public:
 	static void register_type(BasePlant* ctor) {
 		if (is_registered<T>())
 			throw false;
-		type::Type t(typeid(T));
+		Type t(typeid(T));
 		t.ctor = ctor;
 		Storage::t().push_back(t); 
 	}
 
-	static const type::Type* find(const char* type) {
+	static const Type* find(const char* type) {
 		typename Storage::TypesT::const_iterator i = Storage::t().begin();
 		for (; i != Storage::t().end(); ++i) {
 			if (std::strcmp(i->info.name(), type) == 0) 

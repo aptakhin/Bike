@@ -73,7 +73,7 @@ public:
 			std::pair<bool, unsigned int> set_result = refs_->set(t);
 			ref = set_result.second;
 			if (set_result.first) {
-				const type::Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*t).name());
+				const Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*t).name());
 				if (type) { // If we found type in registered types, then initialize such way
 					PtrHolder node(this);
 					type->ctor->write(t, node);
@@ -202,7 +202,7 @@ public:
 			if (ptr == S11N_NULLPTR) {
 				pugi::xml_attribute type_attr = xml_.attribute("type");
 				if (type_attr) {
-					const type::Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(type_attr.as_string());
+					const Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(type_attr.as_string());
 					PtrHolder node_holder(this);
 					PtrHolder got = type->ctor->create(node_holder);
 					t = got.get<T>(); // TODO: Fixme another template adapter
