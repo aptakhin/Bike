@@ -80,13 +80,9 @@ public:
 		xml_.append_attribute("ref") = ref;
 	}
 
-	template <class Object, class T>
-	void serialize(Object* object, const char* name, T (Object::*get)(), void (Object::*)(T)) {
-		T val = (object->*get)();
-		named(val, name);
-	}
-
 	ReferencesPtr* refs() const { return refs_; }
+
+	OutputEssence essence() { return OutputEssence(); }
 
 protected:
 	OutputXmlSerializerNode* parent_;
@@ -204,12 +200,7 @@ public:
 
 	ReferencesId* refs() const { return refs_; }
 
-	template <class Object, class T>
-	void serialize(Object* object, const char* name, T (Object::*)(), void (Object::* set)(T)) {
-		T val;
-		named(val, name);
-		(object->*set)(val);
-	}
+	InputEssence essence() { return InputEssence(); }
 
 protected:
 	pugi::xml_node next_child_node() {

@@ -248,8 +248,8 @@ private:
 
 template <typename Node>
 void serialize(IntegerHolder& integer, Node& node) {
-	node.serialize(&integer, "number", 
-		&IntegerHolder::get_number, &IntegerHolder::set_number);
+	access(&integer, "number", 
+		&IntegerHolder::get_number, &IntegerHolder::set_number, node);
 }
 
 S11N_XML_OUT(IntegerHolder, serialize);
