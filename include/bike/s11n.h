@@ -35,7 +35,8 @@ namespace bike {
 
 /// std::type_index for C++03
 class type_index {
-public:           type_index(const std::type_info& info) : info_(&info) {}
+public:           
+	type_index(const std::type_info& info) : info_(&info) {}
 
 	type_index(const type_index& index) : info_(index.info_) {}
 
@@ -160,8 +161,8 @@ protected:
 
 class BasePlant;
 
-class Types {
-public:
+
+namespace type {
 	struct Type {
 		type_index info;
 		BasePlant* ctor;
@@ -170,12 +171,24 @@ public:
 		Type(const type_index& info)
 		:	info(info), ctor(S11N_NULLPTR) {}
 	};
+} // namespace type {
 
+#define S11N_TYPE_STORAGE\
+	public:\
+		typedef std::vector<type::Type> TypesT;\
+		static std::vector<type::Type>& t() {\
+			static std::vector<type::Type> types;\
+			return types;\
+		}
+
+template <class Storage>
+class TypeStorageAccessor {
+public:
 	template <typename T>
 	static bool is_registered() {
 		const type_index type = typeid(T);
-		std::vector<Types::Type>::const_iterator i = Types::t().begin();
-		for (; i != Types::t().end(); ++i) {
+		typename Storage::TypesT::const_iterator i = Storage::t().begin();
+		for (; i != Storage::t().end(); ++i) {
 			if (i->info == type) 
 				return true;
 		}
@@ -186,24 +199,18 @@ public:
 	static void register_type(BasePlant* ctor) {
 		if (is_registered<T>())
 			throw false;
-		Type t(typeid(T));
+		type::Type t(typeid(T));
 		t.ctor = ctor;
-		Types::t().push_back(t);
+		Storage::t().push_back(t); 
 	}
 
-	static const Type* find(const char* type) {
-		std::vector<Types::Type>::const_iterator i = Types::t().begin();
-		for (; i != Types::t().end(); ++i) {
+	static const type::Type* find(const char* type) {
+		typename Storage::TypesT::const_iterator i = Storage::t().begin();
+		for (; i != Storage::t().end(); ++i) {
 			if (std::strcmp(i->info.name(), type) == 0) 
 				return &*i;
 		}
 		return S11N_NULLPTR;
-	}
-
-public:
-	static std::vector<Type>& t() {
-		static std::vector<Type> types;
-		return types;
 	}
 };
 
@@ -282,7 +289,7 @@ protected:
 	struct Impl {
 		static void reg() {
 			BasePlant* plant = new Plant<T, Serializer>;
-			Types::register_type<T>(plant);
+			TypeStorageAccessor<Serializer::Storage>::register_type<T>(plant);
 		}
 	};
 
@@ -343,12 +350,6 @@ void access_impl(Object* object, const char* name, T (Object::* get)(), void (Ob
 {
 	T val = (object->*get)();
 	node.named(val, name);
-}
-
-template <class T1, class Node>
-void pod(T1& p1, Node& node)
-{
-	node.pod(p1);
 }
 
 template <typename T, class Node>

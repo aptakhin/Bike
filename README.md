@@ -8,11 +8,12 @@ s11n (unstable)
 C++ serialization library with Boost.Serialization-like interface with such improvements:
 - Header-only. 2 files and less 1k lines of ubertemplatesgodkillskittens
 - Decreased compiler error lines per one mistake (It's more useful to read 50 lines of errors than 100, yep?)
+- Serialization of objects, which code can't be changed (out of class serialization with few limitations)
 
-Common features:
+Other features:
 - Non-default constructors support
-- Serialization of inherited classes
-- Serialization of shared classes
+- Serialization of inherited objects
+- Serialization of shared objects
 
 [Read how to use s11n](docs/using-s11n.md)
 
