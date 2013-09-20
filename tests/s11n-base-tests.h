@@ -10,6 +10,46 @@
 
 using namespace bike;
 
+typedef ::testing::Types<XmlSerializer> TestSerializers;
+
+template <typename Serializer>
+class TemplateTest : public testing::Test {
+public:
+	typedef typename Serializer::Input  Input; 
+	typedef typename Serializer::Output Output; 
+};
+
+TYPED_TEST_CASE_P(TemplateTest);
+
+TYPED_TEST_P(TemplateTest, Multiply0) {
+	std::ofstream fout("test.txt");
+	Output out(fout);
+
+	std::string aw = "One object", ar;
+	out << aw;
+
+	std::string bw = "Two objects", br;
+	out << bw;
+
+	out.close();
+	fout.close();
+
+	std::ifstream fin("test.txt");
+	Input in(fin);
+
+	in >> ar >> br;
+
+	ASSERT_EQ(aw, ar);
+	ASSERT_EQ(bw, br);
+}
+
+REGISTER_TYPED_TEST_CASE_P(
+	TemplateTest, 
+	Multiply0
+);
+
+INSTANTIATE_TYPED_TEST_CASE_P(TTest, TemplateTest, TestSerializers);
+
 template <typename Serializer>
 class BaseTest : public testing::Test {
 public:
@@ -55,7 +95,9 @@ public:
 		std::ofstream fout("test.txt");\
 		Output out(fout);\
 		out << (Write);\
+		out.close();\
 		fout.close();\
+		
 
 #define READ(Read)\
 		std::ifstream fin("test.txt");\
@@ -273,5 +315,4 @@ REGISTER_TYPED_TEST_CASE_P(
 	OutOfClass
 );
 
-typedef ::testing::Types<XmlSerializer> TestSerializers;
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);

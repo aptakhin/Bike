@@ -116,19 +116,31 @@ public:
 	: 	OutputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs_),
 		out_(&out) {}
 
+	~OutputXmlSerializer() {
+		close();
+	}
+
 	template <class T>
 	OutputXmlSerializer& operator << (T& t) {
-		pugi::xml_document doc;
-		xml_ = doc.append_child("serializable");
+		assert(out_);
+		// TODO: out_ runtime error
+		xml_ = doc_.append_child("serializable");
 		xml_.append_attribute("fmtver").set_value(1);
 		static_cast<OutputXmlSerializer&>(*this & t);
-		doc.save(*out_);
 		return *this; 
 	}
 
+	void close() {
+		if (out_) {
+			doc_.save(*out_);
+			out_ = S11N_NULLPTR; // We shouldn't write to output anymore.
+		}
+	}
+
 protected:
-	ReferencesPtr refs_;
-	std::ostream* out_;
+	std::ostream*      out_;
+	ReferencesPtr      refs_;
+	pugi::xml_document doc_;
 };
 
 class InputXmlSerializerNode {
@@ -168,6 +180,11 @@ public:
 		return true;
 	}
 
+	void set_xml(pugi::xml_node& xml) { 
+		xml_ = xml;
+		current_child_ = pugi::xml_node();
+	}
+
 	pugi::xml_node xml() const { return xml_; }
 
 	template <class T>
@@ -204,10 +221,12 @@ protected:
 
 protected:
 	InputXmlSerializerNode* parent_;
-	pugi::xml_node          xml_;
 	ReferencesId*           refs_;
 	pugi::xml_node          current_child_;
 	Version                 version_;
+
+private:
+	pugi::xml_node          xml_;
 };
 
 template <class T>
@@ -232,20 +251,26 @@ public:
 class InputXmlSerializer : public InputXmlSerializerNode {
 public:
 	InputXmlSerializer(std::istream& in)
-	: 	InputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs),
-		in_(&in) {}
+	: 	InputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs_),
+		in_(&in) {
+		pugi::xml_parse_result result = doc_.load(*in_);
+	}
 
 	template <class T>
 	InputXmlSerializer& operator >> (T& t) {
-		pugi::xml_document doc;
-		pugi::xml_parse_result result = doc.load(*in_);
-		xml_ = doc.child("serializable");
+		next_serializable();
 		return static_cast<InputXmlSerializer&>(*this & t);
 	}
 
 protected:
-	std::istream* in_;
-	ReferencesId  refs;
+	void next_serializable() {
+		set_xml((xml().empty()? doc_.child("serializable") : xml().next_sibling()));
+	}
+
+protected:
+	std::istream*      in_;
+	ReferencesId       refs_;
+	pugi::xml_document doc_;
 };
 
 #define SN_RAW(Type, Retrieve) \
@@ -365,7 +390,7 @@ public:
 		return *this;
 	}
 
-	InputXmlIter operator ++ (int) {
+	InputXmlIter operator ++(int) {
 		iter_++;
 		return *this;
 	}
