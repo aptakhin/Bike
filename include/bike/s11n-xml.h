@@ -55,7 +55,8 @@ public:
 	class TypeWriter<T*&> {
 	public:
 		static void write(T*& t, pugi::xml_node& xml_node) {
-			xml_node.append_attribute("type").set_value(typeid(*t).name());
+			if (t != S11N_NULLPTR)
+				xml_node.append_attribute("type").set_value(typeid(*t).name());
 		}
 	};
 
@@ -192,20 +193,22 @@ public:
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
 		assert(ref_attr);
 		unsigned int ref = ref_attr.as_uint();
-		void* ptr = refs_->get(ref);
-		if (ptr == S11N_NULLPTR) {
-			pugi::xml_attribute type_attr = xml_.attribute("type");
-			if (type_attr) {
-				const Types::Type* type = Types::find(type_attr.as_string());
-				PtrHolder node_holder(this);
-				PtrHolder got = type->ctor->create(node_holder);
-				t = got.get<T>(); // TODO: Fixme another template adapter
-				type->ctor->read(t, node_holder);
-			}
-			else
-				t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
+		if (ref != 0) {
+			void* ptr = refs_->get(ref);
+			if (ptr == S11N_NULLPTR) {
+				pugi::xml_attribute type_attr = xml_.attribute("type");
+				if (type_attr) {
+					const Types::Type* type = Types::find(type_attr.as_string());
+					PtrHolder node_holder(this);
+					PtrHolder got = type->ctor->create(node_holder);
+					t = got.get<T>(); // TODO: Fixme another template adapter
+					type->ctor->read(t, node_holder);
+				}
+				else
+					t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
 				
-			refs_->set(ref, t);
+				refs_->set(ref, t);
+			}
 		}
 	}
 

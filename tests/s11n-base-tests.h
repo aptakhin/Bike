@@ -237,19 +237,31 @@ TYPED_TEST_P(BaseTest, Classes) {
 }
 
 TYPED_TEST_P(BaseTest, Pointers) {
-	Human* ivan = new Human("Ivan Ivanov"), *read = S11N_NULLPTR;
+	Human* ivan = S11N_NULLPTR, *read = S11N_NULLPTR;
+	io_impl(ivan, read);
+	ASSERT_EQ(ivan, read);
+
+	ivan = new Human("Ivan Ivanov"), read = S11N_NULLPTR;
 	test_ptr_impl(ivan, read);
 	delete read, delete ivan;
 }
 
 TYPED_TEST_P(BaseTest, SmartPointers) {
+	std::unique_ptr<Human> empty, read0;
+	io_impl(empty, read0);
+	ASSERT_EQ(empty.get(), read0.get());
+
 	std::unique_ptr<Human> taras, read;
 	taras.reset(new Human("Taras Tarasov"));
 	test_dis_impl(taras, read);
 
-	std::shared_ptr<Human> alex, read2;
+	std::shared_ptr<Human> empty2, read2;
+	io_impl(empty2, read2);
+	ASSERT_EQ(empty2.get(), read2.get());
+
+	std::shared_ptr<Human> alex, read3;
 	alex.reset(new Human("Alex Alexandrov"));
-	test_dis_impl(alex, read2);
+	test_dis_impl(alex, read3);
 }
 
 TYPED_TEST_P(BaseTest, SequenceContainers) {
