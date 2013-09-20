@@ -131,6 +131,7 @@ public:
 
 	void close() {
 		if (out_) {
+			assert(*out_);
 			doc_.save(*out_);
 			out_ = S11N_NULLPTR; // We shouldn't write to output anymore.
 		}
@@ -263,7 +264,9 @@ public:
 
 protected:
 	void next_serializable() {
-		set_xml((xml().empty()? doc_.child("serializable") : xml().next_sibling()));
+		pugi::xml_node next = xml().empty()?
+			doc_.child("serializable") : xml().next_sibling();
+		set_xml(next);
 	}
 
 protected:
@@ -288,6 +291,8 @@ protected:
 			t = static_cast<Type>(attr.Retrieve());\
 		}\
 	};
+
+SN_RAW(bool,           as_bool);
 
 SN_RAW(int,            as_int); 
 SN_RAW(unsigned int,   as_uint);

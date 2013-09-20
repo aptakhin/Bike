@@ -197,7 +197,7 @@ public:
 			if (std::strcmp(i->info.name(), type) == 0) 
 				return &*i;
 		}
-		return nullptr;
+		return S11N_NULLPTR;
 	}
 
 public:
