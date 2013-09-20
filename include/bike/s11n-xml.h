@@ -123,7 +123,6 @@ public:
 	template <class T>
 	OutputXmlSerializer& operator << (T& t) {
 		assert(out_);
-		// TODO: out_ runtime error
 		xml_ = doc_.append_child("serializable");
 		xml_.append_attribute("fmtver").set_value(1);
 		static_cast<OutputXmlSerializer&>(*this & t);
@@ -222,11 +221,11 @@ protected:
 protected:
 	InputXmlSerializerNode* parent_;
 	ReferencesId*           refs_;
-	pugi::xml_node          current_child_;
 	Version                 version_;
 
 private:
 	pugi::xml_node          xml_;
+	pugi::xml_node          current_child_;
 };
 
 template <class T>

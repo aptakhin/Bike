@@ -97,7 +97,6 @@ public:
 		out << (Write);\
 		out.close();\
 		fout.close();\
-		
 
 #define READ(Read)\
 		std::ifstream fin("test.txt");\

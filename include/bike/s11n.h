@@ -345,6 +345,12 @@ void access_impl(Object* object, const char* name, T (Object::* get)(), void (Ob
 	node.named(val, name);
 }
 
+template <class T1, class Node>
+void pod(T1& p1, Node& node)
+{
+	node.pod(p1);
+}
+
 template <typename T, class Node>
 void version(bool expr, T& t, Node& node) {
 	if (expr)
