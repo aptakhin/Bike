@@ -150,12 +150,6 @@ public:
 		return named(t, "");
 	}
 
-	template <typename T>
-	InputXmlSerializerNode& ver(bool expr, T& t) {
-		if (expr) *this & t;
-		return *this;
-	}
-
 	template <class T>
 	InputXmlSerializerNode& named(T& t, const char* attr_name) {
 		InputXmlSerializerNode node(this, next_child_node(), refs_);
