@@ -108,6 +108,7 @@ protected:
 	int version_;
 };
 
+/// Dictionary for integer id to object pointers 
 class ReferencesId {
 public:
 	typedef std::map<unsigned int, void*> RefMap;
@@ -128,6 +129,7 @@ protected:
 	RefMap refs_;
 };
 
+/// Mapping for object pointers to integer id
 class ReferencesPtr {
 public:
 	typedef std::map<void*, unsigned int> RefMap;
@@ -161,15 +163,17 @@ protected:
 
 class BasePlant;
 
+/// Storing information about registered class.
 struct Type {
 	type_index info;
-	BasePlant* ctor;
-	std::vector<Type*> base;
+	BasePlant* ctor;        /// Constructing plant 
+	std::vector<Type*> base;/// Base classes
 
 	Type(const type_index& info)
 	:	info(info), ctor(S11N_NULLPTR) {}
 };
 
+/// Define used in serializer-specific storages
 #define S11N_TYPE_STORAGE\
 	public:\
 		typedef std::vector<Type> TypesT;\
@@ -178,6 +182,7 @@ struct Type {
 			return types;\
 		}
 
+/// Unisversal code for accessing serializer-specific storages
 template <class Storage>
 class TypeStorageAccessor {
 public:
@@ -211,6 +216,7 @@ public:
 	}
 };
 
+/// Just keeping pointer
 class PtrHolder {
 public:
 	template <typename T>
@@ -230,6 +236,7 @@ protected:
 	void* ptr_;
 };
 
+/// Base type constructor plant
 class BasePlant {
 public:
 	virtual ~BasePlant() {}
@@ -241,6 +248,7 @@ public:
 	virtual void write(void* wr, PtrHolder holder) = 0;
 };
 
+/// Plant for constructing types specific to serializer type
 template <typename T, typename Serializer>
 class Plant : public BasePlant {
 protected:
@@ -253,12 +261,14 @@ public:
 
 	virtual ~Plant() {}
 
+	/// Constructing object from node data
 	PtrHolder create(PtrHolder holder) /* override */ {
 		InNode* orig = holder.get<InNode>();
 		assert(orig);
 		return PtrHolder(Ctor<T*, InNode>::ctor(*orig));
 	}
 
+	/// Reading object from node data
 	void read(void* rd, PtrHolder node) /* override */ {
 		InNode* orig = node.get<InNode>();
 		assert(orig);
@@ -266,6 +276,7 @@ public:
 		typename Serializer::input_call<T&>(r, *orig); 
 	}
 
+	/// Writing object to node data
 	void write(void* wr, PtrHolder node) /* override */ {
 		OutNode* orig = node.get<OutNode>();
 		assert(orig);
