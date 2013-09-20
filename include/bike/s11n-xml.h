@@ -117,7 +117,7 @@ public:
 class OutputXmlSerializer : public OutputXmlSerializerNode {
 public:
 	OutputXmlSerializer(std::ostream& out) 
-	: 	OutputXmlSerializerNode(nullptr, pugi::xml_node(), &refs_),
+	: 	OutputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs_),
 		out_(&out) {}
 
 	template <class T>
@@ -247,7 +247,7 @@ public:
 class InputXmlSerializer : public InputXmlSerializerNode {
 public:
 	InputXmlSerializer(std::istream& in)
-	: 	InputXmlSerializerNode(nullptr, pugi::xml_node(), &refs),
+	: 	InputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs),
 		in_(&in) {}
 
 	template <class T>

@@ -13,7 +13,6 @@
 #ifdef S11N_CPP03
 #	define S11N_NULLPTR NULL
 #else
-#	include <typeindex>
 #	define S11N_NULLPTR nullptr
 #endif
 
@@ -36,8 +35,7 @@ namespace bike {
 
 /// std::type_index for C++03
 class type_index {
-public:
-	type_index(const std::type_info& info) : info_(&info) {}
+public:           type_index(const std::type_info& info) : info_(&info) {}
 
 	type_index(const type_index& index) : info_(index.info_) {}
 

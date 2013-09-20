@@ -11,7 +11,7 @@
 using namespace bike;
 
 template <typename Serializer>
-class BaseTest : public ::testing::Test {
+class BaseTest : public testing::Test {
 public:
 	typedef typename Serializer::Input  Input; 
 	typedef typename Serializer::Output Output; 
@@ -127,8 +127,7 @@ TYPED_TEST_P(BaseTest, Structs) {
 	test_val<Vec2<double> >(5.5555, 6.6666);
 }
 
-class Human
-{
+class Human {
 public:
     Human(const std::string& name) : name_(name) {} 
 
@@ -147,8 +146,7 @@ protected:
 };
 
 template <typename Node>
-class Ctor<Human*, Node>
-{
+class Ctor<Human*, Node> {
 public:
     static Human* ctor(Node& node) {
         std::string name;
@@ -161,8 +159,7 @@ bool operator == (const Human& l, const Human& r) {
 	return l.name() == r.name();
 }
 
-class Superman : public Human
-{
+class Superman : public Human {
 public:
     Superman(int superpower = 100000) 
 	:	Human("Clark Kent"), 
@@ -182,8 +179,7 @@ protected:
 };
 
 template <typename Node>
-class Ctor<Superman*, Node>
-{
+class Ctor<Superman*, Node> {
 public:
     static Superman* ctor(Node& node) {
         int power;
@@ -238,8 +234,7 @@ TYPED_TEST_P(BaseTest, Inheritance) {
 	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
 }
 
-class IntegerHolder
-{
+class IntegerHolder {
 public:
 	IntegerHolder() : number_(0) {}
 
@@ -252,8 +247,7 @@ private:
 };
 
 template <typename Node>
-void serialize(IntegerHolder& integer, Node& node)
-{
+void serialize(IntegerHolder& integer, Node& node) {
 	node.serialize(&integer, "number", 
 		&IntegerHolder::get_number, &IntegerHolder::set_number);
 }
