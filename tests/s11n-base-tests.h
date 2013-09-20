@@ -301,6 +301,37 @@ TYPED_TEST_P(BaseTest, OutOfClass) {
 	io_impl(integer, read);
 }
 
+struct SampleStruct {
+	std::string name;
+	int id;
+
+	template <class Node>
+	void ser(Node& node, Version ver) {
+		node & name & id;
+	}
+};
+
+bool operator == (const SampleStruct& a, const SampleStruct& b) {
+	return a.name == b.name && a.id == b.id;
+}
+
+TYPED_TEST_P(BaseTest, Benchmark) {
+	size_t Size = 1000;
+	std::vector<SampleStruct> vec;
+	vec.reserve(Size);
+	for (size_t i = 0; i < Size; ++i) {
+		SampleStruct f;
+		f.id   = (int)pow(i, 4); 
+
+		std::ostringstream out;
+		out << f.id;
+
+		f.name = out.str();
+		vec.push_back(f);
+	}
+	test_val(vec);
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
@@ -311,7 +342,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	SmartPointers,
 	SequenceContainers,
 	Inheritance,
-	OutOfClass
+	OutOfClass,
+	Benchmark
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);
