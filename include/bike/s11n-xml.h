@@ -8,6 +8,10 @@
 
 namespace bike {
 
+class XmlSerializerStorage {
+	S11N_TYPE_STORAGE
+};
+
 class OutputXmlSerializerNode {
 public:
 	OutputXmlSerializerNode(OutputXmlSerializerNode* parent, pugi::xml_node node, ReferencesPtr* refs) 
@@ -55,7 +59,8 @@ public:
 	class TypeWriter<T*&> {
 	public:
 		static void write(T*& t, pugi::xml_node& xml_node) {
-			xml_node.append_attribute("type").set_value(typeid(*t).name());
+			if (t != S11N_NULLPTR)
+				xml_node.append_attribute("type").set_value(typeid(*t).name());
 		}
 	};
 
@@ -68,7 +73,7 @@ public:
 			std::pair<bool, unsigned int> set_result = refs_->set(t);
 			ref = set_result.second;
 			if (set_result.first) {
-				const Types::Type* type = Types::find(typeid(*t).name());
+				const Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*t).name());
 				if (type) { // If we found type in registered types, then initialize such way
 					PtrHolder node(this);
 					type->ctor->write(t, node);
@@ -80,13 +85,9 @@ public:
 		xml_.append_attribute("ref") = ref;
 	}
 
-	template <class Object, class T>
-	void serialize(Object* object, const char* name, T (Object::*get)(), void (Object::*)(T)) {
-		T val = (object->*get)();
-		named(val, name);
-	}
-
 	ReferencesPtr* refs() const { return refs_; }
+
+	OutputEssence essence() { return OutputEssence(); }
 
 protected:
 	OutputXmlSerializerNode* parent_;
@@ -117,22 +118,34 @@ public:
 class OutputXmlSerializer : public OutputXmlSerializerNode {
 public:
 	OutputXmlSerializer(std::ostream& out) 
-	: 	OutputXmlSerializerNode(nullptr, pugi::xml_node(), &refs_),
+	: 	OutputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs_),
 		out_(&out) {}
+
+	~OutputXmlSerializer() {
+		close();
+	}
 
 	template <class T>
 	OutputXmlSerializer& operator << (T& t) {
-		pugi::xml_document doc;
-		xml_ = doc.append_child("serializable");
+		assert(out_);
+		xml_ = doc_.append_child("serializable");
 		xml_.append_attribute("fmtver").set_value(1);
 		static_cast<OutputXmlSerializer&>(*this & t);
-		doc.save(*out_);
 		return *this; 
 	}
 
+	void close() {
+		if (out_) {
+			assert(*out_);
+			doc_.save(*out_);
+			out_ = S11N_NULLPTR; // We shouldn't write to output anymore.
+		}
+	}
+
 protected:
-	ReferencesPtr refs_;
-	std::ostream* out_;
+	std::ostream*      out_;
+	ReferencesPtr      refs_;
+	pugi::xml_document doc_;
 };
 
 class InputXmlSerializerNode {
@@ -154,12 +167,6 @@ public:
 		return named(t, "");
 	}
 
-	template <typename T>
-	InputXmlSerializerNode& ver(bool expr, T& t) {
-		if (expr) *this & t;
-		return *this;
-	}
-
 	template <class T>
 	InputXmlSerializerNode& named(T& t, const char* attr_name) {
 		InputXmlSerializerNode node(this, next_child_node(), refs_);
@@ -178,6 +185,11 @@ public:
 		return true;
 	}
 
+	void set_xml(pugi::xml_node& xml) { 
+		xml_ = xml;
+		current_child_ = pugi::xml_node();
+	}
+
 	pugi::xml_node xml() const { return xml_; }
 
 	template <class T>
@@ -185,31 +197,28 @@ public:
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
 		assert(ref_attr);
 		unsigned int ref = ref_attr.as_uint();
-		void* ptr = refs_->get(ref);
-		if (ptr == S11N_NULLPTR) {
-			pugi::xml_attribute type_attr = xml_.attribute("type");
-			if (type_attr) {
-				const Types::Type* type = Types::find(type_attr.as_string());
-				PtrHolder node_holder(this);
-				PtrHolder got = type->ctor->create(node_holder);
-				t = got.get<T>(); // TODO: Fixme another template adapter
-				type->ctor->read(t, node_holder);
-			}
-			else
-				t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
+		if (ref != 0) {
+			void* ptr = refs_->get(ref);
+			if (ptr == S11N_NULLPTR) {
+				pugi::xml_attribute type_attr = xml_.attribute("type");
+				if (type_attr) {
+					const Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(type_attr.as_string());
+					PtrHolder node_holder(this);
+					PtrHolder got = type->ctor->create(node_holder);
+					t = got.get<T>(); // TODO: Fixme another template adapter
+					type->ctor->read(t, node_holder);
+				}
+				else
+					t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
 				
-			refs_->set(ref, t);
+				refs_->set(ref, t);
+			}
 		}
 	}
 
 	ReferencesId* refs() const { return refs_; }
 
-	template <class Object, class T>
-	void serialize(Object* object, const char* name, T (Object::*)(), void (Object::* set)(T)) {
-		T val;
-		named(val, name);
-		(object->*set)(val);
-	}
+	InputEssence essence() { return InputEssence(); }
 
 protected:
 	pugi::xml_node next_child_node() {
@@ -219,10 +228,12 @@ protected:
 
 protected:
 	InputXmlSerializerNode* parent_;
-	pugi::xml_node          xml_;
 	ReferencesId*           refs_;
-	pugi::xml_node          current_child_;
 	Version                 version_;
+
+private:
+	pugi::xml_node          xml_;
+	pugi::xml_node          current_child_;
 };
 
 template <class T>
@@ -247,20 +258,28 @@ public:
 class InputXmlSerializer : public InputXmlSerializerNode {
 public:
 	InputXmlSerializer(std::istream& in)
-	: 	InputXmlSerializerNode(nullptr, pugi::xml_node(), &refs),
-		in_(&in) {}
+	: 	InputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs_),
+		in_(&in) {
+		pugi::xml_parse_result result = doc_.load(*in_);
+	}
 
 	template <class T>
 	InputXmlSerializer& operator >> (T& t) {
-		pugi::xml_document doc;
-		pugi::xml_parse_result result = doc.load(*in_);
-		xml_ = doc.child("serializable");
+		next_serializable();
 		return static_cast<InputXmlSerializer&>(*this & t);
 	}
 
 protected:
-	std::istream* in_;
-	ReferencesId  refs;
+	void next_serializable() {
+		pugi::xml_node next = xml().empty()?
+			doc_.child("serializable") : xml().next_sibling();
+		set_xml(next);
+	}
+
+protected:
+	std::istream*      in_;
+	ReferencesId       refs_;
+	pugi::xml_document doc_;
 };
 
 #define SN_RAW(Type, Retrieve) \
@@ -280,6 +299,8 @@ protected:
 		}\
 	};
 
+SN_RAW(bool,           as_bool);
+
 SN_RAW(int,            as_int); 
 SN_RAW(unsigned int,   as_uint);
 
@@ -293,11 +314,13 @@ SN_RAW(double,         as_double);
 
 class XmlSerializer {
 public:
-	typedef InputXmlSerializer  Input;
-	typedef OutputXmlSerializer Output;
+	typedef InputXmlSerializer      Input;
+	typedef OutputXmlSerializer     Output;
 
 	typedef InputXmlSerializerNode  InNode;
 	typedef OutputXmlSerializerNode OutNode;
+
+	typedef XmlSerializerStorage    Storage;
 
 	template <typename T>
 	static void input_call(T& t, InNode& node) {
@@ -380,7 +403,7 @@ public:
 		return *this;
 	}
 
-	InputXmlIter operator ++ (int) {
+	InputXmlIter operator ++(int) {
 		iter_++;
 		return *this;
 	}

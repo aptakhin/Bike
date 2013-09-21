@@ -19259,11 +19259,11 @@ AssertionResult AssertPred5Helper(const char* pred_text,
 // ASSERT_XY(), which clashes with some users' own code.
 
 #if !GTEST_DONT_DEFINE_ASSERT_EQ
-# define ASSERT_EQ(val1, val2) GTEST_ASSERT_EQ(val1, val2)
+# define ASSERT_EQ(expected, actual) GTEST_ASSERT_EQ(expected, actual)
 #endif
 
 #if !GTEST_DONT_DEFINE_ASSERT_NE
-# define ASSERT_NE(val1, val2) GTEST_ASSERT_NE(val1, val2)
+# define ASSERT_NE(not_expected, actual) GTEST_ASSERT_NE(not_expected, actual)
 #endif
 
 #if !GTEST_DONT_DEFINE_ASSERT_LE

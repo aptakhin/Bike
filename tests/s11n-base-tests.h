@@ -10,8 +10,48 @@
 
 using namespace bike;
 
+typedef ::testing::Types<XmlSerializer> TestSerializers;
+
 template <typename Serializer>
-class BaseTest : public ::testing::Test {
+class TemplateTest : public testing::Test {
+public:
+	typedef typename Serializer::Input  Input; 
+	typedef typename Serializer::Output Output; 
+};
+
+TYPED_TEST_CASE_P(TemplateTest);
+
+TYPED_TEST_P(TemplateTest, Multiply0) {
+	std::ofstream fout("test.txt");
+	Output out(fout);
+
+	std::string aw = "One object", ar;
+	out << aw;
+
+	std::string bw = "Two objects", br;
+	out << bw;
+
+	out.close();
+	fout.close();
+
+	std::ifstream fin("test.txt");
+	Input in(fin);
+
+	in >> ar >> br;
+
+	ASSERT_EQ(aw, ar);
+	ASSERT_EQ(bw, br);
+}
+
+REGISTER_TYPED_TEST_CASE_P(
+	TemplateTest, 
+	Multiply0
+);
+
+INSTANTIATE_TYPED_TEST_CASE_P(TTest, TemplateTest, TestSerializers);
+
+template <typename Serializer>
+class BaseTest : public testing::Test {
 public:
 	typedef typename Serializer::Input  Input; 
 	typedef typename Serializer::Output Output; 
@@ -55,6 +95,7 @@ public:
 		std::ofstream fout("test.txt");\
 		Output out(fout);\
 		out << (Write);\
+		out.close();\
 		fout.close();\
 
 #define READ(Read)\
@@ -127,8 +168,7 @@ TYPED_TEST_P(BaseTest, Structs) {
 	test_val<Vec2<double> >(5.5555, 6.6666);
 }
 
-class Human
-{
+class Human {
 public:
     Human(const std::string& name) : name_(name) {} 
 
@@ -147,8 +187,7 @@ protected:
 };
 
 template <typename Node>
-class Ctor<Human*, Node>
-{
+class Ctor<Human*, Node> {
 public:
     static Human* ctor(Node& node) {
         std::string name;
@@ -161,8 +200,7 @@ bool operator == (const Human& l, const Human& r) {
 	return l.name() == r.name();
 }
 
-class Superman : public Human
-{
+class Superman : public Human {
 public:
     Superman(int superpower = 100000) 
 	:	Human("Clark Kent"), 
@@ -182,8 +220,7 @@ protected:
 };
 
 template <typename Node>
-class Ctor<Superman*, Node>
-{
+class Ctor<Superman*, Node> {
 public:
     static Superman* ctor(Node& node) {
         int power;
@@ -200,19 +237,31 @@ TYPED_TEST_P(BaseTest, Classes) {
 }
 
 TYPED_TEST_P(BaseTest, Pointers) {
-	Human* ivan = new Human("Ivan Ivanov"), *read = S11N_NULLPTR;
+	Human* ivan = S11N_NULLPTR, *read = S11N_NULLPTR;
+	io_impl(ivan, read);
+	ASSERT_EQ(ivan, read);
+
+	ivan = new Human("Ivan Ivanov"), read = S11N_NULLPTR;
 	test_ptr_impl(ivan, read);
 	delete read, delete ivan;
 }
 
 TYPED_TEST_P(BaseTest, SmartPointers) {
+	std::unique_ptr<Human> empty, read0;
+	io_impl(empty, read0);
+	ASSERT_EQ(empty.get(), read0.get());
+
 	std::unique_ptr<Human> taras, read;
 	taras.reset(new Human("Taras Tarasov"));
 	test_dis_impl(taras, read);
 
-	std::shared_ptr<Human> alex, read2;
+	std::shared_ptr<Human> empty2, read2;
+	io_impl(empty2, read2);
+	ASSERT_EQ(empty2.get(), read2.get());
+
+	std::shared_ptr<Human> alex, read3;
 	alex.reset(new Human("Alex Alexandrov"));
-	test_dis_impl(alex, read2);
+	test_dis_impl(alex, read3);
 }
 
 TYPED_TEST_P(BaseTest, SequenceContainers) {
@@ -238,8 +287,7 @@ TYPED_TEST_P(BaseTest, Inheritance) {
 	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
 }
 
-class IntegerHolder
-{
+class IntegerHolder {
 public:
 	IntegerHolder() : number_(0) {}
 
@@ -252,10 +300,9 @@ private:
 };
 
 template <typename Node>
-void serialize(IntegerHolder& integer, Node& node)
-{
-	node.serialize(&integer, "number", 
-		&IntegerHolder::get_number, &IntegerHolder::set_number);
+void serialize(IntegerHolder& integer, Node& node) {
+	access(&integer, "number", 
+		&IntegerHolder::get_number, &IntegerHolder::set_number, node);
 }
 
 S11N_XML_OUT(IntegerHolder, serialize);
@@ -266,8 +313,6 @@ TYPED_TEST_P(BaseTest, OutOfClass) {
 	io_impl(integer, read);
 }
 
-<<<<<<< Updated upstream
-=======
 struct SampleStruct {
 	std::string name;
 	int id;
@@ -299,7 +344,6 @@ TYPED_TEST_P(BaseTest, Benchmark) {
 	test_val(vec);
 }
 
->>>>>>> Stashed changes
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
@@ -310,8 +354,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	SmartPointers,
 	SequenceContainers,
 	Inheritance,
-	OutOfClass
+	OutOfClass,
+	Benchmark
 );
 
-typedef ::testing::Types<XmlSerializer> TestSerializers;
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);

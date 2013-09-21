@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <stdio.h>
+#include <iosfwd>
 
 namespace bike {
 
@@ -57,14 +58,27 @@ class FileWriter : public IWriter
 public:
 	FileWriter(const char* filename);
 
-	void write(void* buf, size_t size) /* override */;
-
 	~FileWriter();
+
+	void write(void* buf, size_t size) /* override */;	
 
 protected:
 	FILE* fout_;
 };
 
+class OstreamWriter : public IWriter
+{
+public:
+	OstreamWriter(const char* filename);
 
+	~OstreamWriter();
+
+	void write(void* buf, size_t size) /* override */;
+
+protected:
+	std::ostream* fout_;
+};
+
+//class 
 
 } // namespace bike {

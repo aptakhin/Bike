@@ -13,7 +13,6 @@
 #ifdef S11N_CPP03
 #	define S11N_NULLPTR NULL
 #else
-#	include <typeindex>
 #	define S11N_NULLPTR nullptr
 #endif
 
@@ -36,7 +35,7 @@ namespace bike {
 
 /// std::type_index for C++03
 class type_index {
-public:
+public:           
 	type_index(const std::type_info& info) : info_(&info) {}
 
 	type_index(const type_index& index) : info_(index.info_) {}
@@ -109,6 +108,7 @@ protected:
 	int version_;
 };
 
+/// Dictionary for integer id to object pointers 
 class ReferencesId {
 public:
 	typedef std::map<unsigned int, void*> RefMap;
@@ -129,6 +129,7 @@ protected:
 	RefMap refs_;
 };
 
+/// Mapping for object pointers to integer id
 class ReferencesPtr {
 public:
 	typedef std::map<void*, unsigned int> RefMap;
@@ -162,22 +163,34 @@ protected:
 
 class BasePlant;
 
-class Types {
+/// Storing information about registered class.
+struct Type {
+	type_index info;
+	BasePlant* ctor;        /// Constructing plant 
+	std::vector<Type*> base;/// Base classes
+
+	Type(const type_index& info)
+	:	info(info), ctor(S11N_NULLPTR) {}
+};
+
+/// Define used in serializer-specific storages
+#define S11N_TYPE_STORAGE\
+	public:\
+		typedef std::vector<Type> TypesT;\
+		static std::vector<Type>& t() {\
+			static std::vector<Type> types;\
+			return types;\
+		}
+
+/// Unisversal code for accessing serializer-specific storages
+template <class Storage>
+class TypeStorageAccessor {
 public:
-	struct Type {
-		type_index info;
-		BasePlant* ctor;
-		std::vector<Type*> base;
-
-		Type(const type_index& info)
-		:	info(info), ctor(S11N_NULLPTR) {}
-	};
-
 	template <typename T>
 	static bool is_registered() {
 		const type_index type = typeid(T);
-		std::vector<Types::Type>::const_iterator i = Types::t().begin();
-		for (; i != Types::t().end(); ++i) {
+		typename Storage::TypesT::const_iterator i = Storage::t().begin();
+		for (; i != Storage::t().end(); ++i) {
 			if (i->info == type) 
 				return true;
 		}
@@ -190,22 +203,16 @@ public:
 			throw false;
 		Type t(typeid(T));
 		t.ctor = ctor;
-		Types::t().push_back(t);
+		Storage::t().push_back(t); 
 	}
 
 	static const Type* find(const char* type) {
-		std::vector<Types::Type>::const_iterator i = Types::t().begin();
-		for (; i != Types::t().end(); ++i) {
+		typename Storage::TypesT::const_iterator i = Storage::t().begin();
+		for (; i != Storage::t().end(); ++i) {
 			if (std::strcmp(i->info.name(), type) == 0) 
 				return &*i;
 		}
-		return nullptr;
-	}
-
-public:
-	static std::vector<Type>& t() {
-		static std::vector<Type> types;
-		return types;
+		return S11N_NULLPTR;
 	}
 
 	static void clean() {
@@ -217,6 +224,7 @@ public:
 	}
 };
 
+/// Just keeping pointer
 class PtrHolder {
 public:
 	template <typename T>
@@ -236,6 +244,7 @@ protected:
 	void* ptr_;
 };
 
+/// Base type constructor plant
 class BasePlant {
 public:
 	virtual ~BasePlant() {}
@@ -247,6 +256,7 @@ public:
 	virtual void write(void* wr, PtrHolder holder) = 0;
 };
 
+/// Plant for constructing types specific to serializer type
 template <typename T, typename Serializer>
 class Plant : public BasePlant {
 protected:
@@ -259,12 +269,14 @@ public:
 
 	virtual ~Plant() {}
 
+	/// Constructing object from node data
 	PtrHolder create(PtrHolder holder) /* override */ {
 		InNode* orig = holder.get<InNode>();
 		assert(orig);
 		return PtrHolder(Ctor<T*, InNode>::ctor(*orig));
 	}
 
+	/// Reading object from node data
 	void read(void* rd, PtrHolder node) /* override */ {
 		InNode* orig = node.get<InNode>();
 		assert(orig);
@@ -272,6 +284,7 @@ public:
 		typename Serializer::input_call<T&>(r, *orig); 
 	}
 
+	/// Writing object to node data
 	void write(void* wr, PtrHolder node) /* override */ {
 		OutNode* orig = node.get<OutNode>();
 		assert(orig);
@@ -292,7 +305,7 @@ protected:
 	struct Impl {
 		static void reg() {
 			BasePlant* plant = new Plant<T, Serializer>;
-			Types::register_type<T>(plant);
+			TypeStorageAccessor<Serializer::Storage>::register_type<T>(plant);
 		}
 	};
 	template <typename T>
@@ -342,5 +355,38 @@ public:
 		return new T();
 	}
 };
+
+class InputEssence  {};
+class OutputEssence {};
+
+/*
+ * Standard extensions
+ */
+template <class Object, class T, class Node>
+void access(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node)
+{
+	access_impl(object, name, get, set, node, node.essence());
+}
+
+template <class Object, class T, class Node>
+void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, InputEssence&)
+{
+	T val;
+	node.named(val, name);
+	(object->*set)(val);
+}
+
+template <class Object, class T, class Node>
+void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, OutputEssence&)
+{
+	T val = (object->*get)();
+	node.named(val, name);
+}
+
+template <typename T, class Node>
+void version(bool expr, T& t, Node& node) {
+	if (expr)
+		node & t;
+}
  
 } // namespace bike {
