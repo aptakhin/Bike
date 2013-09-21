@@ -207,6 +207,14 @@ public:
 		static std::vector<Type> types;
 		return types;
 	}
+
+	static void clean() {
+		typename Storage::TypesT::const_iterator i = Storage::t().begin();
+		for (; i != Storage::t().end(); ++i) {
+			delete i->ctor;
+		}
+		Storage::t().clear();
+	}
 };
 
 class PtrHolder {
@@ -287,10 +295,20 @@ protected:
 			Types::register_type<T>(plant);
 		}
 	};
-
 	template <typename T>
 	struct Impl<T, None> {
 		static void reg() { /* Nothing to do */ }
+	};
+
+	template <typename T, typename Serializer>
+	struct Cleaner {
+		static void clean() {
+			TypeStorageAccessor<Serializer::Storage>::clean();
+		}
+	};
+	template <typename T>
+	struct Cleaner<T, None> {
+		static void clean() { /* Nothing to do */ }
 	};
 
 public:
@@ -299,6 +317,11 @@ public:
 	void reg_type() {
 		Impl<T, Serializer0>::reg();
 		Impl<T, Serializer1>::reg();
+	}
+
+	void clean() {
+		Cleaner<T, Serializer0>::clean();
+		Cleaner<T, Serializer1>::clean();
 	}
 };
 
