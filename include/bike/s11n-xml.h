@@ -24,6 +24,8 @@ public:
 	template <typename Base>
 	OutputXmlSerializerNode& base(Base* base_ptr) {
 		Base* base = static_cast<Base*>(base_ptr);
+		if (typeid(*base_ptr) != typeid(Base))
+			assert(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Register your types!");
 		return *this & (*base);
 	}
 
