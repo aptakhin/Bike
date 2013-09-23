@@ -8,7 +8,7 @@
 #include <vector>
 #include <memory>
 #include <map>
-#include <assert.h>
+#include <cassert>
 
 #ifdef S11N_CPP03
 #	define S11N_NULLPTR NULL
