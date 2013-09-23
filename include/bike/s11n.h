@@ -361,13 +361,13 @@ class OutputEssence {};
  * Standard extensions
  */
 template <class Object, class T, class Node>
-void access(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node)
+void access(Object* object, const char* name, const T (Object::* get)() const, void (Object::* set)(T), Node& node)
 {
 	access_impl(object, name, get, set, node, node.essence());
 }
 
 template <class Object, class T, class Node>
-void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, InputEssence&)
+void access_impl(Object* object, const char* name, const T (Object::* get)() const, void (Object::* set)(T), Node& node, InputEssence&)
 {
 	T val;
 	node.named(val, name);
@@ -375,7 +375,7 @@ void access_impl(Object* object, const char* name, T (Object::* get)(), void (Ob
 }
 
 template <class Object, class T, class Node>
-void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, OutputEssence&)
+void access_impl(Object* object, const char* name, const T (Object::* get)() const, void (Object::* set)(T), Node& node, OutputEssence&)
 {
 	T val = (object->*get)();
 	node.named(val, name);

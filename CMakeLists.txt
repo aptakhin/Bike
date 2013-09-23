@@ -14,6 +14,7 @@ set(S11NT_SRC
   tests/s11n-base-tests.h
   tests/s11n-stream-tests.h
   tests/s11n-docs-tests.h
+  tests/s11n-complex-tests.h
   tests/gtest/gtest.h
   tests/gtest/gtest-all.cc
   tests/pugixml/pugixml.hpp
@@ -28,10 +29,6 @@ source_group("s11n" FILES
   include/bike/snabix.h
 )
 
-source_group("snabix" FILES 
-  include/bike/snabix.h
-)
-
 source_group("gtest" FILES 
   tests/gtest/gtest.h 
   tests/gtest/gtest-all.cc
@@ -42,6 +39,7 @@ source_group("tests" FILES
   tests/s11n-base-tests.h
   tests/s11n-stream-tests.h
   tests/s11n-docs-tests.h
+  tests/s11n-complex-tests.h
 )
 
 source_group("xml" FILES 
