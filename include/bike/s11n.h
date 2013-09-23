@@ -199,8 +199,7 @@ public:
 
 	template <class T>
 	static void register_type(BasePlant* ctor) {
-		if (is_registered<T>())
-			throw false;
+		assert(!is_registered<T>());
 		Type t(typeid(T));
 		t.ctor = ctor;
 		Storage::t().push_back(t); 
