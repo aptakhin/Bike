@@ -1,4 +1,11 @@
 
+#pragma once
+
+#include <string>
+#include <vector>
+
+namespace bike {
+
 #define CONCATIMPL(a, b) a##b
 #define CONCAT(a, b) CONCATIMPL(a, b)
 #define CONV_NAME(Type) CONCAT(conv_, Type)
@@ -207,7 +214,4 @@ public:
 	}
 };
 
-
-
-
-
+} // namespace bike {

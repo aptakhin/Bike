@@ -11,6 +11,7 @@
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
 #include "s11n-base-tests.h"
+#include "s11n-stream-tests.h"
 #include "s11n-docs-tests.h"
 
 GTEST_API_ int main(int argc, char **argv) {
