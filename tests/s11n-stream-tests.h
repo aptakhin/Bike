@@ -90,3 +90,54 @@ TEST(Snabix, 1) {
 	in >> w;
 	ASSERT_EQ(v, w);
 }
+
+TEST(Snabix, Bench) {
+	std::string str;
+	StrWriter strout(str);
+	StrReader strin(str);
+	
+	OutputBinaryStreaming<StrWriter> out(strout);
+	InputBinaryStreaming<StrReader> in(strin);
+
+	Vec2<int> v(1, 2), w;
+
+	size_t Size = 100000;
+
+	for (size_t i = 0; i < Size; ++i)
+		out << v;
+
+	for (size_t i = 0; i < Size; ++i)
+		in >> w;
+	ASSERT_EQ(v, w);
+}
+
+TEST(Snabix, Bench2) {
+	std::string str;
+	StrWriter strout(str);
+	StrReader strin(str);
+	
+	OutputBinaryStreaming<StrWriter> out(strout);
+	InputBinaryStreaming<StrReader> in(strin);
+
+	size_t Size = 10000;
+	std::vector<SampleStruct> vec;
+	vec.reserve(Size);
+	for (size_t i = 0; i < Size; ++i) {
+		SampleStruct f;
+		f.id   = (int)pow(i, 4); 
+
+		f.regs.resize(5);
+		std::fill_n(f.regs.begin(), 5, 10);
+
+		std::ostringstream nout;
+		nout << f.id;
+		f.name = nout.str();
+
+		out << f;
+	}
+
+	for (size_t i = 0; i < Size; ++i) {
+		SampleStruct f;
+		in >> f;
+	}
+}

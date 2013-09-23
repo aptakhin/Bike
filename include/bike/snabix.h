@@ -30,8 +30,8 @@ T swap_endian(T u) {
 
 	source.u = u;
 
-	for (size_t k = 0; k < sizeof(T); k++)
-		dest.u8[k] = source.u8[sizeof(T) - k - 1];
+	for (size_t i = 0; i < sizeof(T); i++)
+		dest.u8[i] = source.u8[sizeof(T) - i - 1];
 
 	return dest.u;
 }
@@ -191,8 +191,7 @@ public:
 	static void encode(Writer& writer, const std::vector<T>& v) {
 		uint32_t size = (uint32_t) v.size();
 		writer.write(&size, sizeof(uint32_t));
-		std::vector<T>::const_iterator i = v.begin();
-		std::vector<T>::const_iterator e = v.end();
+		std::vector<T>::const_iterator i = v.begin(), e = v.end();
 		for (; i != e; ++i)
 			EncoderImpl<T>::encode(writer, *i);
 	}

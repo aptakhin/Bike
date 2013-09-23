@@ -6,9 +6,9 @@ Different stuff. Currently consists of one library — s11n.
 s11n (unstable)
 ---------------------
 C++ serialization library with Boost.Serialization-like interface with such improvements:
-- Header-only. 2 files and less 1k lines of ubertemplatesgodkillskittens
-- Decreased compiler error lines per one mistake (It's more useful to read 50 lines of errors than 100, yep?)
+- Header-only. 2 files and less 1k lines of ubertemplatesgodkillskittens (per one serializer format)
 - Serialization of objects, which code can't be changed (out of class serialization with few limitations)
+- Decreased compiler error lines per one mistake (it's more useful to read 50 lines of errors than 100, yep?)
 
 Other features:
 - Non-default constructors support

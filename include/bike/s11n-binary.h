@@ -77,8 +77,16 @@ public:
 		}\
 	}; 
 
+SN_RAW(int8_t);
+SN_RAW(uint8_t);
+SN_RAW(int16_t);
+SN_RAW(uint16_t);
 SN_RAW(int32_t);
 SN_RAW(uint32_t);
+SN_RAW(int64_t);
+SN_RAW(uint64_t);
+
+#undef SN_RAW
 
 //
 // std::string
@@ -147,6 +155,5 @@ public:
 
 protected:
 };
-
 
 } // namespace bike {

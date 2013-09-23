@@ -316,10 +316,11 @@ TYPED_TEST_P(BaseTest, OutOfClass) {
 struct SampleStruct {
 	std::string name;
 	int id;
+	std::vector<int> regs;
 
 	template <class Node>
 	void ser(Node& node, Version ver) {
-		node & name & id;
+		node & name & id & regs;
 	}
 };
 
@@ -333,7 +334,7 @@ TYPED_TEST_P(BaseTest, Benchmark) {
 	vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {
 		SampleStruct f;
-		f.id   = (int)pow(i, 4); 
+		f.id = (int)pow(i, 4); 
 
 		std::ostringstream out;
 		out << f.id;
