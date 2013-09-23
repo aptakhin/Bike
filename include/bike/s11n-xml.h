@@ -21,7 +21,7 @@ public:
 
 	void version(int ver) { version_.version(ver); }
 
-	template <typename Base>
+	template <class Base>
 	OutputXmlSerializerNode& base(Base* base_ptr) {
 		Base* base = static_cast<Base*>(base_ptr);
 		return *this & (*base);
@@ -157,7 +157,7 @@ public:
 
 	void version(int ver) { version_.version(ver); }
 
-	template <typename Base>
+	template <class Base>
 	InputXmlSerializerNode& base(Base* base) {
 		return *this & (*base);
 	}
@@ -322,12 +322,12 @@ public:
 
 	typedef XmlSerializerStorage    Storage;
 
-	template <typename T>
+	template <class T>
 	static void input_call(T& t, InNode& node) {
 		InputXmlSerializerCall<T&>::call(t, node);
 	}
 
-	template <typename T>
+	template <class T>
 	static void output_call(T& t, OutNode& node) {
 		OutputXmlSerializerCall<T&>::call(t, node);
 	}

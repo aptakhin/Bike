@@ -12,7 +12,7 @@ using namespace bike;
 
 typedef ::testing::Types<XmlSerializer> TestSerializers;
 
-template <typename Serializer>
+template <class Serializer>
 class TemplateTest : public testing::Test {
 public:
 	typedef typename Serializer::Input  Input; 
@@ -50,43 +50,43 @@ REGISTER_TYPED_TEST_CASE_P(
 
 INSTANTIATE_TYPED_TEST_CASE_P(TTest, TemplateTest, TestSerializers);
 
-template <typename Serializer>
+template <class Serializer>
 class BaseTest : public testing::Test {
 public:
 	typedef typename Serializer::Input  Input; 
 	typedef typename Serializer::Output Output; 
 
-	template <typename T>
+	template <class T>
 	void test_val_impl(const T& write, T& read)	{
 		io_impl(write, read);
 		ASSERT_EQ(write, read);
 	}
 
-	template <typename T>
+	template <class T>
 	void test_dis_impl(const T& write, T& read)	{
 		io_impl(write, read);
 		ASSERT_EQ(*write, *read);
 	}
 
-	template <typename T>
+	template <class T>
 	void test_ptr_impl(const T* write, T* read)	{
 		io_ptr_impl(write, read);
 		ASSERT_EQ(*write, *read);
 	}
 
-	template <typename T>
+	template <class T>
 	void test_val() {
 		T read, write;
 		test_val_impl(write, read);
 	}
 
-	template <typename T>
+	template <class T>
 	void test_val(const T& write) {
 		T read;
 		test_val_impl(write, read);
 	}
 
-	template <typename T, typename P1, typename P2>
+	template <class T, class P1, class P2>
 	void test_val(const P1& p1, const P2& p2) {
 		test_val<T>(T(p1, p2));
 	}
@@ -103,19 +103,19 @@ public:
 		Input in(fin);\
 		in >> (Read);\
 
-	template <typename T>
+	template <class T>
 	void io_impl(const T& write, T& read) {
 		WRITE(const_cast<T&>(write))
 		READ(read);
 	}
 
-	template <typename T>
+	template <class T>
 	void io_ptr_impl(const T*& write, T*& read) {
 		WRITE(const_cast<T*&>(write));
 		READ(read);
 	}
 
-	template <typename T, int Size>
+	template <class T, int Size>
 	void io_arr_impl(T(&write)[Size], T(&read)[Size]) {
 		WRITE(write);
 		READ(read);
@@ -144,7 +144,7 @@ TYPED_TEST_P(BaseTest, Strings) {
 	ASSERT_EQ(0, std::strcmp(buf, read));
 }
 
-template <typename T>
+template <class T>
 struct Vec2 {
 
 	template <class Node>
@@ -176,7 +176,7 @@ public:
 
     const std::string& name() const { return name_; }
 
-	template <typename Node>
+	template <class Node>
 	void ser(Node& node, Version vers) {
 		node.version(1);
 		node.named(name_, "name");
@@ -186,7 +186,7 @@ protected:
     std::string name_;
 };
 
-template <typename Node>
+template <class Node>
 class Ctor<Human*, Node> {
 public:
     static Human* ctor(Node& node) {
@@ -219,7 +219,7 @@ protected:
     int superpower_;
 };
 
-template <typename Node>
+template <class Node>
 class Ctor<Superman*, Node> {
 public:
     static Superman* ctor(Node& node) {
@@ -299,7 +299,7 @@ private:
 	int number_;
 };
 
-template <typename Node>
+template <class Node>
 void serialize(IntegerHolder& integer, Node& node) {
 	access(&integer, "number", 
 		&IntegerHolder::get_number, &IntegerHolder::set_number, node);
