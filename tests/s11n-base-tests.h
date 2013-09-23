@@ -334,10 +334,10 @@ TYPED_TEST_P(BaseTest, Benchmark) {
 	vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {
 		SampleStruct f;
-		f.id = (int)pow(i, 4); 
+		f.id = (int) i; 
 
 		std::ostringstream out;
-		out << f.id;
+		out << "id" << f.id;
 
 		f.name = out.str();
 		vec.push_back(f);

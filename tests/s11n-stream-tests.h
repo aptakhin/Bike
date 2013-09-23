@@ -124,7 +124,7 @@ TEST(Snabix, Bench2) {
 	vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {
 		SampleStruct f;
-		f.id   = (int)pow(i, 4); 
+		f.id = (int) i;
 
 		f.regs.resize(5);
 		std::fill_n(f.regs.begin(), 5, 10);

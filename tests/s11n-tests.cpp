@@ -14,10 +14,17 @@
 #include "s11n-stream-tests.h"
 #include "s11n-docs-tests.h"
 
+Register<XmlSerializer> serializers;
+
 GTEST_API_ int main(int argc, char **argv) {
-	Register<XmlSerializer> reg;
-	reg.reg_type<Human>();
-	reg.reg_type<Superman>();
+	
+	unsigned char EndianTest[] = {1, 0};
+	short x;
+
+	x = *(short *) EndianTest;
+
+	serializers.reg_type<Human>();
+	serializers.reg_type<Superman>();
 
 	testing::InitGoogleTest(&argc, argv);
 	int code = RUN_ALL_TESTS();

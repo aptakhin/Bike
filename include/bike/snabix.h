@@ -1,15 +1,99 @@
-
+// snabix is about bin and sax
+//
 #pragma once
 
 #include <string>
 #include <vector>
+#include <cstring>
+#include <cstdint>
+#include <cstdio>
+#include <iosfwd>
 
 namespace bike {
 
+class IWriter {
+public:
+	virtual void write(void* buf, size_t size) = 0;
+};
+
+class IReader {
+public:
+	virtual size_t read(void* buf, size_t size) = 0;
+};
+
+template <size_t BufSize>
+class BufferedWriter : public IWriter
+{
+public:
+	BufferedWriter(IWriter* backend)
+	:	backend_(backend),
+		size_(0) {}
+
+	void write(void* buf, size_t size) /* override */ {
+		char* ptr = reinterpret_cast<char*>(buf);
+		while (size > 0) {
+			size_t write_bytes = std::min(size, BufSize - size_);
+			memcpy(buf_ + size_, ptr, write_bytes);
+			size_ += write_bytes;
+			ptr   += write_bytes;
+			size  -= write_bytes;
+			if (size_ == BufSize)
+				flush();
+		}
+	}
+
+	~BufferedWriter() {
+		flush();
+	}
+
+	void flush() {
+		backend_->write(buf, size_);
+		size_ = 0;
+	}
+	
+protected:
+	IWriter* backend_;
+	char buf_[BufSize];
+	size_t size_;
+};
+
+class FileWriter : public IWriter
+{
+public:
+	FileWriter(const char* filename) {
+		fout_ = fopen(filename, "wb");
+	}
+
+	~FileWriter() {
+		fclose(fout_);
+	}
+
+	void write(void* buf, size_t size) /* override */{
+		fwrite(buf, 1, size, fout_);
+	}
+
+protected:
+	FILE* fout_;
+};
+
+class OstreamWriter : public IWriter
+{
+public:
+	OstreamWriter(const char* filename);
+
+	~OstreamWriter();
+
+	void write(void* buf, size_t size) /* override */;
+
+protected:
+	std::ostream* fout_;
+};
+
+
 #define CONCATIMPL(a, b) a##b
-#define CONCAT(a, b) CONCATIMPL(a, b)
-#define CONV_NAME(Type) CONCAT(conv_, Type)
-#define CONV(Type) ConvImpl<Type> CONV_NAME(Type)
+#define CONCAT(a, b)     CONCATIMPL(a, b)
+#define CONV_NAME(Type)  CONCAT(conv_, Type)
+#define CONV(Type)       ConvImpl<Type> CONV_NAME(Type)
 
 bool is_little_endian() {
 	char test[] = {1, 0};

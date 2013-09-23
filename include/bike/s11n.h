@@ -213,6 +213,14 @@ public:
 		}
 		return S11N_NULLPTR;
 	}
+
+	static void clean() {
+		typename Storage::TypesT::const_iterator i = Storage::t().begin();
+		for (; i != Storage::t().end(); ++i) {
+			delete i->ctor;
+		}
+		Storage::t().clear();
+	}
 };
 
 /// Just keeping pointer
@@ -287,8 +295,6 @@ protected:
 	std::string name_;
 };
 
-struct None {};
-
 template <class Serializer0, class Serializer1 = void>
 class Register {
 protected:
@@ -305,12 +311,28 @@ protected:
 		static void reg() { /* Nothing to do */ }
 	};
 
+	template <typename T, typename Serializer>
+	struct Cleaner {
+		static void clean() {
+			TypeStorageAccessor<Serializer::Storage>::clean();
+		}
+	};
+	template <typename T>
+	struct Cleaner<T, void> {
+		static void clean() { /* Nothing to do */ }
+	};
+
 public:
 
 	template <class T>
 	void reg_type() {
 		Impl<T, Serializer0>::reg();
 		Impl<T, Serializer1>::reg();
+	}
+
+	void clean() {
+		Cleaner<T, Serializer0>::clean();
+		Cleaner<T, Serializer1>::clean();
 	}
 };
 

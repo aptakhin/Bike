@@ -28,6 +28,10 @@ source_group("s11n" FILES
   include/bike/snabix.h
 )
 
+source_group("snabix" FILES 
+  include/bike/snabix.h
+)
+
 source_group("gtest" FILES 
   tests/gtest/gtest.h 
   tests/gtest/gtest-all.cc
