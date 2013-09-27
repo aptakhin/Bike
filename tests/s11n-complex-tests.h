@@ -36,7 +36,7 @@ protected:
 
 template <class Node>
 void serialize_widget(Widget& widget, Node& node) {
-	bike::access<Widget, Widget*, Node>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
+	//bike::access<Widget, Widget*, Node>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
 	//access(&widget, "parent", Widget::parent, Widget::set_parent, node);
 }
 
@@ -44,7 +44,7 @@ S11N_XML_OUT(Widget, serialize_widget);
 
 
 
-
+/*
 TEST(Complex, 0) {
 	WidgetUPtr root, root_read;
 	root.reset(new Widget(S11N_NULLPTR));
@@ -69,3 +69,4 @@ TEST(Complex, 0) {
 	ASSERT_EQ(fst_child_read, childs[0]);
 	ASSERT_EQ(snd_child_read, childs[1]);
 }
+*/

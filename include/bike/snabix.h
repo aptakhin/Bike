@@ -5,15 +5,15 @@
 #include <string>
 #include <vector>
 #include <cstring>
-#include <cstdint>
-#include <cstdio>
+#include <stdint.h>
+#include <stdio.h>
 #include <iosfwd>
 
 namespace bike {
 
 class IWriter {
 public:
-	virtual void write(void* buf, size_t size) = 0;
+	virtual void write(const void* buf, size_t size) = 0;
 };
 
 class IReader {
@@ -68,7 +68,7 @@ public:
 		fclose(fout_);
 	}
 
-	void write(void* buf, size_t size) /* override */{
+	void write(const void* buf, size_t size) /* override */{
 		fwrite(buf, 1, size, fout_);
 	}
 
@@ -84,6 +84,8 @@ public:
 	~OstreamWriter();
 
 	void write(void* buf, size_t size) /* override */;
+
+
 
 protected:
 	std::ostream* fout_;
@@ -190,8 +192,7 @@ template <class T>
 class EncoderImpl
 {
 public:
-	template <class Writer>
-	static void encode(Writer&, const T&) {
+	static void encode(IWriter*, const T&) {
 		assert(0);
 	}
 };
@@ -200,8 +201,7 @@ template <class T>
 class DecoderImpl
 {
 public:
-	template <class Reader>
-	static void decode(Reader&, T&) {
+	static void decode(IReader*, T&) {
 		assert(0);
 	}
 };
@@ -210,19 +210,17 @@ public:
 	template <>\
 	class EncoderImpl<Type> {\
 	public:\
-		template <class Writer>\
-		static void encode(Writer& writer, const Type& v) {\
+		static void encode(IWriter* writer, const Type& v) {\
 			Type tmp = conv().CONV_NAME(Type)(v);\
-			writer.write(&tmp, sizeof(Type));\
+			writer->write(&tmp, sizeof(Type));\
 		}\
 	};\
 	template <>\
 	class DecoderImpl<Type> {\
 	public:\
-		template <class Reader>\
-		static void decode(Reader& reader, Type& v) {\
+		static void decode(IReader* reader, Type& v) {\
 			Type tmp;\
-			reader.read(&tmp, sizeof(Type));\
+			reader->read(&tmp, sizeof(Type));\
 			v = conv().CONV_NAME(Type)(tmp);\
 		}\
 	};
@@ -242,25 +240,23 @@ ENC_RAW(uint64_t);
 template <>
 class EncoderImpl<std::string> {
 public:
-	template <class Writer>
-	static void encode(Writer& writer, const std::string& v) {
+	static void encode(IWriter* writer, const std::string& v) {
 		uint32_t size = (uint32_t) v.size();
-		writer.write(&size, sizeof(uint32_t));
+		writer->write(&size, sizeof(uint32_t));
 		if (size)
-			writer.write(&v[0], (size_t) size);
+			writer->write(&v[0], (size_t) size);
 	}
 };
 template <>
 class DecoderImpl<std::string> {
 public:
-	template <class Reader>
-	static void decode(Reader& reader, std::string& v) {
+	static void decode(IReader* reader, std::string& v) {
 		v = "";
 		uint32_t size;
-		reader.read(&size, sizeof(uint32_t));
+		reader->read(&size, sizeof(uint32_t));
 		if (size) {
 			v.resize(size);
-			reader.read(&v[0], (size_t) size);
+			reader->read(&v[0], (size_t) size);
 		}
 	}
 };
@@ -271,10 +267,9 @@ public:
 template <class T>
 class EncoderImpl<std::vector<T> > {
 public:
-	template <class Writer>
-	static void encode(Writer& writer, const std::vector<T>& v) {
+	static void encode(IWriter* writer, const std::vector<T>& v) {
 		uint32_t size = (uint32_t) v.size();
-		writer.write(&size, sizeof(uint32_t));
+		writer->write(&size, sizeof(uint32_t));
 		std::vector<T>::const_iterator i = v.begin(), e = v.end();
 		for (; i != e; ++i)
 			EncoderImpl<T>::encode(writer, *i);
@@ -283,11 +278,10 @@ public:
 template <class T>
 class DecoderImpl<std::vector<T> > {
 public:
-	template <class Reader>
-	static void decode(Reader& reader, std::vector<T>& v) {
+	static void decode(IReader* reader, std::vector<T>& v) {
 		v.clear();
 		uint32_t size = (uint32_t) v.size();
-		reader.read(&size, sizeof(uint32_t));
+		reader->read(&size, sizeof(uint32_t));
 		v.reserve(size);
 		for (size_t i = 0; i < size; ++i) {
 			T tmp;

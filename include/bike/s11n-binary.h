@@ -6,77 +6,75 @@
 
 namespace bike {
 
-template <class Writer>
 class OutputBinarySerializerNode {
 
 public:
-	OutputBinarySerializerNode(Writer& writer) 
+	OutputBinarySerializerNode(IWriter* writer)
 	:	writer_(writer) {}
 
 	template <class T>
 	OutputBinarySerializerNode& operator & (T& t) {
-		OutputBinarySerializerCall<T, Writer>::call(t, *this);
+		OutputBinarySerializerCall<T&>::call(t, *this);
 		return *this;
 	}
 
-	Writer& writer() { return writer_; }
+	IWriter* writer() { return writer_; }
 
 protected:
-	Writer& writer_;
+	IWriter* writer_;
 };
 
-template <class Reader>
 class InputBinarySerializerNode {
 
 public:
-	InputBinarySerializerNode(Reader& reader) 
+	InputBinarySerializerNode(IReader* reader)
 	:	reader_(reader) {}
 
 	template <class T>
 	InputBinarySerializerNode& operator & (T& t) {
-		InputBinarySerializerCall<T, Reader>::call(t, *this);
+		InputBinarySerializerCall<T&>::call(t, *this);
 		return *this;
 	}
 
-	Reader& reader() { return reader_; }
+	IReader* reader() { return reader_; }
 
 protected:
-	Reader& reader_;
+	IReader* reader_;
 };
 
-
-template <class T, class Reader>
+template <class T>
 class InputBinarySerializerCall {
 public:
-	static void call(T& t, InputBinarySerializerNode<Reader>& node) {
+	static void call(T& t, InputBinarySerializerNode& node) {
 		t.ser(node, Version(-1));
 	}
-}; 
+};
 
-template <class T, class Writer>
+template <class T>
 class OutputBinarySerializerCall {
 public:
-	static void call(T& t, OutputBinarySerializerNode<Writer>& node) {
+	static void call(T& t, OutputBinarySerializerNode& node) {
 		t.ser(node, Version(-1));
 	}
 };
 
 #define SN_RAW(Type)\
-	template <class Writer>\
-	class OutputBinarySerializerCall<Type, Writer> {\
+	template <>\
+	class OutputBinarySerializerCall<Type&> {\
 	public:\
-		static void call(Type& t, OutputBinarySerializerNode<Writer>& node) {\
+		static void call(Type& t, OutputBinarySerializerNode& node) {\
 			EncoderImpl<Type>::encode(node.writer(), t);\
 		}\
 	};\
-	template <class Reader>\
-	class InputBinarySerializerCall<Type, Reader> {\
+	template <>\
+	class InputBinarySerializerCall<Type&> {\
 	public:\
-		static void call(Type& t, InputBinarySerializerNode<Reader>& node) {\
+		static void call(Type& t, InputBinarySerializerNode& node) {\
 			DecoderImpl<Type>::decode(node.reader(), t);\
 		}\
 	}; 
 
+SN_RAW(bool);
 SN_RAW(int8_t);
 SN_RAW(uint8_t);
 SN_RAW(int16_t);
@@ -86,22 +84,22 @@ SN_RAW(uint32_t);
 SN_RAW(int64_t);
 SN_RAW(uint64_t);
 
+SN_RAW(std::string);
+
 #undef SN_RAW
 
 //
 // std::string
 //
-template <class Writer>
-class OutputBinarySerializerCall<std::string, Writer> {
+class OutputBinarySerializerCall<std::string> {
 public:
-	static void call(std::string& t, OutputBinarySerializerNode<Writer>& node) {
+	static void call(std::string& t, OutputBinarySerializerNode& node) {
 		EncoderImpl<std::string>::encode(node.writer(), t);
 	}
 };
-template <class Reader>
-class InputBinarySerializerCall<std::string, Reader> {
+class InputBinarySerializerCall<std::string> {
 public:
-	static void call(std::string& t, InputBinarySerializerNode<Reader>& node) {
+	static void call(std::string& t, InputBinarySerializerNode& node) {
 		DecoderImpl<std::string>::decode(node.reader(), t);
 	}
 }; 
@@ -109,51 +107,46 @@ public:
 //
 // std::vector
 //
-template <class T, class Writer>
-class OutputBinarySerializerCall<std::vector<T>, Writer> {
+template <class T>
+class OutputBinarySerializerCall<std::vector<T>&> {
 public:
-	static void call(std::vector<T>& t, OutputBinarySerializerNode<Writer>& node) {
+	static void call(std::vector<T>& t, OutputBinarySerializerNode& node) {
 		EncoderImpl<std::vector<T> >::encode(node.writer(), t);
 	}
 };
-template <class T, class Reader>
-class InputBinarySerializerCall<std::vector<T>, Reader> {
+template <class T>
+class InputBinarySerializerCall<std::vector<T>&> {
 public:
-	static void call(std::vector<T>& t, InputBinarySerializerNode<Reader>& node) {
+	static void call(std::vector<T>& t, InputBinarySerializerNode& node) {
 		DecoderImpl<std::vector<T> >::decode(node.reader(), t);
 	}
 }; 
 
-template <class Writer>
-class OutputBinaryStreaming : public OutputBinarySerializerNode<Writer> {
+class OutputBinaryStreaming : public OutputBinarySerializerNode {
 
 public:
-	OutputBinaryStreaming(Writer& writer) 
+	OutputBinaryStreaming(IWriter* writer)
 	:	OutputBinarySerializerNode(writer) {}
 
 	template <class T>
 	OutputBinaryStreaming& operator << (T& t) {
-		(*((OutputBinarySerializerNode<Writer>*) this)) & t;
+		(*((OutputBinarySerializerNode*) this)) & t;
 		return *this;
 	}
-
-protected:
 };
 
 template <class Reader>
-class InputBinaryStreaming : public InputBinarySerializerNode<Reader> {
+class InputBinaryStreaming : public InputBinarySerializerNode {
 
 public:
-	InputBinaryStreaming(Reader& reader) 
+	InputBinaryStreaming(IReader* reader)
 	:	InputBinarySerializerNode(reader) {}
 
 	template <class T>
 	InputBinaryStreaming& operator >> (T& t) {
-		(*((InputBinarySerializerNode<Reader>*) this)) & t;
+		(*((InputBinarySerializerNode*) this)) & t;
 		return *this;
 	}
-
-protected:
 };
 
 } // namespace bike {
