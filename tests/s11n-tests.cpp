@@ -11,12 +11,15 @@
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
 #include "s11n-base-tests.h"
+#include "s11n-stream-tests.h"
+#include "s11n-complex-tests.h"
 #include "s11n-docs-tests.h"
 
+Register<XmlSerializer> serializers;
+
 GTEST_API_ int main(int argc, char **argv) {
-	Register<XmlSerializer> reg;
-	reg.reg_type<Human>();
-	reg.reg_type<Superman>();
+	serializers.reg_type<Human>();
+	serializers.reg_type<Superman>();
 
 	testing::InitGoogleTest(&argc, argv);
 	int code = RUN_ALL_TESTS();

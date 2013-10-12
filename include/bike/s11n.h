@@ -3,12 +3,11 @@
 #pragma once
 
 #include <iosfwd>
-#include <type_traits>
 #include <string>
 #include <vector>
 #include <memory>
 #include <map>
-#include <assert.h>
+#include <cassert>
 
 #ifdef S11N_CPP03
 #	define S11N_NULLPTR NULL
@@ -78,11 +77,6 @@ public:
 		assert(!latest());
 		return version_;
 	}
-
-	Version& operator = (const Version& cpy) {
-		version_ = cpy.version_;
-        return *this;
-    }
 
 	bool operator < (int r) const {
 		return version_ < r && !latest();
@@ -186,7 +180,7 @@ struct Type {
 template <class Storage>
 class TypeStorageAccessor {
 public:
-	template <typename T>
+	template <class T>
 	static bool is_registered() {
 		const type_index type = typeid(T);
 		typename Storage::TypesT::const_iterator i = Storage::t().begin();
@@ -197,10 +191,9 @@ public:
 		return false;
 	}
 
-	template <typename T>
+	template <class T>
 	static void register_type(BasePlant* ctor) {
-		if (is_registered<T>())
-			throw false;
+		assert(!is_registered<T>());
 		Type t(typeid(T));
 		t.ctor = ctor;
 		Storage::t().push_back(t); 
@@ -214,20 +207,28 @@ public:
 		}
 		return S11N_NULLPTR;
 	}
+
+	static void clean() {
+		typename Storage::TypesT::const_iterator i = Storage::t().begin();
+		for (; i != Storage::t().end(); ++i) {
+			delete i->ctor;
+		}
+		Storage::t().clear();
+	}
 };
 
 /// Just keeping pointer
 class PtrHolder {
 public:
-	template <typename T>
+	template <class T>
 	explicit PtrHolder(T* ptr) : ptr_(ptr) {}
 
-	template <typename T>
+	template <class T>
 	T* get() const {
 		return reinterpret_cast<T*>(ptr_);
 	}
 
-	template <typename T>
+	template <class T>
 	T* get_dyn() const {
 		return dynamic_cast<T*>(ptr_);
 	}
@@ -249,7 +250,7 @@ public:
 };
 
 /// Plant for constructing types specific to serializer type
-template <typename T, typename Serializer>
+template <class T, class Serializer>
 class Plant : public BasePlant {
 protected:
 	typedef typename Serializer::InNode  InNode;
@@ -288,12 +289,10 @@ protected:
 	std::string name_;
 };
 
-struct None {};
-
-template <typename Serializer0, typename Serializer1 = None>
+template <class Serializer0, class Serializer1 = void>
 class Register {
 protected:
-	template <typename T, typename Serializer>
+	template <class T, class Serializer>
 	struct Impl {
 		static void reg() {
 			BasePlant* plant = new Plant<T, Serializer>;
@@ -301,17 +300,33 @@ protected:
 		}
 	};
 
-	template <typename T>
-	struct Impl<T, None> {
+	template <class T>
+	struct Impl<T, void> {
 		static void reg() { /* Nothing to do */ }
+	};
+
+	template <typename T, typename Serializer>
+	struct Cleaner {
+		static void clean() {
+			TypeStorageAccessor<Serializer::Storage>::clean();
+		}
+	};
+	template <typename T>
+	struct Cleaner<T, void> {
+		static void clean() { /* Nothing to do */ }
 	};
 
 public:
 
-	template <typename T>
+	template <class T>
 	void reg_type() {
 		Impl<T, Serializer0>::reg();
 		Impl<T, Serializer1>::reg();
+	}
+
+	void clean() {
+		Cleaner<T, Serializer0>::clean();
+		Cleaner<T, Serializer1>::clean();
 	}
 };
 
@@ -339,6 +354,7 @@ class OutputEssence {};
 /*
  * Standard extensions
  */
+
 template <class Object, class T, class Node>
 void access(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node)
 {
@@ -360,10 +376,25 @@ void access_impl(Object* object, const char* name, T (Object::* get)(), void (Ob
 	node.named(val, name);
 }
 
-template <typename T, class Node>
-void version(bool expr, T& t, Node& node) {
-	if (expr)
-		node & t;
+template <class T, class Object, class Getter, class Setter, class Node>
+void access_free(Object* object, const char* name, Getter get, Setter set, Node& node)
+{
+	access_free_impl<T>(object, name, get, set, node, node.essence());
+}
+
+template <class T, class Object, class Getter, class Setter, class Node>
+void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, InputEssence&)
+{
+	T val;
+	node.named(val, name);
+	(object->*set)(val);
+}
+
+template <class T, class Object, class Getter, class Setter, class Node>
+void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, OutputEssence&)
+{
+	T val = const_cast<T>((object->*get)());
+	node.named(val, name);
 }
  
 } // namespace bike {

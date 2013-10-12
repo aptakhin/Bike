@@ -21,7 +21,7 @@ public:
 
 	void version(int ver) { version_.version(ver); }
 
-	template <typename Base>
+	template <class Base>
 	OutputXmlSerializerNode& base(Base* base_ptr) {
 		Base* base = static_cast<Base*>(base_ptr);
 		if (typeid(*base_ptr) != typeid(Base))
@@ -81,7 +81,7 @@ public:
 					type->ctor->write(t, node);
 				}
 				else // Otherwise, no choise and direct way
-					(*t).ser(*this, Version(-1));
+					OutputXmlSerializerCall<T&>::call(*t, *this);
 			}
 		}
 		xml_.append_attribute("ref") = ref;
@@ -159,7 +159,7 @@ public:
 
 	void version(int ver) { version_.version(ver); }
 
-	template <typename Base>
+	template <class Base>
 	InputXmlSerializerNode& base(Base* base) {
 		return *this & (*base);
 	}
@@ -203,14 +203,19 @@ public:
 			void* ptr = refs_->get(ref);
 			if (ptr == S11N_NULLPTR) {
 				pugi::xml_attribute type_attr = xml_.attribute("type");
+				bool from_ctor = true;
 				if (type_attr) {
 					const Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(type_attr.as_string());
-					PtrHolder node_holder(this);
-					PtrHolder got = type->ctor->create(node_holder);
-					t = got.get<T>(); // TODO: Fixme another template adapter
-					type->ctor->read(t, node_holder);
+					if (type != S11N_NULLPTR) {
+						from_ctor = false;
+						PtrHolder node_holder(this);
+						PtrHolder got = type->ctor->create(node_holder);
+						t = got.get<T>(); // TODO: Fixme another template adapter
+						type->ctor->read(t, node_holder);
+					}
 				}
-				else
+				
+				if (from_ctor)
 					t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
 				
 				refs_->set(ref, t);
@@ -324,12 +329,12 @@ public:
 
 	typedef XmlSerializerStorage    Storage;
 
-	template <typename T>
+	template <class T>
 	static void input_call(T& t, InNode& node) {
 		InputXmlSerializerCall<T&>::call(t, node);
 	}
 
-	template <typename T>
+	template <class T>
 	static void output_call(T& t, OutNode& node) {
 		OutputXmlSerializerCall<T&>::call(t, node);
 	}
