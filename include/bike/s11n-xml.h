@@ -79,7 +79,7 @@ public:
 					type->ctor->write(t, node);
 				}
 				else // Otherwise, no choise and direct way
-					(*t).ser(*this, Version(-1));
+					OutputXmlSerializerCall<T&>::call(*t, *this);
 			}
 		}
 		xml_.append_attribute("ref") = ref;

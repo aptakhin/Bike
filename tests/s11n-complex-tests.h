@@ -11,7 +11,7 @@ typedef std::unique_ptr<Widget> WidgetUPtr;
 
 class Widget {
 public:
-	Widget(Widget* parent)
+	Widget(Widget* parent = nullptr)
 	:	parent_(parent) {
 	}
 
@@ -36,15 +36,11 @@ protected:
 
 template <class Node>
 void serialize_widget(Widget& widget, Node& node) {
-	//bike::access<Widget, Widget*, Node>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
-	//access(&widget, "parent", Widget::parent, Widget::set_parent, node);
+	access_free<Widget*>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
 }
 
 S11N_XML_OUT(Widget, serialize_widget);
 
-
-
-/*
 TEST(Complex, 0) {
 	WidgetUPtr root, root_read;
 	root.reset(new Widget(S11N_NULLPTR));
@@ -60,6 +56,8 @@ TEST(Complex, 0) {
 	std::ofstream fout("complex.xml");
 	OutputXmlSerializer out(fout);
 	out << root << fst_child << snd_child;
+	out.close();
+	fout.close();
 
 	std::ifstream fin("complex.xml");
 	InputXmlSerializer in(fin);
@@ -69,4 +67,3 @@ TEST(Complex, 0) {
 	ASSERT_EQ(fst_child_read, childs[0]);
 	ASSERT_EQ(snd_child_read, childs[1]);
 }
-*/

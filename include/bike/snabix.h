@@ -84,13 +84,9 @@ public:
 	~OstreamWriter();
 
 	void write(void* buf, size_t size) /* override */;
-
-
-
 protected:
 	std::ostream* fout_;
 };
-
 
 #define CONCATIMPL(a, b) a##b
 #define CONCAT(a, b)     CONCATIMPL(a, b)

@@ -360,32 +360,47 @@ class OutputEssence {};
 /*
  * Standard extensions
  */
-/*
-template <class Object, class T, class Node, class Getter, class Setter>
-void access(Object* object, const char* name, Getter get, Setter set, Node& node)
+
+template <class Object, class T, class Node>
+void access(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node)
 {
 	access_impl(object, name, get, set, node, node.essence());
 }
 
-template <class Object, class T, class Node, class Getter, class Setter>
-void access_impl(Object* object, const char* name, Getter get, Setter set, Node& node, InputEssence&)
+template <class Object, class T, class Node>
+void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, InputEssence&)
 {
 	T val;
 	node.named(val, name);
 	(object->*set)(val);
 }
 
-template <class Object, class T, class Node, class Getter, class Setter>
-void access_impl(Object* object, const char* name, Getter get, Setter set, Node& node, OutputEssence&)
+template <class Object, class T, class Node>
+void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, OutputEssence&)
 {
 	T val = (object->*get)();
 	node.named(val, name);
 }
-*/
-template <class T, class Node>
-void version(bool expr, T& t, Node& node) {
-	if (expr)
-		node & t;
+
+template <class T, class Object, class Getter, class Setter, class Node>
+void access_free(Object* object, const char* name, Getter get, Setter set, Node& node)
+{
+	access_free_impl<T>(object, name, get, set, node, node.essence());
+}
+
+template <class T, class Object, class Getter, class Setter, class Node>
+void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, InputEssence&)
+{
+	T val;
+	node.named(val, name);
+	(object->*set)(val);
+}
+
+template <class T, class Object, class Getter, class Setter, class Node>
+void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, OutputEssence&)
+{
+	T val = const_cast<T>((object->*get)());
+	node.named(val, name);
 }
  
 } // namespace bike {

@@ -89,22 +89,6 @@ SN_RAW(std::string);
 #undef SN_RAW
 
 //
-// std::string
-//
-class OutputBinarySerializerCall<std::string> {
-public:
-	static void call(std::string& t, OutputBinarySerializerNode& node) {
-		EncoderImpl<std::string>::encode(node.writer(), t);
-	}
-};
-class InputBinarySerializerCall<std::string> {
-public:
-	static void call(std::string& t, InputBinarySerializerNode& node) {
-		DecoderImpl<std::string>::decode(node.reader(), t);
-	}
-}; 
-
-//
 // std::vector
 //
 template <class T>
@@ -123,7 +107,6 @@ public:
 }; 
 
 class OutputBinaryStreaming : public OutputBinarySerializerNode {
-
 public:
 	OutputBinaryStreaming(IWriter* writer)
 	:	OutputBinarySerializerNode(writer) {}
@@ -135,9 +118,7 @@ public:
 	}
 };
 
-template <class Reader>
 class InputBinaryStreaming : public InputBinarySerializerNode {
-
 public:
 	InputBinaryStreaming(IReader* reader)
 	:	InputBinarySerializerNode(reader) {}

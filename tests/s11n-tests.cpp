@@ -18,12 +18,6 @@
 Register<XmlSerializer> serializers;
 
 GTEST_API_ int main(int argc, char **argv) {
-	
-	unsigned char EndianTest[] = {1, 0};
-	short x;
-
-	x = *(short *) EndianTest;
-
 	serializers.reg_type<Human>();
 	serializers.reg_type<Superman>();
 
