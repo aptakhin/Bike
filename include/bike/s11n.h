@@ -3,7 +3,6 @@
 #pragma once
 
 #include <iosfwd>
-#include <type_traits>
 #include <string>
 #include <vector>
 #include <memory>
@@ -78,11 +77,6 @@ public:
 		assert(!latest());
 		return version_;
 	}
-
-	Version& operator = (const Version& cpy) {
-		version_ = cpy.version_;
-        return *this;
-    }
 
 	bool operator < (int r) const {
 		return version_ < r && !latest();

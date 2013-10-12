@@ -118,7 +118,8 @@ T swap_endian(T u) {
 	return dest.u;
 }
 
-#if _MSC_VER
+#ifdef _MSC_VER
+// Set up intrinsics
 template <>
 uint16_t swap_endian(uint16_t v) {
 	return _byteswap_ushort(v);
