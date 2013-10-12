@@ -55,15 +55,13 @@ TEST(Complex, 0) {
 
 	std::ofstream fout("complex.xml");
 	OutputXmlSerializer out(fout);
-	out << root << fst_child << snd_child;
+	out << root;
 	out.close();
 	fout.close();
 
 	std::ifstream fin("complex.xml");
 	InputXmlSerializer in(fin);
-	in >> root_read >> fst_child_read >> snd_child_read;
+	in >> root_read;
 
 	Widget::Widgets& childs = root->childs();
-	ASSERT_EQ(fst_child_read, childs[0]);
-	ASSERT_EQ(snd_child_read, childs[1]);
 }

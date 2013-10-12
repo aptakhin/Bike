@@ -201,14 +201,19 @@ public:
 			void* ptr = refs_->get(ref);
 			if (ptr == S11N_NULLPTR) {
 				pugi::xml_attribute type_attr = xml_.attribute("type");
+				bool from_ctor = true;
 				if (type_attr) {
 					const Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(type_attr.as_string());
-					PtrHolder node_holder(this);
-					PtrHolder got = type->ctor->create(node_holder);
-					t = got.get<T>(); // TODO: Fixme another template adapter
-					type->ctor->read(t, node_holder);
+					if (type != S11N_NULLPTR) {
+						from_ctor = false;
+						PtrHolder node_holder(this);
+						PtrHolder got = type->ctor->create(node_holder);
+						t = got.get<T>(); // TODO: Fixme another template adapter
+						type->ctor->read(t, node_holder);
+					}
 				}
-				else
+				
+				if (from_ctor)
 					t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
 				
 				refs_->set(ref, t);
