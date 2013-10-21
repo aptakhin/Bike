@@ -14,11 +14,15 @@ namespace bike {
 class IWriter {
 public:
 	virtual void write(const void* buf, size_t size) = 0;
+
+	virtual ~IWriter() {}
 };
 
 class IReader {
 public:
 	virtual size_t read(void* buf, size_t size) = 0;
+
+	virtual ~IReader() {}
 };
 
 template <size_t BufSize>
