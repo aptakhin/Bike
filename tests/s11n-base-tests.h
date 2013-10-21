@@ -43,9 +43,57 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	ASSERT_EQ(bw, br);
 }
 
+struct X1 
+{
+	int x;
+
+	X1(int x) : x(x) {}
+
+	template <class Node>
+	void ser(Node& node, Version ver) {
+		node & x;
+	}
+};
+
+struct X2 
+{
+	int x, y;
+
+	X2() : x(0), y(0) {}
+	X2(int x, int y) : x(x), y(y) {}
+
+	template <class Node>
+	void ser(Node& node, Version ver) {
+		node.version(1);
+		node & x;
+		if (ver > 0)
+			node & y;
+	}
+};
+
+TYPED_TEST_P(TemplateTest, Version0) {
+	std::ofstream fout("test.txt");
+	Output out(fout);
+
+	X1 w1(5);
+	out << w1;
+
+	X2 w2(7, 9), r2, r22;
+	out << w2;
+
+	out.close();
+	fout.close();
+
+	std::ifstream fin("test.txt");
+	Input in(fin);
+
+	in >> r2 >> r22;
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	TemplateTest, 
-	Multiply0
+	Multiply0,
+	Version0
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(TTest, TemplateTest, TestSerializers);
