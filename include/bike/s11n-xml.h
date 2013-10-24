@@ -51,8 +51,7 @@ public:
 
 		OutputXmlSerializerCall<T&>::call(t, node);
 
-		if (version() != VersionDecl<T>::ver())
-			xml_node.append_attribute("ver").set_value(node.version());
+		xml_node.append_attribute("ver").set_value(node.version());
 
 		TypeWriter<T&>::write(t, xml_node);
 		return *this;
@@ -112,7 +111,6 @@ public:
 		/*
 		 * Please implement `ser` method in your class.
 		 */
-		node.decl_version(VersionDecl<T>::ver());
 		t.ser(node);
 	}
 };
@@ -141,13 +139,13 @@ public:
 		xml_ = doc_.append_child("serializable");
 		xml_.append_attribute("fmtver").set_value(1);
 		static_cast<OutputXmlSerializer&>(*this & t);
+		xml_.print(*out_, "", pugi::format_raw);
 		return *this; 
 	}
 
 	void close() {
 		if (out_) {
 			assert(*out_);
-			doc_.save(*out_);
 			out_ = S11N_NULLPTR; // We shouldn't write to output anymore.
 		}
 	}

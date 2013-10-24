@@ -91,30 +91,6 @@ private:
 	unsigned version_;
 };
 
-template <class T>
-class VersionDecl {
-public:
-	static unsigned ver() {
-		return 0;
-	}
-};
-
-#define S11N_VER(Class, Vers)\
-	class VersionDecl<Class> {\
-	public:\
-		static unsigned ver() {\
-			return Vers;\
-		}\
-	};
-
-#define S11N_VER_CL(Class)\
-	class VersionDecl<Class>\
-	public:\
-		static unsigned ver() {\
-			return Class::version;\
-		}\
-	};
-
 /// Dictionary for integer id to object pointers 
 class ReferencesId {
 public:

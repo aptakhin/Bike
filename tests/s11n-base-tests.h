@@ -31,7 +31,6 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	std::string bw = "Two objects", br;
 	out << bw;
 
-	out.close();
 	fout.close();
 
 	std::ifstream fin("test.txt");
@@ -81,7 +80,6 @@ TYPED_TEST_P(TemplateTest, Version0) {
 	X2 w2(7, 9), r2, r22;
 	out << w2;
 
-	out.close();
 	fout.close();
 
 	std::ifstream fin("test.txt");
@@ -143,7 +141,6 @@ public:
 		std::ofstream fout("test.txt");\
 		Output out(fout);\
 		out << (Write);\
-		out.close();\
 		fout.close();\
 
 #define READ(Read)\

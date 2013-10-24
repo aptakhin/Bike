@@ -56,7 +56,6 @@ TEST(Complex, 0) {
 	std::ofstream fout("complex.xml");
 	OutputXmlSerializer out(fout);
 	out << root;
-	out.close();
 	fout.close();
 
 	std::ifstream fin("complex.xml");
