@@ -15,7 +15,7 @@ class StrWriter : public IWriter
 public:
 	StrWriter(std::string& str) : out_(str) {}
 
-	void write(const void* o, size_t size) {
+	void write(const void* o, size_t size) /* override */ {
 		char* s = (char*) o;
 		std::string x(s, s + size);
 		out_ += x;
@@ -29,7 +29,7 @@ class StrReader : public IReader
 public:
 	StrReader(std::string& str) : out_(str), offset_(0) {}
 
-	size_t read(void* o, size_t size) {
+	size_t read(void* o, size_t size) /* override */ {
 		memcpy(o, &out_[offset_], size);
 		offset_ += size;
 		return size;

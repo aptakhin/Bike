@@ -301,8 +301,8 @@ private:
 
 template <class Node>
 void serialize(IntegerHolder& integer, Node& node) {
-	//bike::access<IntegerHolder, int>(&integer, "number", 
-	//	&IntegerHolder::get_number, &IntegerHolder::set_number, node);
+	bike::access_free<int>(&integer, "number", 
+		&IntegerHolder::get_number, &IntegerHolder::set_number, node);
 }
 
 S11N_XML_OUT(IntegerHolder, serialize);
