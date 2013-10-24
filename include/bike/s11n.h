@@ -32,27 +32,30 @@
 
 namespace bike {
 
+class InputEssence  {};
+class OutputEssence {};
+
 /// std::type_index for C++03
-class type_index {
+class TypeIndex {
 public:           
-	type_index(const std::type_info& info) : info_(&info) {}
+	TypeIndex(const std::type_info& info) : info_(&info) {}
 
-	type_index(const type_index& index) : info_(index.info_) {}
+	TypeIndex(const TypeIndex& index) : info_(index.info_) {}
 
-	type_index& operator = (const type_index& index) {
+	TypeIndex& operator = (const TypeIndex& index) {
 		info_ = index.info_;
 		return *this;
     }
 
-	bool operator < (const type_index& index) const	{
+	bool operator < (const TypeIndex& index) const	{
 		return info_->before(*index.info_) != 0;
 	}
 
-	bool operator == (const type_index& index) const {
+	bool operator == (const TypeIndex& index) const {
 		return *info_ == *index.info_;
 	}
 
-	bool operator != (const type_index& index) const {
+	bool operator != (const TypeIndex& index) const {
 		return *info_ != *index.info_;
 	}
 
@@ -64,58 +67,68 @@ protected:
 	const std::type_info* info_;
 };
 
-class Version {
+class ProtocolVersion {
 public:
-	Version() : version_(0) {}
-	Version(int v) : version_(v) {}
 
-	void version(int version) {
-		version_ = version;
+	template <class Node>
+	void setup(Node& node)
+	{
+		setup_impl(node, node.essence());
 	}
 
-	int version() {
-		assert(!latest());
-		return version_;
+private:
+	template <class Node>
+	void setup(Node& node, InputEssence&) {
+		version_ = node.version();
 	}
 
-	bool operator < (int r) const {
-		return version_ < r && !latest();
-	};
+	template <class Node>
+	void setup(Node& node, OutputEssence&) {
+		node.version(version_);
+	}
 
-	bool operator <= (int r) const {
-		return version_ <= r && !latest();
-	};
-
-	bool operator > (int r) const {
-		return version_ > r || latest();
-	};
-
-	bool operator >= (int r) const {
-		return version_ >= r || latest();
-	};
-
-	bool latest() const {
-		return version_ == -1;
-	};
-
-protected:
-	int version_;
+private:
+	unsigned version_;
 };
+
+template <class T>
+class VersionDecl {
+public:
+	static unsigned ver() {
+		return 0;
+	}
+};
+
+#define S11N_VER(Class, Vers)\
+	class VersionDecl<Class> {\
+	public:\
+		static unsigned ver() {\
+			return Vers;\
+		}\
+	};
+
+#define S11N_VER_CL(Class)\
+	class VersionDecl<Class>\
+	public:\
+		static unsigned ver() {\
+			return Class::version;\
+		}\
+	};
 
 /// Dictionary for integer id to object pointers 
 class ReferencesId {
 public:
-	typedef std::map<unsigned int, void*> RefMap;
-	typedef std::map<unsigned int, void*>::const_iterator RefMapConstIter;
+	typedef std::map<unsigned, void*>                 RefMap;
+	typedef std::map<unsigned, void*>::const_iterator RefMapConstIter;
 
 	ReferencesId() {}
 
-	void* get(unsigned int key) const {
+	void* get(unsigned key) const {
 		RefMapConstIter found = refs_.find(key);
 		return found != refs_.end()? found->second : S11N_NULLPTR;
 	}
 
-	void set(unsigned int key, void* val) {
+	void set(unsigned key, void* val) {
 		refs_.insert(std::make_pair(key, val));
 	}
 
@@ -126,19 +139,19 @@ protected:
 /// Mapping for object pointers to integer id
 class ReferencesPtr {
 public:
-	typedef std::map<void*, unsigned int> RefMap;
-	typedef std::map<void*, unsigned int>::const_iterator RefMapConstIter;
+	typedef std::map<void*, unsigned>                 RefMap;
+	typedef std::map<void*, unsigned>::const_iterator RefMapConstIter;
 
 	ReferencesPtr() : id_(1) {}
 
-	unsigned int get(void* key) const {
+	unsigned get(void* key) const {
 		RefMapConstIter found = refs_.find(key);
 		return found != refs_.end()? found->second : 0;
 	}
 
 	template <typename T>
-	std::pair<bool, unsigned int> set(T* key) {
-		unsigned int id = get(key);
+	std::pair<bool, unsigned> set(T* key) {
+		unsigned id = get(key);
 		bool inserted = false;
 
 		if (id == 0) {
@@ -152,18 +165,18 @@ public:
 
 protected:
 	RefMap refs_;
-	unsigned int id_;
+	unsigned id_;
 };
 
 class BasePlant;
 
 /// Storing information about registered class.
 struct Type {
-	type_index info;
+	TypeIndex info;
 	BasePlant* ctor;        /// Constructing plant 
 	std::vector<Type*> base;/// Base classes
 
-	Type(const type_index& info)
+	Type(const TypeIndex& info)
 	:	info(info), ctor(S11N_NULLPTR) {}
 };
 
@@ -182,7 +195,7 @@ class TypeStorageAccessor {
 public:
 	template <class T>
 	static bool is_registered() {
-		const type_index type = typeid(T);
+		const TypeIndex type = typeid(T);
 		typename Storage::TypesT::const_iterator i = Storage::t().begin();
 		for (; i != Storage::t().end(); ++i) {
 			if (i->info == type) 
@@ -347,9 +360,6 @@ public:
 		return new T();
 	}
 };
-
-class InputEssence  {};
-class OutputEssence {};
 
 /*
  * Standard extensions

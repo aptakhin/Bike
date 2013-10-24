@@ -50,7 +50,7 @@ struct X1
 	X1(int x) : x(x) {}
 
 	template <class Node>
-	void ser(Node& node, Version ver) {
+	void ser(Node& node) {
 		node & x;
 	}
 };
@@ -63,10 +63,10 @@ struct X2
 	X2(int x, int y) : x(x), y(y) {}
 
 	template <class Node>
-	void ser(Node& node, Version ver) {
-		node.version(1);
+	void ser(Node& node) {
+		node.decl_version(1);
 		node & x;
-		if (ver > 0)
+		if (node.version() > 0)
 			node & y;
 	}
 };
@@ -177,7 +177,7 @@ TYPED_TEST_CASE_P(BaseTest);
 
 TYPED_TEST_P(BaseTest, Base) {
 	test_val<int>(1);
-	test_val<unsigned int>(2);
+	test_val<unsigned>(2);
 	test_val<short>(3);
 	test_val<unsigned short>(4);
 }
@@ -196,7 +196,7 @@ template <class T>
 struct Vec2 {
 
 	template <class Node>
-	void ser(Node& node, Version vers) {
+	void ser(Node& node) {
 		node & x & y;
 	}
 
@@ -225,8 +225,8 @@ public:
     const std::string& name() const { return name_; }
 
 	template <class Node>
-	void ser(Node& node, Version vers) {
-		node.version(1);
+	void ser(Node& node) {
+		node.decl_version(1);
 		node.named(name_, "name");
 	}
 
@@ -258,7 +258,7 @@ public:
 	void fly() { /* Clark don't need any code to fly */ }
 
     template <class Node>
-    void ser(Node& node, Version version) {
+    void ser(Node& node) {
         node.base<Human>(this);
 		node.named(superpower_, "power");
     }
@@ -367,7 +367,7 @@ struct SampleStruct {
 	std::vector<int> regs;
 
 	template <class Node>
-	void ser(Node& node, Version ver) {
+	void ser(Node& node) {
 		node & name & id & regs;
 	}
 };

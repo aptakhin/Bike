@@ -17,9 +17,16 @@ public:
 	OutputXmlSerializerNode(OutputXmlSerializerNode* parent, pugi::xml_node node, ReferencesPtr* refs) 
 	:	parent_(parent),
 		refs_(refs),
-		xml_(node) {}
+		xml_(node),
+		version_(~0) {}
 
-	void version(int ver) { version_.version(ver); }
+	void decl_version(unsigned ver) {
+		version_ = ver;
+	}
+
+	unsigned version() const {
+		return ~version_? parent_->version() : version_;
+	}
 
 	template <class Base>
 	OutputXmlSerializerNode& base(Base* base_ptr) {
@@ -44,8 +51,8 @@ public:
 
 		OutputXmlSerializerCall<T&>::call(t, node);
 
-		if (!node.version_.latest())
-			xml_node.append_attribute("ver").set_value(node.version_.version());
+		if (version() != VersionDecl<T>::ver())
+			xml_node.append_attribute("ver").set_value(node.version());
 
 		TypeWriter<T&>::write(t, xml_node);
 		return *this;
@@ -70,9 +77,9 @@ public:
 
 	template <class T>
 	void ptr_impl(T* t) {
-		unsigned int ref = 0;
+		unsigned ref = 0;
 		if (t != S11N_NULLPTR) {
-			std::pair<bool, unsigned int> set_result = refs_->set(t);
+			std::pair<bool, unsigned> set_result = refs_->set(t);
 			ref = set_result.second;
 			if (set_result.first) {
 				const Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*t).name());
@@ -95,7 +102,7 @@ protected:
 	OutputXmlSerializerNode* parent_;
 	pugi::xml_node           xml_;
 	ReferencesPtr*           refs_;
-	Version                  version_;
+	unsigned                 version_;
 };
 
 template <class T>
@@ -105,7 +112,8 @@ public:
 		/*
 		 * Please implement `ser` method in your class.
 		 */
-		t.ser(node, Version(-1));
+		node.decl_version(VersionDecl<T>::ver());
+		t.ser(node);
 	}
 };
 
@@ -155,9 +163,14 @@ public:
 	InputXmlSerializerNode(InputXmlSerializerNode* parent, pugi::xml_node node, ReferencesId* refs)
 	:	parent_(parent),
 		xml_(node),
-		refs_(refs) {}
+		refs_(refs),
+		version_(~0) {}
 
-	void version(int ver) { version_.version(ver); }
+	void decl_version(unsigned ver) {}
+
+	unsigned version() const {
+		return ~version_? parent_->version() : version_;
+	}
 
 	template <class Base>
 	InputXmlSerializerNode& base(Base* base) {
@@ -198,7 +211,7 @@ public:
 	void ptr_impl(T*& t) {
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
 		assert(ref_attr);
-		unsigned int ref = ref_attr.as_uint();
+		unsigned ref = ref_attr.as_uint();
 		if (ref != 0) {
 			void* ptr = refs_->get(ref);
 			if (ptr == S11N_NULLPTR) {
@@ -236,7 +249,7 @@ protected:
 protected:
 	InputXmlSerializerNode* parent_;
 	ReferencesId*           refs_;
-	Version                 version_;
+	unsigned                 version_;
 
 private:
 	pugi::xml_node          xml_;
@@ -250,7 +263,7 @@ public:
 		/*
 		 * Please implement `ser` method in your class.
 		 */
-		t.ser(node, Version(-1));
+		t.ser(node);
 	}
 };
 
@@ -309,7 +322,7 @@ protected:
 SN_RAW(bool,           as_bool);
 
 SN_RAW(int,            as_int); 
-SN_RAW(unsigned int,   as_uint);
+SN_RAW(unsigned,   as_uint);
 
 SN_RAW(short,          as_int); 
 SN_RAW(unsigned short, as_uint); 
