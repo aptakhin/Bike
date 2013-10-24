@@ -18,7 +18,8 @@ public:
 	:	parent_(parent),
 		refs_(refs),
 		xml_(node),
-		version_(~0) {}
+		version_(~0),
+		fmtver_(1) {}
 
 	void decl_version(unsigned ver) {
 		version_ = ver;
@@ -97,11 +98,16 @@ public:
 
 	OutputEssence essence() { return OutputEssence(); }
 
+	unsigned format_version() {
+		return fmtver_;
+	}
+
 protected:
 	OutputXmlSerializerNode* parent_;
 	pugi::xml_node           xml_;
 	ReferencesPtr*           refs_;
 	unsigned                 version_;
+	unsigned                 fmtver_;
 };
 
 template <class T>
@@ -129,25 +135,16 @@ public:
 	: 	OutputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs_),
 		out_(&out) {}
 
-	~OutputXmlSerializer() {
-		close();
-	}
+	~OutputXmlSerializer() {}
 
 	template <class T>
 	OutputXmlSerializer& operator << (T& t) {
 		assert(out_);
 		xml_ = doc_.append_child("serializable");
-		xml_.append_attribute("fmtver").set_value(1);
+		xml_.append_attribute("fmtver").set_value(fmtver_);
 		static_cast<OutputXmlSerializer&>(*this & t);
 		xml_.print(*out_, "", pugi::format_raw);
 		return *this; 
-	}
-
-	void close() {
-		if (out_) {
-			assert(*out_);
-			out_ = S11N_NULLPTR; // We shouldn't write to output anymore.
-		}
 	}
 
 protected:
@@ -247,7 +244,7 @@ protected:
 protected:
 	InputXmlSerializerNode* parent_;
 	ReferencesId*           refs_;
-	unsigned                 version_;
+	unsigned                version_;
 
 private:
 	pugi::xml_node          xml_;
@@ -320,7 +317,7 @@ protected:
 SN_RAW(bool,           as_bool);
 
 SN_RAW(int,            as_int); 
-SN_RAW(unsigned,   as_uint);
+SN_RAW(unsigned,       as_uint);
 
 SN_RAW(short,          as_int); 
 SN_RAW(unsigned short, as_uint); 
@@ -455,9 +452,9 @@ public:
 
 	template <class Cont, class T>
 	static void read(Cont& container, InputXmlSerializerNode& node) {
-		InputXmlIter<T> begin(&node, node.xml().begin());
-		InputXmlIter<T>   end(&node, node.xml().end());
-		Cont tmp(begin, end);
+		InputXmlIter<T> b(&node, node.xml().begin());
+		InputXmlIter<T> e(&node, node.xml().end());
+		Cont tmp(b, e);
 		std::swap(container, tmp);
 	}
 

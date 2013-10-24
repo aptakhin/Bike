@@ -86,6 +86,34 @@ TYPED_TEST_P(TemplateTest, Version0) {
 	Input in(fin);
 
 	in >> r2 >> r22;
+
+	ASSERT_EQ(w1.x, r2.x);
+	ASSERT_EQ(0,    r2.y);
+	ASSERT_EQ(w2.x, r22.x);
+	ASSERT_EQ(w2.y, r22.y);
+}
+
+TYPED_TEST_P(TemplateTest, Version0) {
+	std::ofstream fout("test.txt");
+	Output out(fout);
+
+	X1 w1(5);
+	out << w1;
+
+	X2 w2(7, 9), r2, r22;
+	out << w2;
+
+	fout.close();
+
+	std::ifstream fin("test.txt");
+	Input in(fin);
+
+	in >> r2 >> r22;
+
+	ASSERT_EQ(w1.x, r2.x);
+	ASSERT_EQ(0,    r2.y);
+	ASSERT_EQ(w2.x, r22.x);
+	ASSERT_EQ(w2.y, r22.y);
 }
 
 REGISTER_TYPED_TEST_CASE_P(
@@ -338,7 +366,7 @@ public:
 
 	void set_number(int number) { number_ = number; }
 
-	int get_number() { return number_; }
+	int get_number() const { return number_; }
 
 private:
 	int number_;
@@ -346,8 +374,8 @@ private:
 
 template <class Node>
 void serialize(IntegerHolder& integer, Node& node) {
-	//bike::access<IntegerHolder, int>(&integer, "number", 
-	//	&IntegerHolder::get_number, &IntegerHolder::set_number, node);
+	bike::access_free<int, IntegerHolder>(&integer, "number", 
+		&IntegerHolder::get_number, &IntegerHolder::set_number, node);
 }
 
 S11N_XML_OUT(IntegerHolder, serialize);
@@ -356,6 +384,7 @@ TYPED_TEST_P(BaseTest, OutOfClass) {
 	IntegerHolder integer, read;
 	integer.set_number(12);
 	io_impl(integer, read);
+	ASSERT_EQ(integer.get_number(), read.get_number());
 }
 
 struct SampleStruct {

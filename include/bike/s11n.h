@@ -71,8 +71,7 @@ class ProtocolVersion {
 public:
 
 	template <class Node>
-	void setup(Node& node)
-	{
+	void setup(Node& node) {
 		setup_impl(node, node.essence());
 	}
 
