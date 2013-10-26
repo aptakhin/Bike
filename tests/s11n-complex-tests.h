@@ -23,7 +23,7 @@ public:
 
 	Widgets& childs() { return widgets_; }
 
-	const Widget* parent() const { return parent_; }
+	Widget* parent() const { return parent_; }
 
 	void set_parent(Widget* parent) { parent_ = parent; }
 
@@ -36,7 +36,7 @@ protected:
 
 template <class Node>
 void serialize_widget(Widget& widget, Node& node) {
-	access_free<Widget*>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
+	access<Widget*, Widget>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
 }
 
 S11N_XML_OUT(Widget, serialize_widget);

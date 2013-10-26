@@ -93,29 +93,6 @@ TYPED_TEST_P(TemplateTest, Version0) {
 	ASSERT_EQ(w2.y, r22.y);
 }
 
-TYPED_TEST_P(TemplateTest, Version0) {
-	std::ofstream fout("test.txt");
-	Output out(fout);
-
-	X1 w1(5);
-	out << w1;
-
-	X2 w2(7, 9), r2, r22;
-	out << w2;
-
-	fout.close();
-
-	std::ifstream fin("test.txt");
-	Input in(fin);
-
-	in >> r2 >> r22;
-
-	ASSERT_EQ(w1.x, r2.x);
-	ASSERT_EQ(0,    r2.y);
-	ASSERT_EQ(w2.x, r22.x);
-	ASSERT_EQ(w2.y, r22.y);
-}
-
 REGISTER_TYPED_TEST_CASE_P(
 	TemplateTest, 
 	Multiply0,
@@ -374,7 +351,7 @@ private:
 
 template <class Node>
 void serialize(IntegerHolder& integer, Node& node) {
-	bike::access_free<int, IntegerHolder>(&integer, "number", 
+	bike::access<int, IntegerHolder>(&integer, "number", 
 		&IntegerHolder::get_number, &IntegerHolder::set_number, node);
 }
 
@@ -419,6 +396,32 @@ TYPED_TEST_P(BaseTest, Benchmark) {
 	test_val(vec);
 }
 
+struct ConfigSample {
+	std::string name;
+	std::string start_url;
+	std::string desc;
+
+	ConfigSample() {
+		bike::construct(this);
+	}
+
+	template <class Node>
+	void ser(Node& node) {
+		optional(name,      "name",      "Default",                   node);
+		optional(start_url, "start_url", "http://stackoverflow.com/", node);
+		optional(desc,      "desc",      "SODD",                      node);
+	}
+};
+
+bool operator == (const ConfigSample& a, const ConfigSample& b) {
+	return a.name == b.name && a.start_url == b.start_url && a.desc == b.desc;
+}
+
+TYPED_TEST_P(BaseTest, Optional) {
+	ConfigSample conf;
+	test_val(conf);
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
@@ -430,7 +433,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	SequenceContainers,
 	Inheritance,
 	OutOfClass,
-	Benchmark
+	Benchmark,
+	Optional
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);

@@ -34,6 +34,7 @@ namespace bike {
 
 class InputEssence  {};
 class OutputEssence {};
+class ConstructEssence{};
 
 /// std::type_index for C++03
 class TypeIndex {
@@ -278,7 +279,7 @@ protected:
 };
 
 template <class Serializer0, class Serializer1 = void>
-class Register {
+class Serializers {
 protected:
 	template <class T, class Serializer>
 	struct Impl {
@@ -307,7 +308,7 @@ protected:
 public:
 
 	template <class T>
-	void reg_type() {
+	void reg() {
 		Impl<T, Serializer0>::reg();
 		Impl<T, Serializer1>::reg();
 	}
@@ -336,17 +337,59 @@ public:
 	}
 };
 
+
+class Constructor {
+public:
+	Constructor() {}
+
+	void decl_version(unsigned ver) {}
+
+	unsigned version() const {
+		return ~0;
+	}
+
+	template <class Base>
+	Constructor& base(Base* base_ptr) {
+		return *this;
+	}
+
+	template <class T>
+	Constructor& operator & (T& t) {
+		return named(t, "");
+	}
+
+	template <class T>
+	Constructor& named(T& t, const char* name) {
+		return *this;
+	}
+
+	template <class T>
+	void optional(T& t, const char* name, const T& def)
+	{
+		t = def;
+	}
+
+	template <class T>
+	void ptr_impl(T* t) {
+	}
+
+	ConstructEssence essence() { return ConstructEssence(); }
+};
+
+
 /*
  * Standard extensions
  */
 
-template <class Object, class T, class Node>
+// With not-const getter
+//
+template <class T, class Object, class Node>
 void access(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node)
 {
 	access_impl(object, name, get, set, node, node.essence());
 }
 
-template <class Object, class T, class Node>
+template <class T, class Object, class Node>
 void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, InputEssence&)
 {
 	T val;
@@ -354,8 +397,31 @@ void access_impl(Object* object, const char* name, T (Object::* get)(), void (Ob
 	(object->*set)(val);
 }
 
-template <class Object, class T, class Node>
+template <class T, class Object, class Node>
 void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, OutputEssence&)
+{
+	T val = (object->*get)();
+	node.named(val, name);
+}
+
+// With const getter
+//
+template <class T, class Object, class Node>
+void access(Object* object, const char* name, T (Object::* get)() const, void (Object::* set)(T), Node& node)
+{
+	access_impl(object, name, get, set, node, node.essence());
+}
+
+template <class T, class Object, class Node>
+void access_impl(Object* object, const char* name, T (Object::* get)() const, void (Object::* set)(T), Node& node, InputEssence&)
+{
+	T val;
+	node.named(val, name);
+	(object->*set)(val);
+}
+
+template <class T, class Object, class Node>
+void access_impl(Object* object, const char* name, T (Object::* get)() const, void (Object::* set)(T), Node& node, OutputEssence&)
 {
 	T val = (object->*get)();
 	node.named(val, name);
@@ -378,8 +444,28 @@ void access_free_impl(Object* object, const char* name, Getter get, Setter set, 
 template <class T, class Object, class Getter, class Setter, class Node>
 void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, OutputEssence&)
 {
-	T val = const_cast<T>((object->*get)());
+	T val = (object->*get)();
 	node.named(val, name);
+}
+
+template <class T, class Node>
+void optional(T& t, const char* name, const T& def, Node& node)
+{
+	node.optional(t, name, def);
+}
+
+// For small std::string magic
+template <class Node>
+void optional(std::string& t, const char* name, const char* def, Node& node)
+{
+	node.optional(t, name, std::string(def));
+}
+
+template <class T>
+void construct(T* obj)
+{
+	Constructor con;
+	obj->ser(con);
 }
  
 } // namespace bike {

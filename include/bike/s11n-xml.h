@@ -33,7 +33,7 @@ public:
 	OutputXmlSerializerNode& base(Base* base_ptr) {
 		Base* base = static_cast<Base*>(base_ptr);
 		if (typeid(*base_ptr) != typeid(Base))
-			assert(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Register your types!");
+			assert(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Serializers your types!");
 		return *this & (*base);
 	}
 
@@ -56,6 +56,14 @@ public:
 
 		TypeWriter<T&>::write(t, xml_node);
 		return *this;
+	}
+
+	template <class T>
+	void optional(T& t, const char* name, const T& def)
+	{
+		assert(name && name[0] != 0);
+		if (t != def)
+			named(t, name);
 	}
 
 	template <class T>
@@ -187,17 +195,31 @@ public:
 	}
 
 	template <class T>
+	void optional(T& t, const char* name, const T& def)
+	{
+		assert(name && name[0] != 0);
+		pugi::xml_node found = xml_.find_child_by_attribute("name", name);
+		if (!found.empty())
+		{
+			InputXmlSerializerNode node(this, found, refs_);
+			InputXmlSerializerCall<T&>::call(t, node);
+		}
+		else
+			t = def;
+	}
+
+	template <class T>
 	bool search(T& t, const char* attr_name) {
 		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name);
-		assert(found);
+		assert(!found.empty());
 		InputXmlSerializerNode node(this, found, refs_);
 		InputXmlSerializerCall<T&>::call(t, node);
 		return true;
 	}
 
 	void set_xml(pugi::xml_node& xml) { 
-		xml_ = xml;
-		current_child_ = pugi::xml_node();
+		xml_       = xml;
+		cur_child_ = pugi::xml_node();
 	}
 
 	pugi::xml_node xml() const { return xml_; }
@@ -237,8 +259,8 @@ public:
 
 protected:
 	pugi::xml_node next_child_node() {
-		return current_child_ = current_child_.empty() ? 
-			*xml_.begin() : current_child_.next_sibling();
+		return cur_child_ = cur_child_.empty() ? 
+			*xml_.begin() : cur_child_.next_sibling();
 	}
 
 protected:
@@ -248,7 +270,7 @@ protected:
 
 private:
 	pugi::xml_node          xml_;
-	pugi::xml_node          current_child_;
+	pugi::xml_node          cur_child_;
 };
 
 template <class T>
