@@ -32,9 +32,9 @@
 
 namespace bike {
 
-class InputEssence  {};
+class InputEssence {};
 class OutputEssence {};
-class ConstructEssence{};
+class ConstructEssence {};
 
 /// std::type_index for C++03
 class TypeIndex {
@@ -95,12 +95,12 @@ private:
 class ReferencesId {
 public:
 	typedef std::map<unsigned, void*>                 RefMap;
-	typedef std::map<unsigned, void*>::const_iterator RefMapConstIter;
+	typedef std::map<unsigned, void*>::const_iterator RefMapCIter;
 
 	ReferencesId() {}
 
 	void* get(unsigned key) const {
-		RefMapConstIter found = refs_.find(key);
+		RefMapCIter found = refs_.find(key);
 		return found != refs_.end()? found->second : S11N_NULLPTR;
 	}
 
@@ -116,18 +116,18 @@ protected:
 class ReferencesPtr {
 public:
 	typedef std::map<void*, unsigned>                 RefMap;
-	typedef std::map<void*, unsigned>::const_iterator RefMapConstIter;
+	typedef std::map<void*, unsigned>::const_iterator RefMapCIter;
 
 	ReferencesPtr() : id_(1) {}
 
 	unsigned get(void* key) const {
-		RefMapConstIter found = refs_.find(key);
+		RefMapCIter found = refs_.find(key);
 		return found != refs_.end()? found->second : 0;
 	}
 
 	template <typename T>
 	std::pair<bool, unsigned> set(T* key) {
-		unsigned id = get(key);
+		unsigned id   = get(key);
 		bool inserted = false;
 
 		if (id == 0) {
@@ -148,9 +148,10 @@ class BasePlant;
 
 /// Storing information about registered class.
 struct Type {
-	TypeIndex info;
-	BasePlant* ctor;        /// Constructing plant 
-	std::vector<Type*> base;/// Base classes
+	TypeIndex          info;
+	BasePlant*         ctor; /// Constructing plant 
+	std::vector<Type*> base; /// Base classes
+	std::string        alias;
 
 	Type(const TypeIndex& info)
 	:	info(info), ctor(S11N_NULLPTR) {}
@@ -170,21 +171,22 @@ template <class Storage>
 class TypeStorageAccessor {
 public:
 	template <class T>
-	static bool is_registered() {
+	static bool is_registered(const std::string& alias) {
 		const TypeIndex type = typeid(T);
 		typename Storage::TypesT::const_iterator i = Storage::t().begin();
 		for (; i != Storage::t().end(); ++i) {
-			if (i->info == type) 
+			if (i->info == type || i->alias == alias && alias != "" || i->alias == type.name()) 
 				return true;
 		}
 		return false;
 	}
 
 	template <class T>
-	static void register_type(BasePlant* ctor) {
-		assert(!is_registered<T>());
+	static void register_type(BasePlant* ctor, const std::string& alias) {
+		assert(!is_registered<T>(alias));
 		Type t(typeid(T));
-		t.ctor = ctor;
+		t.ctor  = ctor;
+		t.alias = alias;
 		Storage::t().push_back(t); 
 	}
 
@@ -283,15 +285,15 @@ class Serializers {
 protected:
 	template <class T, class Serializer>
 	struct Impl {
-		static void reg() {
+		static void reg(const std::string& alias) {
 			BasePlant* plant = new Plant<T, Serializer>;
-			TypeStorageAccessor<Serializer::Storage>::register_type<T>(plant);
+			TypeStorageAccessor<Serializer::Storage>::register_type<T>(plant, alias);
 		}
 	};
 
 	template <class T>
 	struct Impl<T, void> {
-		static void reg() { /* Nothing to do */ }
+		static void reg(const std::string& alias) { /* Nothing to do */ }
 	};
 
 	template <typename T, typename Serializer>
@@ -308,9 +310,9 @@ protected:
 public:
 
 	template <class T>
-	void reg() {
-		Impl<T, Serializer0>::reg();
-		Impl<T, Serializer1>::reg();
+	void reg(const std::string alias = "") {
+		Impl<T, Serializer0>::reg(alias);
+		Impl<T, Serializer1>::reg(alias);
 	}
 
 	void clean() {
@@ -364,18 +366,15 @@ public:
 	}
 
 	template <class T>
-	void optional(T& t, const char* name, const T& def)
-	{
+	void optional(T& t, const char* name, const T& def)	{
 		t = def;
 	}
 
 	template <class T>
-	void ptr_impl(T* t) {
-	}
+	void ptr_impl(T* t) {}
 
 	ConstructEssence essence() { return ConstructEssence(); }
 };
-
 
 /*
  * Standard extensions
@@ -427,6 +426,8 @@ void access_impl(Object* object, const char* name, T (Object::* get)() const, vo
 	node.named(val, name);
 }
 
+// Templated getter, setter
+//
 template <class T, class Object, class Getter, class Setter, class Node>
 void access_free(Object* object, const char* name, Getter get, Setter set, Node& node)
 {
@@ -461,6 +462,8 @@ void optional(std::string& t, const char* name, const char* def, Node& node)
 	node.optional(t, name, std::string(def));
 }
 
+// Constructor
+//
 template <class T>
 void construct(T* obj)
 {
