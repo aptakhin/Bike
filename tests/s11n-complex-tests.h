@@ -42,9 +42,9 @@ protected:
 
 template <class Node>
 void serialize_widget(Widget& widget, Node& node) {
-
-	access<Widget*, Widget>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
-	access<std::string, Widget>(&widget, "name", &Widget::name, &Widget::set_name, node);
+	Accessor<Widget, Node> a(&widget, node);
+	a.access("parent", &Widget::parent, &Widget::set_parent);
+	a.access("name",   &Widget::name,   &Widget::set_name);
 	//optional(name_, "name", "", node);
 }
 

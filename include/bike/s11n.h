@@ -381,116 +381,139 @@ private:
 	unsigned version_;
 };
 
+template <class Object, class Node>
+class Accessor
+{
+public:
+	Accessor(Object* obj, Node& node)
+	:	obj_(obj),
+		node_(node)
+	{
+	}
+
+	template <class T>
+	class Impl
+	{
+	public:
+		static void access();
+	};
+	
+	// With not-const getter
+	//
+	template <class T>
+	void access(const char* name, T (Object::* get)(), void (Object::* set)(T))
+	{
+		access_impl(name, get, set, node_.essence());
+	}
+
+	template <class T>
+	void access_impl(const char* name, T (Object::* get)(), void (Object::* set)(T), InputEssence&)
+	{
+		T val;
+		node_.named(val, name);
+		(obj_->*set)(val);
+	}
+
+	template <class T>
+	void access_impl(const char* name, T (Object::* get)(), void (Object::* set)(T), OutputEssence&)
+	{
+		T val = (obj_->*get)();
+		node_.named(val, name);
+	}
+
+	// With const getter
+	//
+	template <class T>
+	void access(const char* name, T (Object::* get)() const, void (Object::* set)(T))
+	{
+		access_impl(name, get, set, node_.essence());
+	}
+
+	template <class T>
+	void access_impl(const char* name, T (Object::* get)() const, void (Object::* set)(T), InputEssence&)
+	{
+		T val;
+		node_.named(val, name);
+		(obj_->*set)(val);
+	}
+
+	template <class T>
+	void access_impl(const char* name, T (Object::* get)() const, void (Object::* set)(T), OutputEssence&)
+	{
+		T val = (obj_->*get)();
+		node_.named(val, name);
+	}
+
+	template <class T>
+	void access_impl(const char*, T (Object::*)() const, void (Object::*)(T), ConstructEssence&)
+	{
+	}
+
+	// With const& setter and getter
+	//
+	template <class T>
+	void access(const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&))
+	{
+		access_impl_ref(name, get, set, node_.essence());
+	}
+
+	template <class T>
+	void access_impl_ref(const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), InputEssence&)
+	{
+		T val;
+		node_.named(val, name);
+		(obj_->*set)(val);
+	}
+
+	template <class T>
+	void access_impl_ref(const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), OutputEssence&)
+	{
+		T val = (obj_->*get)();
+		node_.named(val, name);
+	}
+
+	template <class T>
+	void access_impl_ref(const char*, const T& (Object::*)() const, void (Object::*)(const T&), ConstructEssence&)
+	{
+	}
+
+	// Templated getter, setter
+	//
+	template <class T, class Getter, class Setter>
+	void access_free(const char* name, Getter get, Setter set)
+	{
+		access_free_impl<T>(name, get, set, node_.essence());
+	}
+
+	template <class T, class Getter, class Setter>
+	void access_free_impl(const char* name, Getter get, Setter set, InputEssence&)
+	{
+		T val;
+		node_.named(val, name);
+		(obj_->*set)(val);
+	}
+
+	template <class T, class Getter, class Setter>
+	void access_free_impl(const char* name, Getter get, Setter set, OutputEssence&)
+	{
+		T val = (obj_->*get)();
+		node_.named(val, name);
+	}
+
+	template <class T, class Getter, class Setter>
+	void access_free_impl(const char*, Getter, Setter, ConstructEssence&)
+	{
+	}
+
+protected:
+	Object* obj_;
+	Node&   node_;
+};
+
 /*
  * Standard extensions
  */
 
-// With not-const getter
-//
-template <class T, class Object, class Node>
-void access(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node)
-{
-	access_impl(object, name, get, set, node, node.essence());
-}
-
-template <class T, class Object, class Node>
-void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, InputEssence&)
-{
-	T val;
-	node.named(val, name);
-	(object->*set)(val);
-}
-
-template <class T, class Object, class Node>
-void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, OutputEssence&)
-{
-	T val = (object->*get)();
-	node.named(val, name);
-}
-
-// With const getter
-//
-template <class T, class Object, class Node>
-void access(Object* object, const char* name, T (Object::* get)() const, void (Object::* set)(T), Node& node)
-{
-	access_impl(object, name, get, set, node, node.essence());
-}
-
-template <class T, class Object, class Node>
-void access_impl(Object* object, const char* name, T (Object::* get)() const, void (Object::* set)(T), Node& node, InputEssence&)
-{
-	T val;
-	node.named(val, name);
-	(object->*set)(val);
-}
-
-template <class T, class Object, class Node>
-void access_impl(Object* object, const char* name, T (Object::* get)() const, void (Object::* set)(T), Node& node, OutputEssence&)
-{
-	T val = (object->*get)();
-	node.named(val, name);
-}
-
-template <class T, class Object, class Node>
-void access_impl(Object*, const char*, T (Object::*)() const, void (Object::*)(T), Node&, ConstructEssence&)
-{
-}
-
-// With const& setter and getter
-//
-template <class T, class Object, class Node>
-void access(Object* object, const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), Node& node)
-{
-	access_impl_ref(object, name, get, set, node, node.essence());
-}
-
-template <class T, class Object, class Node>
-void access_impl_ref(Object* object, const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), Node& node, InputEssence&)
-{
-	T val;
-	node.named(val, name);
-	(object->*set)(val);
-}
-
-template <class T, class Object, class Node>
-void access_impl_ref(Object* object, const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), Node& node, OutputEssence&)
-{
-	T val = (object->*get)();
-	node.named(val, name);
-}
-
-template <class T, class Object, class Node>
-void access_impl_ref(Object*, const char*, const T& (Object::*)() const, void (Object::*)(const T&), Node&, ConstructEssence&)
-{
-}
-
-// Templated getter, setter
-//
-template <class T, class Object, class Getter, class Setter, class Node>
-void access_free(Object* object, const char* name, Getter get, Setter set, Node& node)
-{
-	access_free_impl<T>(object, name, get, set, node, node.essence());
-}
-
-template <class T, class Object, class Getter, class Setter, class Node>
-void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, InputEssence&)
-{
-	T val;
-	node.named(val, name);
-	(object->*set)(val);
-}
-
-template <class T, class Object, class Getter, class Setter, class Node>
-void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, OutputEssence&)
-{
-	T val = (object->*get)();
-	node.named(val, name);
-}
-
-template <class T, class Object, class Getter, class Setter, class Node>
-void access_free_impl(Object*, const char*, Getter, Setter, Node&, ConstructEssence&)
-{
-}
 
 template <class T, class Node>
 void optional(T& t, const char* name, const T& def, Node& node)
