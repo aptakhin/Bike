@@ -42,10 +42,9 @@ protected:
 
 template <class Node>
 void serialize_widget(Widget& widget, Node& node) {
-	Accessor<Widget, Node> a(&widget, node);
-	a.access("parent", &Widget::parent, &Widget::set_parent);
-	a.access("name",   &Widget::name,   &Widget::set_name);
-	//optional(name_, "name", "", node);
+	Accessor<Widget, Node> acc(&widget, node);
+	acc.access("parent", &Widget::parent, &Widget::set_parent);
+	acc.optional("name", "", &Widget::name, &Widget::set_name);
 }
 
 S11N_XML_OUT(Widget, serialize_widget);
