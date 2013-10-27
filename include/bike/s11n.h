@@ -347,7 +347,7 @@ public:
 	void decl_version(unsigned ver) {}
 
 	unsigned version() const {
-		return ~0;
+		return 0;
 	}
 
 	template <class Base>

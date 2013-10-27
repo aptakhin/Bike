@@ -10,7 +10,7 @@
 
 using namespace bike;
 
-typedef ::testing::Types<XmlSerializer> TestSerializers;
+typedef testing::Types<XmlSerializer> TestSerializers;
 
 template <class Serializer>
 class TemplateTest : public testing::Test {
@@ -114,7 +114,7 @@ public:
 	}
 
 	template <class T>
-	void test_dis_impl(const T& write, T& read)	{
+	void test_deref_impl(const T& write, T& read)	{
 		io_impl(write, read);
 		ASSERT_EQ(*write, *read);
 	}
@@ -228,7 +228,6 @@ public:
 
 	template <class Node>
 	void ser(Node& node) {
-		node.decl_version(1);
 		node.named(name_, "name");
 	}
 
@@ -303,7 +302,7 @@ TYPED_TEST_P(BaseTest, SmartPointers) {
 
 	std::unique_ptr<Human> taras, read;
 	taras.reset(new Human("Taras Tarasov"));
-	test_dis_impl(taras, read);
+	test_deref_impl(taras, read);
 
 	std::shared_ptr<Human> empty2, read2;
 	io_impl(empty2, read2);
@@ -311,7 +310,7 @@ TYPED_TEST_P(BaseTest, SmartPointers) {
 
 	std::shared_ptr<Human> alex, read3;
 	alex.reset(new Human("Alex Alexandrov"));
-	test_dis_impl(alex, read3);
+	test_deref_impl(alex, read3);
 }
 
 TYPED_TEST_P(BaseTest, SequenceContainers) {
@@ -333,7 +332,7 @@ TYPED_TEST_P(BaseTest, SequenceContainers) {
 TYPED_TEST_P(BaseTest, Inheritance) {
 	std::unique_ptr<Human> superman, read;
 	superman.reset(new Superman(200000));
-	test_dis_impl(superman, read);
+	test_deref_impl(superman, read);
 	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
 }
 

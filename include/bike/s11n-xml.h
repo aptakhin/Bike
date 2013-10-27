@@ -18,7 +18,7 @@ public:
 	:	parent_(parent),
 		refs_(refs),
 		xml_(node),
-		version_(~0),
+		version_(0),
 		fmtver_(1) {}
 
 	void decl_version(unsigned ver) {
@@ -26,7 +26,7 @@ public:
 	}
 
 	unsigned version() const {
-		return ~version_? parent_->version() : version_;
+		return version_;
 	}
 
 	template <class Base>
@@ -167,12 +167,12 @@ public:
 	:	parent_(parent),
 		xml_(node),
 		refs_(refs),
-		version_(~0) {}
+		version_(0) {}
 
 	void decl_version(unsigned ver) {}
 
 	unsigned version() const {
-		return ~version_? parent_->version() : version_;
+		return version_;
 	}
 
 	template <class Base>
@@ -191,6 +191,9 @@ public:
 		// TODO: Check attr_name
 		// TODO: Miss this if we've read this earlier (in search, for example)
 		InputXmlSerializerCall<T&>::call(t, node);
+
+		version_ = xml_.attribute("ver").as_int();
+
 		return *this;
 	}
 
