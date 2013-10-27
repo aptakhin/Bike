@@ -27,16 +27,25 @@ public:
 
 	void set_parent(Widget* parent) { parent_ = parent; }
 
+	const std::string& name() const { return name_; }
+
+	void set_name(const std::string& name) { name_ = name; }
+
 protected:
 	
 	Widget* parent_;
 
 	Widgets widgets_;
+
+	std::string name_;
 };
 
 template <class Node>
 void serialize_widget(Widget& widget, Node& node) {
+
 	access<Widget*, Widget>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
+	access<std::string, Widget>(&widget, "name", &Widget::name, &Widget::set_name, node);
+	//optional(name_, "name", "", node);
 }
 
 S11N_XML_OUT(Widget, serialize_widget);

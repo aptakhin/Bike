@@ -344,10 +344,12 @@ class Constructor {
 public:
 	Constructor() {}
 
-	void decl_version(unsigned ver) {}
+	void decl_version(unsigned ver) {
+		version_ = ver;
+	}
 
 	unsigned version() const {
-		return 0;
+		return version_;
 	}
 
 	template <class Base>
@@ -374,6 +376,9 @@ public:
 	void ptr_impl(T* t) {}
 
 	ConstructEssence essence() { return ConstructEssence(); }
+
+private:
+	unsigned version_;
 };
 
 /*
@@ -426,6 +431,39 @@ void access_impl(Object* object, const char* name, T (Object::* get)() const, vo
 	node.named(val, name);
 }
 
+template <class T, class Object, class Node>
+void access_impl(Object*, const char*, T (Object::*)() const, void (Object::*)(T), Node&, ConstructEssence&)
+{
+}
+
+// With const& setter and getter
+//
+template <class T, class Object, class Node>
+void access(Object* object, const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), Node& node)
+{
+	access_impl_ref(object, name, get, set, node, node.essence());
+}
+
+template <class T, class Object, class Node>
+void access_impl_ref(Object* object, const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), Node& node, InputEssence&)
+{
+	T val;
+	node.named(val, name);
+	(object->*set)(val);
+}
+
+template <class T, class Object, class Node>
+void access_impl_ref(Object* object, const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), Node& node, OutputEssence&)
+{
+	T val = (object->*get)();
+	node.named(val, name);
+}
+
+template <class T, class Object, class Node>
+void access_impl_ref(Object*, const char*, const T& (Object::*)() const, void (Object::*)(const T&), Node&, ConstructEssence&)
+{
+}
+
 // Templated getter, setter
 //
 template <class T, class Object, class Getter, class Setter, class Node>
@@ -447,6 +485,11 @@ void access_free_impl(Object* object, const char* name, Getter get, Setter set, 
 {
 	T val = (object->*get)();
 	node.named(val, name);
+}
+
+template <class T, class Object, class Getter, class Setter, class Node>
+void access_free_impl(Object*, const char*, Getter, Setter, Node&, ConstructEssence&)
+{
 }
 
 template <class T, class Node>
