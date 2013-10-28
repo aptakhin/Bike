@@ -49,6 +49,11 @@ void serialize_widget(Widget& widget, Node& node) {
 
 S11N_XML_OUT(Widget, serialize_widget);
 
+bool operator == (const Widget& a, const Widget& b)
+{
+	return a.name() == b.name();// FIXME: add child widgets comparison
+}
+
 TEST(Complex, 0) {
 	WidgetUPtr root, root_read;
 	root.reset(new Widget(S11N_NULLPTR));
@@ -71,5 +76,5 @@ TEST(Complex, 0) {
 	InputXmlSerializer in(fin);
 	in >> root_read;
 
-	ASSERT_EQ(root, root_read);
+	ASSERT_EQ(*root, *root_read);
 }

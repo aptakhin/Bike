@@ -187,11 +187,9 @@ public:
 
 	template <class T>
 	InputXmlSerializerNode& named(T& t, const char* attr_name) {
-		InputXmlSerializerNode node(this, next_child_node(), refs_);
+		make_call(t, next_child_node());
 		// TODO: Check attr_name
 		// TODO: Miss this if we've read this earlier (in search, for example)
-		InputXmlSerializerCall<T&>::call(t, node);
-
 		version_ = xml_.attribute("ver").as_int();
 
 		return *this;
@@ -203,10 +201,7 @@ public:
 		assert(name && name[0] != 0);
 		pugi::xml_node found = xml_.find_child_by_attribute("name", name);
 		if (!found.empty())
-		{
-			InputXmlSerializerNode node(this, found, refs_);
-			InputXmlSerializerCall<T&>::call(t, node);
-		}
+			make_call(t, found);
 		else
 			t = def;
 	}
@@ -215,8 +210,7 @@ public:
 	bool search(T& t, const char* attr_name) {
 		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name);
 		assert(!found.empty());
-		InputXmlSerializerNode node(this, found, refs_);
-		InputXmlSerializerCall<T&>::call(t, node);
+		make_call(t, found);
 		return true;
 	}
 
@@ -250,8 +244,7 @@ public:
 				
 				if (from_ctor) {
 					t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
-					InputXmlSerializerNode node(this, xml_, refs_);
-					InputXmlSerializerCall<T&>::call(*t, node);
+					make_call(*t, xml_);
 				}
 				
 				refs_->set(ref, t);
@@ -267,6 +260,12 @@ protected:
 	pugi::xml_node next_child_node() {
 		return cur_child_ = cur_child_.empty() ? 
 			*xml_.begin() : cur_child_.next_sibling();
+	}
+
+	template <class T>
+	void make_call(T& t, pugi::xml_node xml_node) {
+		InputXmlSerializerNode node(this, xml_node, refs_);
+		InputXmlSerializerCall<T&>::call(t, node);
 	}
 
 protected:

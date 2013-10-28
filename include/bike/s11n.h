@@ -432,7 +432,6 @@ public:
 protected:
 
 	// Templated getter, setter
-	//
 	template <class T>
 	void access_impl(const char* name, T (Object::* get)(), void (Object::* set)(T), InputEssence&) {
 		T val;
@@ -450,7 +449,6 @@ protected:
 	void access_impl(const char* name, T (Object::* get)(), void (Object::* set)(T), ConstructEssence&) {}
 
 	// Const getter
-	//
 	template <class T>
 	void access_impl(const char* name, T (Object::* get)() const, void (Object::* set)(T), InputEssence&) {
 		T val;
@@ -471,7 +469,6 @@ protected:
 	}
 
 	// With const& setter and getter
-	//
 	template <class T>
 	void access_impl_ref(const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), InputEssence&)	{
 		T val;
@@ -525,7 +522,6 @@ protected:
 	}
 
 	// Const getter
-	//
 	template <class T>
 	void optional_impl(const char* name, const T& def, const T& (Object::* )() const, void (Object::* set)(const T&), InputEssence&) {
 		T val;
