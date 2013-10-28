@@ -80,18 +80,6 @@ protected:
 	FILE* fout_;
 };
 
-class OstreamWriter : public IWriter
-{
-public:
-	OstreamWriter(const char* filename);
-
-	~OstreamWriter();
-
-	void write(void* buf, size_t size) /* override */;
-protected:
-	std::ostream* fout_;
-};
-
 #define CONCATIMPL(a, b) a##b
 #define CONCAT(a, b)     CONCATIMPL(a, b)
 #define CONV_NAME(Type)  CONCAT(conv_, Type)

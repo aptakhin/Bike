@@ -6,11 +6,21 @@
 
 namespace bike {
 
+class BinarySerializerStorage {
+	S11N_TYPE_STORAGE
+};
+
 class OutputBinarySerializerNode {
 
 public:
 	OutputBinarySerializerNode(IWriter* writer)
 	:	writer_(writer) {}
+
+	void decl_version(unsigned ver) {}
+
+	unsigned version() const {
+		return version_;
+	}
 
 	template <class T>
 	OutputBinarySerializerNode& operator & (T& t) {
@@ -22,6 +32,7 @@ public:
 
 protected:
 	IWriter* writer_;
+	unsigned version_;
 };
 
 class InputBinarySerializerNode {
@@ -29,6 +40,12 @@ class InputBinarySerializerNode {
 public:
 	InputBinarySerializerNode(IReader* reader)
 	:	reader_(reader) {}
+
+	void decl_version(unsigned ver) {}
+
+	unsigned version() const {
+		return version_;
+	}
 
 	template <class T>
 	InputBinarySerializerNode& operator & (T& t) {
@@ -40,6 +57,7 @@ public:
 
 protected:
 	IReader* reader_;
+	unsigned version_;
 };
 
 template <class T>
@@ -106,27 +124,50 @@ public:
 	}
 }; 
 
-class OutputBinaryStreaming : public OutputBinarySerializerNode {
+class OutputBinarySerializer : public OutputBinarySerializerNode {
 public:
-	OutputBinaryStreaming(IWriter* writer)
+	OutputBinarySerializer(IWriter* writer)
 	:	OutputBinarySerializerNode(writer) {}
 
 	template <class T>
-	OutputBinaryStreaming& operator << (T& t) {
+	OutputBinarySerializer& operator << (T& t) {
 		(*((OutputBinarySerializerNode*) this)) & t;
 		return *this;
 	}
 };
 
-class InputBinaryStreaming : public InputBinarySerializerNode {
+class InputBinarySerializer : public InputBinarySerializerNode {
 public:
-	InputBinaryStreaming(IReader* reader)
+	InputBinarySerializer(IReader* reader)
 	:	InputBinarySerializerNode(reader) {}
 
 	template <class T>
-	InputBinaryStreaming& operator >> (T& t) {
+	InputBinarySerializer& operator >> (T& t) {
 		(*((InputBinarySerializerNode*) this)) & t;
 		return *this;
+	}
+};
+
+
+
+class BinarySerializer {
+public:
+	typedef InputBinarySerializer      Input;
+	typedef OutputBinarySerializer     Output;
+
+	typedef InputBinarySerializerNode  InNode;
+	typedef OutputBinarySerializerNode OutNode;
+
+	typedef BinarySerializerStorage    Storage;
+
+	template <class T>
+	static void input_call(T& t, InNode& node) {
+		InputBinarySerializerCall<T&>::call(t, node);
+	}
+
+	template <class T>
+	static void output_call(T& t, OutNode& node) {
+		OutputBinarySerializerCall<T&>::call(t, node);
 	}
 };
 

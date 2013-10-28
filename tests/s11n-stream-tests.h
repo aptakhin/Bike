@@ -82,8 +82,8 @@ TEST(Snabix, 1) {
 	StrWriter strout(str);
 	StrReader strin(str);
 	
-	OutputBinaryStreaming out(&strout);
-	InputBinaryStreaming in(&strin);
+	OutputBinarySerializer out(&strout);
+	InputBinarySerializer in(&strin);
 
 	Vec2<int> v(1, 2), w;
 
@@ -97,8 +97,8 @@ TEST(Snabix, Bench) {
 	StrWriter strout(str);
 	StrReader strin(str);
 	
-	OutputBinaryStreaming out(&strout);
-	InputBinaryStreaming in(&strin);
+	OutputBinarySerializer out(&strout);
+	InputBinarySerializer in(&strin);
 
 	Vec2<int> v(1, 2), w;
 
@@ -117,8 +117,8 @@ TEST(Snabix, Bench2) {
 	StrWriter strout(str);
 	StrReader strin(str);
 	
-	OutputBinaryStreaming out(&strout);
-	InputBinaryStreaming in(&strin);
+	OutputBinarySerializer out(&strout);
+	InputBinarySerializer in(&strin);
 
 	size_t Size = 10000;
 	std::vector<SampleStruct> vec;

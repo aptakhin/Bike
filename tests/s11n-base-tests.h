@@ -2,6 +2,7 @@
 //
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
+#include <bike/s11n-binary.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <fstream>
@@ -10,7 +11,37 @@
 
 using namespace bike;
 
-typedef testing::Types<XmlSerializer> TestSerializers;
+class StdReader : public IReader
+{
+public:
+	StdReader(std::istream* in) : in_(in) {}
+
+	virtual size_t read(void* buf, size_t size) /* override */ {
+		in_->get((char*) buf, size);
+	}
+
+protected:
+	std::istream* in_;
+};
+
+class StdWriter : public IWriter
+{
+public:
+	StdWriter(std::ostream* out) : out_(out) {}
+
+	virtual void write(const void* buf, size_t size) /* override */ {
+		out_->write((const char*) buf, size);
+	}
+
+	void close() {
+		out_->flush();	
+	}
+
+protected:
+	std::ostream* out_;
+};
+
+typedef testing::Types<BinarySerializer> TestSerializers;
 
 template <class Serializer>
 class TemplateTest : public testing::Test {
@@ -23,8 +54,9 @@ TYPED_TEST_CASE_P(TemplateTest);
 
 TYPED_TEST_P(TemplateTest, Multiply0) {
 	std::ofstream fout("test.txt");
-	Output out(fout);
-
+	StdWriter sout(&fout);
+	Output out(&sout);
+	
 	std::string aw = "One object", ar;
 	out << aw;
 
@@ -34,7 +66,8 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	fout.close();
 
 	std::ifstream fin("test.txt");
-	Input in(fin);
+	StdReader sin(&fin);
+	Input in(&sin);
 
 	in >> ar >> br;
 
@@ -72,7 +105,8 @@ struct X2
 
 TYPED_TEST_P(TemplateTest, Version0) {
 	std::ofstream fout("test.txt");
-	Output out(fout);
+	StdWriter sout(&fout);
+	Output out(&sout);
 
 	X1 w1(5);
 	out << w1;
@@ -83,7 +117,8 @@ TYPED_TEST_P(TemplateTest, Version0) {
 	fout.close();
 
 	std::ifstream fin("test.txt");
-	Input in(fin);
+	StdReader sin(&fin);
+	Input in(&sin);
 
 	in >> r2 >> r22;
 
@@ -144,13 +179,15 @@ public:
 
 #define WRITE(Write)\
 		std::ofstream fout("test.txt");\
-		Output out(fout);\
+		StdWriter sout(&fout);\
+		Output out(&sout);\
 		out << (Write);\
 		fout.close();\
 
 #define READ(Read)\
 		std::ifstream fin("test.txt");\
-		Input in(fin);\
+		StdReader sin(&fin);\
+		Input in(&sin);\
 		in >> (Read);\
 
 	template <class T>
