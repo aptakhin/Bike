@@ -390,7 +390,7 @@ public:
 
 	/// Access member with template getter, setter
 	template <class T, class Getter, class Setter>
-	void access_free(const char* name, Getter get, Setter set) {
+	void access(const char* name, Getter get, Setter set) {
 		access_free_impl<T>(name, get, set, node_.essence());
 	}
 
