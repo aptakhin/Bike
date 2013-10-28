@@ -248,8 +248,11 @@ public:
 					}
 				}
 				
-				if (from_ctor)
+				if (from_ctor) {
 					t = Ctor<T*, InputXmlSerializerNode>::ctor(*this);
+					InputXmlSerializerNode node(this, xml_, refs_);
+					InputXmlSerializerCall<T&>::call(*t, node);
+				}
 				
 				refs_->set(ref, t);
 			}

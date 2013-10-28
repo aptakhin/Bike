@@ -52,6 +52,7 @@ S11N_XML_OUT(Widget, serialize_widget);
 TEST(Complex, 0) {
 	WidgetUPtr root, root_read;
 	root.reset(new Widget(S11N_NULLPTR));
+	root->set_name("Root");
 
 	WidgetUPtr fst_child, fst_child_read;
 	fst_child.reset(new Widget(root.get()));
@@ -70,5 +71,5 @@ TEST(Complex, 0) {
 	InputXmlSerializer in(fin);
 	in >> root_read;
 
-	Widget::Widgets& childs = root->childs();
+	ASSERT_EQ(root, root_read);
 }

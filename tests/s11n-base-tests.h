@@ -42,8 +42,6 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	ASSERT_EQ(bw, br);
 }
 
-<<<<<<< HEAD
-=======
 struct X1 
 {
 	int x;
@@ -95,10 +93,10 @@ TYPED_TEST_P(TemplateTest, Version0) {
 	ASSERT_EQ(w2.y, r22.y);
 }
 
->>>>>>> e2f72e4cf73d5de02b81034cf3b3249033d676f4
 REGISTER_TYPED_TEST_CASE_P(
 	TemplateTest, 
-	Multiply0
+	Multiply0,
+	Version0
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(TTest, TemplateTest, TestSerializers);
@@ -352,8 +350,8 @@ private:
 
 template <class Node>
 void serialize(IntegerHolder& integer, Node& node) {
-	Accessor<IntegerHolder, Node> access(&integer, node);
-	access.access("number", &IntegerHolder::get_number, &IntegerHolder::set_number);
+	Accessor<IntegerHolder, Node> acc(&integer, node);
+	acc.access("number", &IntegerHolder::get_number, &IntegerHolder::set_number);
 }
 
 S11N_XML_OUT(IntegerHolder, serialize);
