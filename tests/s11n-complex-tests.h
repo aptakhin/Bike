@@ -23,20 +23,28 @@ public:
 
 	Widgets& childs() { return widgets_; }
 
-	const Widget* parent() const { return parent_; }
+	Widget* parent() const { return parent_; }
 
 	void set_parent(Widget* parent) { parent_ = parent; }
+
+	const std::string& name() const { return name_; }
+
+	void set_name(const std::string& name) { name_ = name; }
 
 protected:
 	
 	Widget* parent_;
 
 	Widgets widgets_;
+
+	std::string name_;
 };
 
 template <class Node>
 void serialize_widget(Widget& widget, Node& node) {
-	access_free<Widget*>(&widget, "parent", &Widget::parent, &Widget::set_parent, node);
+	Accessor<Widget, Node> acc(&widget, node);
+	acc.access("parent", &Widget::parent, &Widget::set_parent);
+	acc.optional("name", "", &Widget::name, &Widget::set_name);
 }
 
 S11N_XML_OUT(Widget, serialize_widget);
@@ -56,7 +64,6 @@ TEST(Complex, 0) {
 	std::ofstream fout("complex.xml");
 	OutputXmlSerializer out(fout);
 	out << root;
-	out.close();
 	fout.close();
 
 	std::ifstream fin("complex.xml");

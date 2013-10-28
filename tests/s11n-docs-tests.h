@@ -38,7 +38,7 @@ struct Vector2
 
 	// Just implement serialization method
 	template <class Node>
-	void ser(Node& node, Version version) 
+	void ser(Node& node) 
 	{
 		node & x & y;
 	}

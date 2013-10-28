@@ -17,15 +17,23 @@ public:
 	OutputXmlSerializerNode(OutputXmlSerializerNode* parent, pugi::xml_node node, ReferencesPtr* refs) 
 	:	parent_(parent),
 		refs_(refs),
-		xml_(node) {}
+		xml_(node),
+		version_(0),
+		fmtver_(1) {}
 
-	void version(int ver) { version_.version(ver); }
+	void decl_version(unsigned ver) {
+		version_ = ver;
+	}
+
+	unsigned version() const {
+		return version_;
+	}
 
 	template <class Base>
 	OutputXmlSerializerNode& base(Base* base_ptr) {
 		Base* base = static_cast<Base*>(base_ptr);
 		if (typeid(*base_ptr) != typeid(Base))
-			assert(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Register your types!");
+			assert(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Serializers your types!");
 		return *this & (*base);
 	}
 
@@ -44,11 +52,18 @@ public:
 
 		OutputXmlSerializerCall<T&>::call(t, node);
 
-		if (!node.version_.latest())
-			xml_node.append_attribute("ver").set_value(node.version_.version());
+		xml_node.append_attribute("ver").set_value(node.version());
 
 		TypeWriter<T&>::write(t, xml_node);
 		return *this;
+	}
+
+	template <class T>
+	void optional(T& t, const char* name, const T& def)
+	{
+		assert(name && name[0] != 0);
+		if (t != def)
+			named(t, name);
 	}
 
 	template <class T>
@@ -70,9 +85,9 @@ public:
 
 	template <class T>
 	void ptr_impl(T* t) {
-		unsigned int ref = 0;
+		unsigned ref = 0;
 		if (t != S11N_NULLPTR) {
-			std::pair<bool, unsigned int> set_result = refs_->set(t);
+			std::pair<bool, unsigned> set_result = refs_->set(t);
 			ref = set_result.second;
 			if (set_result.first) {
 				const Type* type = TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*t).name());
@@ -91,11 +106,16 @@ public:
 
 	OutputEssence essence() { return OutputEssence(); }
 
+	unsigned format_version() {
+		return fmtver_;
+	}
+
 protected:
 	OutputXmlSerializerNode* parent_;
 	pugi::xml_node           xml_;
 	ReferencesPtr*           refs_;
-	Version                  version_;
+	unsigned                 version_;
+	unsigned                 fmtver_;
 };
 
 template <class T>
@@ -105,7 +125,7 @@ public:
 		/*
 		 * Please implement `ser` method in your class.
 		 */
-		t.ser(node, Version(-1));
+		t.ser(node);
 	}
 };
 
@@ -123,25 +143,16 @@ public:
 	: 	OutputXmlSerializerNode(S11N_NULLPTR, pugi::xml_node(), &refs_),
 		out_(&out) {}
 
-	~OutputXmlSerializer() {
-		close();
-	}
+	~OutputXmlSerializer() {}
 
 	template <class T>
 	OutputXmlSerializer& operator << (T& t) {
 		assert(out_);
 		xml_ = doc_.append_child("serializable");
-		xml_.append_attribute("fmtver").set_value(1);
+		xml_.append_attribute("fmtver").set_value(fmtver_);
 		static_cast<OutputXmlSerializer&>(*this & t);
+		xml_.print(*out_, "", pugi::format_raw);
 		return *this; 
-	}
-
-	void close() {
-		if (out_) {
-			assert(*out_);
-			doc_.save(*out_);
-			out_ = S11N_NULLPTR; // We shouldn't write to output anymore.
-		}
 	}
 
 protected:
@@ -155,9 +166,14 @@ public:
 	InputXmlSerializerNode(InputXmlSerializerNode* parent, pugi::xml_node node, ReferencesId* refs)
 	:	parent_(parent),
 		xml_(node),
-		refs_(refs) {}
+		refs_(refs),
+		version_(0) {}
 
-	void version(int ver) { version_.version(ver); }
+	void decl_version(unsigned ver) {}
+
+	unsigned version() const {
+		return version_;
+	}
 
 	template <class Base>
 	InputXmlSerializerNode& base(Base* base) {
@@ -175,21 +191,38 @@ public:
 		// TODO: Check attr_name
 		// TODO: Miss this if we've read this earlier (in search, for example)
 		InputXmlSerializerCall<T&>::call(t, node);
+
+		version_ = xml_.attribute("ver").as_int();
+
 		return *this;
+	}
+
+	template <class T>
+	void optional(T& t, const char* name, const T& def)
+	{
+		assert(name && name[0] != 0);
+		pugi::xml_node found = xml_.find_child_by_attribute("name", name);
+		if (!found.empty())
+		{
+			InputXmlSerializerNode node(this, found, refs_);
+			InputXmlSerializerCall<T&>::call(t, node);
+		}
+		else
+			t = def;
 	}
 
 	template <class T>
 	bool search(T& t, const char* attr_name) {
 		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name);
-		assert(found);
+		assert(!found.empty());
 		InputXmlSerializerNode node(this, found, refs_);
 		InputXmlSerializerCall<T&>::call(t, node);
 		return true;
 	}
 
 	void set_xml(pugi::xml_node& xml) { 
-		xml_ = xml;
-		current_child_ = pugi::xml_node();
+		xml_       = xml;
+		cur_child_ = pugi::xml_node();
 	}
 
 	pugi::xml_node xml() const { return xml_; }
@@ -198,7 +231,7 @@ public:
 	void ptr_impl(T*& t) {
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
 		assert(ref_attr);
-		unsigned int ref = ref_attr.as_uint();
+		unsigned ref = ref_attr.as_uint();
 		if (ref != 0) {
 			void* ptr = refs_->get(ref);
 			if (ptr == S11N_NULLPTR) {
@@ -229,18 +262,18 @@ public:
 
 protected:
 	pugi::xml_node next_child_node() {
-		return current_child_ = current_child_.empty() ? 
-			*xml_.begin() : current_child_.next_sibling();
+		return cur_child_ = cur_child_.empty() ? 
+			*xml_.begin() : cur_child_.next_sibling();
 	}
 
 protected:
 	InputXmlSerializerNode* parent_;
 	ReferencesId*           refs_;
-	Version                 version_;
+	unsigned                version_;
 
 private:
 	pugi::xml_node          xml_;
-	pugi::xml_node          current_child_;
+	pugi::xml_node          cur_child_;
 };
 
 template <class T>
@@ -250,7 +283,7 @@ public:
 		/*
 		 * Please implement `ser` method in your class.
 		 */
-		t.ser(node, Version(-1));
+		t.ser(node);
 	}
 };
 
@@ -309,7 +342,7 @@ protected:
 SN_RAW(bool,           as_bool);
 
 SN_RAW(int,            as_int); 
-SN_RAW(unsigned int,   as_uint);
+SN_RAW(unsigned,       as_uint);
 
 SN_RAW(short,          as_int); 
 SN_RAW(unsigned short, as_uint); 
@@ -444,9 +477,9 @@ public:
 
 	template <class Cont, class T>
 	static void read(Cont& container, InputXmlSerializerNode& node) {
-		InputXmlIter<T> begin(&node, node.xml().begin());
-		InputXmlIter<T>   end(&node, node.xml().end());
-		Cont tmp(begin, end);
+		InputXmlIter<T> b(&node, node.xml().begin());
+		InputXmlIter<T> e(&node, node.xml().end());
+		Cont tmp(b, e);
 		std::swap(container, tmp);
 	}
 

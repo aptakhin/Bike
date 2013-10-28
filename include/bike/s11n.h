@@ -32,27 +32,31 @@
 
 namespace bike {
 
+class InputEssence {};
+class OutputEssence {};
+class ConstructEssence {};
+
 /// std::type_index for C++03
-class type_index {
+class TypeIndex {
 public:           
-	type_index(const std::type_info& info) : info_(&info) {}
+	TypeIndex(const std::type_info& info) : info_(&info) {}
 
-	type_index(const type_index& index) : info_(index.info_) {}
+	TypeIndex(const TypeIndex& index) : info_(index.info_) {}
 
-	type_index& operator = (const type_index& index) {
+	TypeIndex& operator = (const TypeIndex& index) {
 		info_ = index.info_;
 		return *this;
     }
 
-	bool operator < (const type_index& index) const	{
+	bool operator < (const TypeIndex& index) const	{
 		return info_->before(*index.info_) != 0;
 	}
 
-	bool operator == (const type_index& index) const {
+	bool operator == (const TypeIndex& index) const {
 		return *info_ == *index.info_;
 	}
 
-	bool operator != (const type_index& index) const {
+	bool operator != (const TypeIndex& index) const {
 		return *info_ != *index.info_;
 	}
 
@@ -64,58 +68,43 @@ protected:
 	const std::type_info* info_;
 };
 
-class Version {
+class ProtocolVersion {
 public:
-	Version() : version_(0) {}
-	Version(int v) : version_(v) {}
 
-	void version(int version) {
-		version_ = version;
+	template <class Node>
+	void setup(Node& node) {
+		setup_impl(node, node.essence());
 	}
 
-	int version() {
-		assert(!latest());
-		return version_;
+private:
+	template <class Node>
+	void setup(Node& node, InputEssence&) {
+		version_ = node.version();
 	}
 
-	bool operator < (int r) const {
-		return version_ < r && !latest();
-	};
+	template <class Node>
+	void setup(Node& node, OutputEssence&) {
+		node.version(version_);
+	}
 
-	bool operator <= (int r) const {
-		return version_ <= r && !latest();
-	};
-
-	bool operator > (int r) const {
-		return version_ > r || latest();
-	};
-
-	bool operator >= (int r) const {
-		return version_ >= r || latest();
-	};
-
-	bool latest() const {
-		return version_ == -1;
-	};
-
-protected:
-	int version_;
+private:
+	unsigned version_;
 };
 
 /// Dictionary for integer id to object pointers 
 class ReferencesId {
 public:
-	typedef std::map<unsigned int, void*> RefMap;
-	typedef std::map<unsigned int, void*>::const_iterator RefMapConstIter;
+	typedef std::map<unsigned, void*>                 RefMap;
+	typedef std::map<unsigned, void*>::const_iterator RefMapCIter;
 
 	ReferencesId() {}
 
-	void* get(unsigned int key) const {
-		RefMapConstIter found = refs_.find(key);
+	void* get(unsigned key) const {
+		RefMapCIter found = refs_.find(key);
 		return found != refs_.end()? found->second : S11N_NULLPTR;
 	}
 
-	void set(unsigned int key, void* val) {
+	void set(unsigned key, void* val) {
 		refs_.insert(std::make_pair(key, val));
 	}
 
@@ -126,19 +115,19 @@ protected:
 /// Mapping for object pointers to integer id
 class ReferencesPtr {
 public:
-	typedef std::map<void*, unsigned int> RefMap;
-	typedef std::map<void*, unsigned int>::const_iterator RefMapConstIter;
+	typedef std::map<void*, unsigned>                 RefMap;
+	typedef std::map<void*, unsigned>::const_iterator RefMapCIter;
 
 	ReferencesPtr() : id_(1) {}
 
-	unsigned int get(void* key) const {
-		RefMapConstIter found = refs_.find(key);
+	unsigned get(void* key) const {
+		RefMapCIter found = refs_.find(key);
 		return found != refs_.end()? found->second : 0;
 	}
 
 	template <typename T>
-	std::pair<bool, unsigned int> set(T* key) {
-		unsigned int id = get(key);
+	std::pair<bool, unsigned> set(T* key) {
+		unsigned id   = get(key);
 		bool inserted = false;
 
 		if (id == 0) {
@@ -152,18 +141,19 @@ public:
 
 protected:
 	RefMap refs_;
-	unsigned int id_;
+	unsigned id_;
 };
 
 class BasePlant;
 
 /// Storing information about registered class.
 struct Type {
-	type_index info;
-	BasePlant* ctor;        /// Constructing plant 
-	std::vector<Type*> base;/// Base classes
+	TypeIndex          info;
+	BasePlant*         ctor; /// Constructing plant 
+	std::vector<Type*> base; /// Base classes
+	std::string        alias;
 
-	Type(const type_index& info)
+	Type(const TypeIndex& info)
 	:	info(info), ctor(S11N_NULLPTR) {}
 };
 
@@ -181,21 +171,22 @@ template <class Storage>
 class TypeStorageAccessor {
 public:
 	template <class T>
-	static bool is_registered() {
-		const type_index type = typeid(T);
+	static bool is_registered(const std::string& alias) {
+		const TypeIndex type = typeid(T);
 		typename Storage::TypesT::const_iterator i = Storage::t().begin();
 		for (; i != Storage::t().end(); ++i) {
-			if (i->info == type) 
+			if (i->info == type || i->alias == alias && alias != "" || i->alias == type.name()) 
 				return true;
 		}
 		return false;
 	}
 
 	template <class T>
-	static void register_type(BasePlant* ctor) {
-		assert(!is_registered<T>());
+	static void register_type(BasePlant* ctor, const std::string& alias) {
+		assert(!is_registered<T>(alias));
 		Type t(typeid(T));
-		t.ctor = ctor;
+		t.ctor  = ctor;
+		t.alias = alias;
 		Storage::t().push_back(t); 
 	}
 
@@ -290,19 +281,19 @@ protected:
 };
 
 template <class Serializer0, class Serializer1 = void>
-class Register {
+class Serializers {
 protected:
 	template <class T, class Serializer>
 	struct Impl {
-		static void reg() {
+		static void reg(const std::string& alias) {
 			BasePlant* plant = new Plant<T, Serializer>;
-			TypeStorageAccessor<Serializer::Storage>::register_type<T>(plant);
+			TypeStorageAccessor<Serializer::Storage>::register_type<T>(plant, alias);
 		}
 	};
 
 	template <class T>
 	struct Impl<T, void> {
-		static void reg() { /* Nothing to do */ }
+		static void reg(const std::string& alias) { /* Nothing to do */ }
 	};
 
 	template <typename T, typename Serializer>
@@ -319,9 +310,9 @@ protected:
 public:
 
 	template <class T>
-	void reg_type() {
-		Impl<T, Serializer0>::reg();
-		Impl<T, Serializer1>::reg();
+	void reg(const std::string alias = "") {
+		Impl<T, Serializer0>::reg(alias);
+		Impl<T, Serializer1>::reg(alias);
 	}
 
 	void clean() {
@@ -348,53 +339,202 @@ public:
 	}
 };
 
-class InputEssence  {};
-class OutputEssence {};
+
+class Constructor {
+public:
+	Constructor() {}
+
+	void decl_version(unsigned ver) {
+		version_ = ver;
+	}
+
+	unsigned version() const {
+		return version_;
+	}
+
+	template <class Base>
+	Constructor& base(Base* base_ptr) {
+		return *this;
+	}
+
+	template <class T>
+	Constructor& operator & (T& t) {
+		return named(t, "");
+	}
+
+	template <class T>
+	Constructor& named(T& t, const char* name) {
+		return *this;
+	}
+
+	template <class T>
+	void optional(T& t, const char* name, const T& def)	{
+		t = def;
+	}
+
+	template <class T>
+	void ptr_impl(T* t) {}
+
+	ConstructEssence essence() { return ConstructEssence(); }
+
+private:
+	unsigned version_;
+};
+
+template <class Object, class Node>
+class Accessor
+{
+public:
+	Accessor(Object* obj, Node& node)
+	:	obj_(obj),
+		node_(node)
+	{
+	}
+
+	template <class T>
+	class Impl
+	{
+	public:
+		static void access();
+	};
+	
+	// With not-const getter
+	//
+	template <class T>
+	void access(const char* name, T (Object::* get)(), void (Object::* set)(T))
+	{
+		access_impl(name, get, set, node_.essence());
+	}
+
+	template <class T>
+	void access_impl(const char* name, T (Object::* get)(), void (Object::* set)(T), InputEssence&)
+	{
+		T val;
+		node_.named(val, name);
+		(obj_->*set)(val);
+	}
+
+	template <class T>
+	void access_impl(const char* name, T (Object::* get)(), void (Object::* set)(T), OutputEssence&)
+	{
+		T val = (obj_->*get)();
+		node_.named(val, name);
+	}
+
+	// With const getter
+	//
+	template <class T>
+	void access(const char* name, T (Object::* get)() const, void (Object::* set)(T))
+	{
+		access_impl(name, get, set, node_.essence());
+	}
+
+	template <class T>
+	void access_impl(const char* name, T (Object::* get)() const, void (Object::* set)(T), InputEssence&)
+	{
+		T val;
+		node_.named(val, name);
+		(obj_->*set)(val);
+	}
+
+	template <class T>
+	void access_impl(const char* name, T (Object::* get)() const, void (Object::* set)(T), OutputEssence&)
+	{
+		T val = (obj_->*get)();
+		node_.named(val, name);
+	}
+
+	template <class T>
+	void access_impl(const char*, T (Object::*)() const, void (Object::*)(T), ConstructEssence&)
+	{
+	}
+
+	// With const& setter and getter
+	//
+	template <class T>
+	void access(const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&))
+	{
+		access_impl_ref(name, get, set, node_.essence());
+	}
+
+	template <class T>
+	void access_impl_ref(const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), InputEssence&)
+	{
+		T val;
+		node_.named(val, name);
+		(obj_->*set)(val);
+	}
+
+	template <class T>
+	void access_impl_ref(const char* name, const T& (Object::* get)() const, void (Object::* set)(const T&), OutputEssence&)
+	{
+		T val = (obj_->*get)();
+		node_.named(val, name);
+	}
+
+	template <class T>
+	void access_impl_ref(const char*, const T& (Object::*)() const, void (Object::*)(const T&), ConstructEssence&)
+	{
+	}
+
+	// Templated getter, setter
+	//
+	template <class T, class Getter, class Setter>
+	void access_free(const char* name, Getter get, Setter set)
+	{
+		access_free_impl<T>(name, get, set, node_.essence());
+	}
+
+	template <class T, class Getter, class Setter>
+	void access_free_impl(const char* name, Getter get, Setter set, InputEssence&)
+	{
+		T val;
+		node_.named(val, name);
+		(obj_->*set)(val);
+	}
+
+	template <class T, class Getter, class Setter>
+	void access_free_impl(const char* name, Getter get, Setter set, OutputEssence&)
+	{
+		T val = (obj_->*get)();
+		node_.named(val, name);
+	}
+
+	template <class T, class Getter, class Setter>
+	void access_free_impl(const char*, Getter, Setter, ConstructEssence&)
+	{
+	}
+
+protected:
+	Object* obj_;
+	Node&   node_;
+};
 
 /*
  * Standard extensions
  */
 
-template <class Object, class T, class Node>
-void access(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node)
+
+template <class T, class Node>
+void optional(T& t, const char* name, const T& def, Node& node)
 {
-	access_impl(object, name, get, set, node, node.essence());
+	node.optional(t, name, def);
 }
 
-template <class Object, class T, class Node>
-void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, InputEssence&)
+// For small std::string magic
+template <class Node>
+void optional(std::string& t, const char* name, const char* def, Node& node)
 {
-	T val;
-	node.named(val, name);
-	(object->*set)(val);
+	node.optional(t, name, std::string(def));
 }
 
-template <class Object, class T, class Node>
-void access_impl(Object* object, const char* name, T (Object::* get)(), void (Object::* set)(T), Node& node, OutputEssence&)
+// Constructor
+//
+template <class T>
+void construct(T* obj)
 {
-	T val = (object->*get)();
-	node.named(val, name);
-}
-
-template <class T, class Object, class Getter, class Setter, class Node>
-void access_free(Object* object, const char* name, Getter get, Setter set, Node& node)
-{
-	access_free_impl<T>(object, name, get, set, node, node.essence());
-}
-
-template <class T, class Object, class Getter, class Setter, class Node>
-void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, InputEssence&)
-{
-	T val;
-	node.named(val, name);
-	(object->*set)(val);
-}
-
-template <class T, class Object, class Getter, class Setter, class Node>
-void access_free_impl(Object* object, const char* name, Getter get, Setter set, Node& node, OutputEssence&)
-{
-	T val = const_cast<T>((object->*get)());
-	node.named(val, name);
+	Constructor con;
+	obj->ser(con);
 }
  
 } // namespace bike {
