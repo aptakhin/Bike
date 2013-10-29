@@ -446,8 +446,9 @@ public:
 	}
 
 	InputXmlIter operator ++(int) {
-		iter_++;
-		return *this;
+		InputXmlIter ret = *this;
+		++iter_;
+		return ret;
 	}
 
 	T operator *() {

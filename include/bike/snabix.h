@@ -1,4 +1,4 @@
-// snabix is about bin and sax
+// snabix is about bin and sax, although not sax at all
 //
 #pragma once
 
@@ -80,11 +80,6 @@ protected:
 	FILE* fout_;
 };
 
-#define CONCATIMPL(a, b) a##b
-#define CONCAT(a, b)     CONCATIMPL(a, b)
-#define CONV_NAME(Type)  CONCAT(conv_, Type)
-#define CONV(Type)       ConvImpl<Type> CONV_NAME(Type)
-
 bool is_little_endian() {
 	char test[] = {1, 0};
 	return *((short*) test) == 1;
@@ -146,12 +141,7 @@ int64_t swap_endian(int64_t v) {
 template <class T>
 class ConvImpl {
 public:
-	ConvImpl() {
-		if (is_little_endian())
-			conv_ = swap_endian<T>;
-		else
-			conv_ = same_endian<T>;
-	}
+	ConvImpl() : conv_(is_little_endian()? swap_endian<T> : same_endian<T>) {}
 
 	T operator ()(T v) {
 		return conv_(v);
@@ -160,6 +150,23 @@ public:
 private:
 	T (*conv_) (T);
 };
+
+#define LEAVE_SAME(Type)
+	template <>\
+	class ConvImpl<Type> {\
+	public:\
+		ConvImpl() {}\
+		Type operator ()(Type v) {\
+			return v;\
+		}\
+	};
+LEAVE_SAME(int8_t);
+LEAVE_SAME(uint8_t);
+
+#define CONCATIMPL(a, b) a##b
+#define CONCAT(a, b)     CONCATIMPL(a, b)
+#define CONV_NAME(Type)  CONCAT(conv_, Type)
+#define CONV(Type)       ConvImpl<Type> CONV_NAME(Type)
 
 struct Conv {
 	CONV(int8_t);
@@ -170,6 +177,8 @@ struct Conv {
 	CONV(uint32_t);
 	CONV(int64_t);
 	CONV(uint64_t);
+	CONV(float);
+	CONV(double);
 };
 
 Conv& conv() {
@@ -222,6 +231,8 @@ ENC_RAW(int32_t);
 ENC_RAW(uint32_t);
 ENC_RAW(int64_t);
 ENC_RAW(uint64_t);
+ENC_RAW(float);
+ENC_RAW(double);
 
 //
 // std::string

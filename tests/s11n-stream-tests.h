@@ -102,7 +102,7 @@ TEST(Snabix, Bench) {
 
 	Vec2<int> v(1, 2), w;
 
-	size_t Size = 100000;
+	size_t Size = 1000;
 
 	for (size_t i = 0; i < Size; ++i)
 		out << v;
@@ -120,7 +120,7 @@ TEST(Snabix, Bench2) {
 	OutputBinarySerializer out(&strout);
 	InputBinarySerializer in(&strin);
 
-	size_t Size = 10000;
+	size_t Size = 100;
 	std::vector<SampleStruct> vec;
 	vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {
