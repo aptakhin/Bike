@@ -419,7 +419,7 @@ bool operator == (const SampleStruct& a, const SampleStruct& b) {
 TYPED_TEST_P(BaseTest, Benchmark) {
 	size_t Size = 1000;
 	std::vector<SampleStruct> vec;
-	vec.reserve(Size);
+	/*vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {
 		SampleStruct f;
 		f.id = (int) i; 
@@ -429,7 +429,7 @@ TYPED_TEST_P(BaseTest, Benchmark) {
 
 		f.name = out.str();
 		vec.push_back(f);
-	}
+	}*/
 	test_val(vec);
 }
 

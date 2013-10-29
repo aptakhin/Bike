@@ -1,4 +1,5 @@
-
+// s11n
+//
 #pragma once
 
 #include "s11n.h"
@@ -9,7 +10,6 @@ namespace bike {
 class BinarySerializerStorage {
 	S11N_TYPE_STORAGE
 };
-
 
 namespace BinaryImpl {
 
@@ -181,7 +181,7 @@ class InputBinarySerializerCall {
 public:
 	static void call(T& t, InputBinarySerializerNode& node) {
 		BinaryImpl::Header header;
-		node & header;
+		header.ser(node);
 		t.ser(node);
 	}
 };
@@ -191,7 +191,7 @@ class OutputBinarySerializerCall {
 public:
 	static void call(T& t, OutputBinarySerializerNode& node) {
 		BinaryImpl::Header header;
-		node & header;
+		header.ser(node);
 		t.ser(node);
 	}
 };
@@ -247,6 +247,21 @@ public:
 //
 // Internal impl
 //
+template <>
+class OutputBinarySerializerCall<BinaryImpl::Header&> {
+public:
+	static void call(BinaryImpl::Header& t, OutputBinarySerializerNode& node) {
+		t.ser(node);
+	}
+};
+template <>
+class InputBinarySerializerCall<BinaryImpl::Header&> {
+public:
+	static void call(BinaryImpl::Header& t, InputBinarySerializerNode& node) {
+		t.ser(node);
+	}
+}; 
+
 template <>
 class OutputBinarySerializerCall<BinaryImpl::Tag&> {
 public:
@@ -361,7 +376,7 @@ public:
 	static void call(std::vector<T>& t, OutputBinarySerializerNode& node) {
 		BinaryImpl::Header header;
 		node & header;
-		BinarySequence<size_t>::write(t, node);
+		BinarySequence<uint32_t>::write(t, node);
 	}
 };
 template <class T>
@@ -370,7 +385,7 @@ public:
 	static void call(std::vector<T>& t, InputBinarySerializerNode& node) {
 		BinaryImpl::Header header;
 		node & header;
-		BinarySequence<size_t>::read(t, node);
+		BinarySequence<uint32_t>::read(t, node);
 	}
 }; 
 

@@ -242,7 +242,7 @@ class EncoderImpl<std::string> {
 public:
 	static void encode(IWriter* writer, const std::string& v) {
 		uint32_t size = (uint32_t) v.size();
-		writer->write(&size, sizeof(uint32_t));
+		EncoderImpl<uint32_t>::encode(writer, size);
 		if (size)
 			writer->write(&v[0], (size_t) size);
 	}
@@ -253,7 +253,7 @@ public:
 	static void decode(IReader* reader, std::string& v) {
 		v = "";
 		uint32_t size;
-		reader->read(&size, sizeof(uint32_t));
+		DecoderImpl<uint32_t>::decode(reader, size);
 		if (size) {
 			v.resize(size);
 			reader->read(&v[0], (size_t) size);
@@ -269,7 +269,7 @@ class EncoderImpl<std::vector<T> > {
 public:
 	static void encode(IWriter* writer, const std::vector<T>& v) {
 		uint32_t size = (uint32_t) v.size();
-		writer->write(&size, sizeof(uint32_t));
+		EncoderImpl<uint32_t>::encode(writer, size);
 		std::vector<T>::const_iterator i = v.begin(), e = v.end();
 		for (; i != e; ++i)
 			EncoderImpl<T>::encode(writer, *i);
@@ -281,7 +281,7 @@ public:
 	static void decode(IReader* reader, std::vector<T>& v) {
 		v.clear();
 		uint32_t size = (uint32_t) v.size();
-		reader->read(&size, sizeof(uint32_t));
+		DecoderImpl<uint32_t>::decode(reader, size);
 		v.reserve(size);
 		for (size_t i = 0; i < size; ++i) {
 			T tmp;
