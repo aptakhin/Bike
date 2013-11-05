@@ -10,9 +10,11 @@
 
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
+#include <bike/ustring.h>
 #include "s11n-base-tests.h"
 #include "s11n-stream-tests.h"
 #include "s11n-docs-tests.h"
+#include "ustring-tests.h"
 
 #ifndef S11N_CPP03
 #	include "s11n-complex-tests.h"

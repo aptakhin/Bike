@@ -24,9 +24,9 @@
 #	undef assert
 #	// My bike is better!
 #	ifdef _DEBUG
-#		define assert(_Expr) { if (!(_Expr)) { _CrtDbgBreak(); _wassert(_CRT_WIDE(#_Expr), _CRT_WIDE(__FILE__), __LINE__); } }
+#		define assert(Expr) { if (!(Expr)) { _CrtDbgBreak(); _wassert(_CRT_WIDE(#Expr), _CRT_WIDE(__FILE__), __LINE__); } }
 #	else
-#		define assert(_Expr) {}
+#		define assert(Expr) {}
 #	endif	
 #endif
 

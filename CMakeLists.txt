@@ -10,11 +10,13 @@ set(S11NT_SRC
   include/bike/s11n-xml.h
   include/bike/s11n-binary.h
   include/bike/snabix.h
+  include/bike/ustring.h
   tests/s11n-tests.cpp
   tests/s11n-base-tests.h
   tests/s11n-stream-tests.h
   tests/s11n-docs-tests.h
   tests/s11n-complex-tests.h
+  tests/ustring-tests.h
   tests/gtest/gtest.h
   tests/gtest/gtest-all.cc
   tests/pugixml/pugixml.hpp
@@ -40,6 +42,7 @@ source_group("tests" FILES
   tests/s11n-stream-tests.h
   tests/s11n-docs-tests.h
   tests/s11n-complex-tests.h
+  tests/ustring-tests.h
 )
 
 source_group("xml" FILES 
@@ -49,6 +52,5 @@ source_group("xml" FILES
 )
 
 add_definitions(-D_VARIADIC_MAX=10)
-add_definitions(-DS11N_CPP11)
 
 add_executable(s11n_tests ${S11NT_SRC})
