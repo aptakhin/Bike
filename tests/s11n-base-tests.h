@@ -181,14 +181,14 @@ public:
 	}
 
 #define WRITE(Write)\
-		std::ofstream fout("test.txt");\
+		std::ofstream fout("test.txt", std::ofstream::binary);\
 		StdWriter sout(&fout);\
 		Output out(&sout);\
 		out << (Write);\
 		fout.close();\
 
 #define READ(Read)\
-		std::ifstream fin("test.txt");\
+		std::ifstream fin("test.txt", std::ifstream::binary);\
 		StdReader sin(&fin);\
 		Input in(&sin);\
 		in >> (Read);\
