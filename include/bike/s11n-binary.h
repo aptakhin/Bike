@@ -43,6 +43,8 @@ public:
 		assert(tag_.check());
 	}
 
+
+
 protected:
 	Tag tag_;
 };
@@ -55,14 +57,18 @@ public:
 	:	parent_(parent),
 		writer_(writer),
 		refs_(refs),
-		version_(0) {}
+		version_(0),
+		header_written_(false),
+		constructing_(S11N_NULLPTR) {}
 
 	void decl_version(unsigned ver) {
 		version_ = ver;
+		BinaryImpl::Header header;
+		header.ser(*this);
 	}
 
 	unsigned version() const {
-		return version_;
+		return !version_ && parent_? parent_->version() : version_;
 	}
 
 	template <class T>
@@ -73,6 +79,7 @@ public:
 
 	template <class T>
 	void named(T& t, const char* name) {
+		constructing_ = &t;
 		OutputBinarySerializerNode node(this, writer_, refs_);
 		OutputBinarySerializerCall<T&>::call(t, node);
 	}
@@ -104,7 +111,9 @@ protected:
 	OutputBinarySerializerNode* parent_;
 	IWriter*       writer_;
 	ReferencesPtr* refs_;
-	unsigned       version_;
+	unsigned version_;
+	bool     header_written_;
+	void*    constructing_;
 };
 
 class InputBinarySerializerNode {
@@ -113,12 +122,14 @@ public:
 	:	parent_(parent),
 		reader_(reader),
 		refs_(refs),
-		version_(0) {}
+		version_(0),
+		header_read_(false),
+		constructing_(S11N_NULLPTR)  {}
 
 	void decl_version(unsigned ver) {}
 
 	unsigned version() const {
-		return version_;
+		return !version_ && parent_? parent_->version() : version_;
 	}
 
 	template <class T>
@@ -129,6 +140,8 @@ public:
 
 	template <class T>
 	void named(T& t, const char* name) {
+		constructing_ = &t;
+		before_read();
 		InputBinarySerializerNode node(this, reader_, refs_);
 		InputBinarySerializerCall<T&>::call(t, node);
 	}
@@ -169,19 +182,23 @@ public:
 	IReader* reader() { return reader_; }
 
 protected:
+	void before_read() {
+	}
+
+protected:
 	InputBinarySerializerNode* parent_;
 
 	IReader*      reader_;
 	ReferencesId* refs_;
-	unsigned      version_;
+	unsigned version_;
+	bool     header_read_;
+	void*    constructing_;
 };
 
 template <class T>
 class InputBinarySerializerCall {
 public:
 	static void call(T& t, InputBinarySerializerNode& node) {
-		BinaryImpl::Header header;
-		header.ser(node);
 		t.ser(node);
 	}
 };
@@ -190,8 +207,6 @@ template <class T>
 class OutputBinarySerializerCall {
 public:
 	static void call(T& t, OutputBinarySerializerNode& node) {
-		BinaryImpl::Header header;
-		header.ser(node);
 		t.ser(node);
 	}
 };

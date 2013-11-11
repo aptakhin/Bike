@@ -51,7 +51,6 @@ public:
 	typedef typename Serializer::Output Output; 
 };
 
-#if 0
 TYPED_TEST_CASE_P(TemplateTest);
 
 TYPED_TEST_P(TemplateTest, Multiply0) {
@@ -137,7 +136,6 @@ REGISTER_TYPED_TEST_CASE_P(
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(TTest, TemplateTest, TestSerializers);
-#endif
 
 template <class Serializer>
 class BaseTest : public testing::Test {

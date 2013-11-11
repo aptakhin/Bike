@@ -112,10 +112,12 @@ public:
 
 protected:
 	OutputXmlSerializerNode* parent_;
-	pugi::xml_node           xml_;
-	ReferencesPtr*           refs_;
-	unsigned                 version_;
-	unsigned                 fmtver_;
+
+	pugi::xml_node xml_;
+	ReferencesPtr* refs_;
+
+	unsigned version_;
+	unsigned fmtver_;
 };
 
 template <class T>
