@@ -408,7 +408,7 @@ struct ConfigSample {
 	void ser(Node& node) {
 		optional(name,      "name",      "Default",                   node);
 		optional(start_url, "start_url", "http://stackoverflow.com/", node);
-		optional(desc,      "desc",      "SODD",                      node);
+		optional(desc,      "desc",      "SODD rulezz!",              node);
 	}
 };
 
