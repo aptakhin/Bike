@@ -64,15 +64,15 @@ public:
 	}
 
 	void set_version(uint8_t v) {
-		if (v != 0)
-			tag_.set_version(), ver_.version_ = v;
-		else
-			tag_.unset_version();
+		tag_.set_version();
+		ver_.version_ = v;
 	}
 
 	uint8_t version() const {
 		return ver_.version_;
 	}
+
+	bool has_version() const { return tag_.has_version(); }
 
 private:
 	Tag          tag_;
@@ -171,14 +171,13 @@ public:
 	:	parent_(parent),
 		reader_(reader),
 		refs_(refs),
-		version_(0),
 		header_read_(false),
 		constructing_(S11N_NULLPTR) {}
 
 	void decl_version(unsigned ver) {}
 
 	unsigned version() const {
-		return !version_ && parent_? parent_->version() : version_;
+		return !header_.has_version() && parent_? parent_->version() : header_.version();
 	}
 
 	template <class T>
@@ -255,7 +254,6 @@ private:
 
 	IReader*      reader_;
 	ReferencesId* refs_;
-	unsigned      version_;
 	bool          header_read_;
 	PtrHolder     constructing_;
 	BinaryImpl::Header header_;
@@ -487,7 +485,7 @@ public:
 class OutputBinarySerializer : public OutputBinarySerializerNode {
 public:
 	OutputBinarySerializer(IWriter* writer)
-	:	OutputBinarySerializerNode(this, writer, &refs_) {}
+	:	OutputBinarySerializerNode(S11N_NULLPTR, writer, &refs_) {}
 
 	template <class T>
 	OutputBinarySerializer& operator << (T& t) {
@@ -502,7 +500,7 @@ private:
 class InputBinarySerializer : public InputBinarySerializerNode {
 public:
 	InputBinarySerializer(IReader* reader)
-	:	InputBinarySerializerNode(this, reader, &refs_) {}
+	:	InputBinarySerializerNode(S11N_NULLPTR, reader, &refs_) {}
 
 	template <class T>
 	InputBinarySerializer& operator >> (T& t) {
