@@ -14,39 +14,70 @@ class BinarySerializerStorage {
 namespace BinaryImpl {
 
 struct Tag {
-	const static int Hello   = 0xA0;
-	const static int Pointer = 1 << 3;
-	const static int Version = 1 << 2;
-	const static int Name    = 1 << 1;
-	const static int Reserve = 1;
+	const static int Hello    = 0xA0;
+	const static int Pointer  = 1 << 3;
+	const static int Version  = 1 << 2;
+	const static int Name     = 1 << 1;
+	const static int Extended = 1;
 
 	Tag() : tag_(Hello) {}
 
-	bool check()       const { return (tag_ & Hello) == Hello; }
+	bool check()        const { return (tag_ & Hello) == Hello; }
 	
-	bool has_pointer() const { return (tag_ & Pointer) > 0; }
-	bool has_version() const { return (tag_ & Version) > 0; }
-	bool has_name()    const { return (tag_ & Name) > 0; }
+	bool has_pointer()  const { return (tag_ & Pointer) > 0; }
+	bool has_version()  const { return (tag_ & Version) > 0; }
+	bool has_name()     const { return (tag_ & Name) > 0; }
+	bool has_extended() const { return (tag_ & Extended) > 0; }
+
+	void unset_version() { tag_ &= ~Version; }
+	void set_version() { tag_ |= Version; }
 
 	uint8_t tag_;
 };
 
+struct Pointer {
+	uint32_t ref_;
+
+	Pointer() : ref_(0) {}
+};
+
 struct SmallVersion {
 	uint8_t version_;
+
+	SmallVersion() : version_(0) {}
+};
+
+struct Name {
+	std::string name_;
 };
 
 class Header {
 public:
 	template <class Node>
 	void ser(Node& node) {
-		node & tag_;
+		node.raw_impl(tag_);
 		assert(tag_.check());
+		if (tag_.has_pointer())
+			node.raw_impl(ptr_);
+		if (tag_.has_version())
+			node.raw_impl(ver_);
 	}
 
+	void set_version(uint8_t v) {
+		if (v != 0)
+			tag_.set_version(), ver_.version_ = v;
+		else
+			tag_.unset_version();
+	}
 
+	uint8_t version() const {
+		return ver_.version_;
+	}
 
-protected:
-	Tag tag_;
+private:
+	Tag          tag_;
+	Pointer      ptr_;
+	SmallVersion ver_;
 };
 
 } // namespace BinaryImpl {
@@ -57,18 +88,15 @@ public:
 	:	parent_(parent),
 		writer_(writer),
 		refs_(refs),
-		version_(0),
 		header_written_(false),
 		constructing_(S11N_NULLPTR) {}
 
 	void decl_version(unsigned ver) {
-		version_ = ver;
-		BinaryImpl::Header header;
-		header.ser(*this);
+		header_.set_version(ver);
 	}
 
 	unsigned version() const {
-		return !version_ && parent_? parent_->version() : version_;
+		return !header_.version() && parent_? parent_->version() : header_.version();
 	}
 
 	template <class T>
@@ -79,9 +107,9 @@ public:
 
 	template <class T>
 	void named(T& t, const char* name) {
-		constructing_ = &t;
-		OutputBinarySerializerNode node(this, writer_, refs_);
-		OutputBinarySerializerCall<T&>::call(t, node);
+		constructing_.set(&t);
+		before_write<42>();
+		raw_impl(t);
 	}
 
 	template <class T>
@@ -103,17 +131,38 @@ public:
 		xml_.append_attribute("ref") = ref;
 	}
 
+	template <class T>
+	void raw_impl(T& t) {
+		OutputBinarySerializerNode node(this, writer_, refs_);
+		OutputBinarySerializerCall<T&>::call(t, node);
+	}
+
 	ReferencesPtr* refs() const { return refs_; }
 
 	IWriter* writer() { return writer_; }
 
-protected:
+	template <class C>
+	C* constructing() const {
+		assert(constructing_.get());
+		return constructing_.get<C>();
+	}
+
+private:
+	template <int>
+	void before_write() {
+		if (!header_written_) {
+			OutputBinarySerializerCall<BinaryImpl::Header&>::call(header_, *this);
+			header_written_ = true;
+		}
+	}
+
+private:
 	OutputBinarySerializerNode* parent_;
 	IWriter*       writer_;
 	ReferencesPtr* refs_;
-	unsigned version_;
 	bool     header_written_;
-	void*    constructing_;
+	PtrHolder constructing_;
+	BinaryImpl::Header header_;
 };
 
 class InputBinarySerializerNode {
@@ -124,7 +173,7 @@ public:
 		refs_(refs),
 		version_(0),
 		header_read_(false),
-		constructing_(S11N_NULLPTR)  {}
+		constructing_(S11N_NULLPTR) {}
 
 	void decl_version(unsigned ver) {}
 
@@ -141,9 +190,8 @@ public:
 	template <class T>
 	void named(T& t, const char* name) {
 		constructing_ = &t;
-		before_read();
-		InputBinarySerializerNode node(this, reader_, refs_);
-		InputBinarySerializerCall<T&>::call(t, node);
+		before_read<42>();
+		raw_impl(t);
 	}
 
 	template <class T>
@@ -177,22 +225,40 @@ public:
 		}
 	}
 
+	template <class T>
+	void raw_impl(T& t) {
+		InputBinarySerializerNode node(this, reader_, refs_);
+		InputBinarySerializerCall<T&>::call(t, node);
+	}
+
 	ReferencesId* refs() const { return refs_; }
 
 	IReader* reader() { return reader_; }
 
-protected:
-	void before_read() {
+	template <class C>
+	C* constructing() const {
+		assert(constructing_.get());
+		return constructing_.get<C>();
 	}
 
-protected:
+private:
+	template <int>
+	void before_read() {
+		if (!header_read_) {
+			InputBinarySerializerCall<BinaryImpl::Header&>::call(header_, *this);
+			header_read_ = true;
+		}
+	}
+
+private:
 	InputBinarySerializerNode* parent_;
 
 	IReader*      reader_;
 	ReferencesId* refs_;
-	unsigned version_;
-	bool     header_read_;
-	void*    constructing_;
+	unsigned      version_;
+	bool          header_read_;
+	PtrHolder     constructing_;
+	BinaryImpl::Header header_;
 };
 
 template <class T>
@@ -307,6 +373,21 @@ public:
 	}
 }; 
 
+template <>
+class OutputBinarySerializerCall<BinaryImpl::Pointer&> {
+public:
+	static void call(BinaryImpl::Pointer& t, OutputBinarySerializerNode& node) {
+		EncoderImpl<uint32_t>::encode(node.writer(), t.ref_);
+	}
+};
+template <>
+class InputBinarySerializerCall<BinaryImpl::Pointer&> {
+public:
+	static void call(BinaryImpl::Pointer& t, InputBinarySerializerNode& node) {
+		DecoderImpl<uint32_t>::decode(node.reader(), t.ref_);
+	}
+};
+
 template <class T, class Iter>
 class InputBinaryIter : public std::iterator<std::input_iterator_tag, T> {
 public:
@@ -362,8 +443,7 @@ public:
 	static void read(Cont& container, InputBinarySerializerNode& node) {
 		Iter size;
 		node & size;
-		InputBinaryIter<T, Iter> b(&node, 0);
-		InputBinaryIter<T, Iter> e(&node, size);
+		InputBinaryIter<T, Iter> b(&node, 0), e(&node, size);
 		Cont tmp(b, e);
 		std::swap(container, tmp);
 	}
@@ -415,7 +495,7 @@ public:
 		return *this;
 	}
 
-protected:
+private:
 	ReferencesPtr refs_;
 };
 
@@ -430,7 +510,7 @@ public:
 		return *this;
 	}
 
-protected:
+private:
 	ReferencesId refs_;
 };
 

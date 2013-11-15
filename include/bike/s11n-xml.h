@@ -157,7 +157,7 @@ public:
 		return *this; 
 	}
 
-protected:
+private:
 	std::ostream*      out_;
 	ReferencesPtr      refs_;
 	pugi::xml_document doc_;
@@ -258,7 +258,7 @@ public:
 
 	InputEssence essence() { return InputEssence(); }
 
-protected:
+private:
 	pugi::xml_node next_child_node() {
 		return cur_child_ = cur_child_.empty() ? 
 			*xml_.begin() : cur_child_.next_sibling();
@@ -270,14 +270,15 @@ protected:
 		InputXmlSerializerCall<T&>::call(t, node);
 	}
 
-protected:
+private:
 	InputXmlSerializerNode* parent_;
-	ReferencesId*           refs_;
-	unsigned                version_;
+
+	ReferencesId*  refs_;
+	unsigned       version_;
 
 private:
-	pugi::xml_node          xml_;
-	pugi::xml_node          cur_child_;
+	pugi::xml_node xml_;
+	pugi::xml_node cur_child_;
 };
 
 template <class T>
@@ -313,14 +314,14 @@ public:
 		return static_cast<InputXmlSerializer&>(*this & t);
 	}
 
-protected:
+private:
 	void next_serializable() {
 		pugi::xml_node next = xml().empty()?
 			doc_.child("serializable") : xml().next_sibling();
 		set_xml(next);
 	}
 
-protected:
+private:
 	std::istream*      in_;
 	ReferencesId       refs_;
 	pugi::xml_document doc_;
@@ -468,7 +469,7 @@ public:
 		return iter_ != i.iter_;
 	}
 
-protected:
+private:
 	InputXmlSerializerNode*  parent_;
 	pugi::xml_node::iterator iter_;
 };
