@@ -18,11 +18,11 @@
 #	include "s11n-complex-tests.h"
 #endif
 
-Serializers<XmlSerializer> serializers;
+Serializers<BinarySerializer> serializers;
 
 GTEST_API_ int main(int argc, char **argv) {
-	//serializers.reg<Human>();
-	//serializers.reg<Superman>();
+	serializers.reg<Human>();
+	serializers.reg<Superman>();
 
 	testing::InitGoogleTest(&argc, argv);
 	int code = RUN_ALL_TESTS();

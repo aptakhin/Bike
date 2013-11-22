@@ -251,7 +251,6 @@ TYPED_TEST_P(BaseTest, Structs) {
 	test_val<Vec2<double> >(5.5555, 6.6666);
 }
 
-#if 0
 class Human {
 public:
     Human(const std::string& name) : name_(name) {} 
@@ -329,6 +328,7 @@ TYPED_TEST_P(BaseTest, Pointers) {
 	delete read, delete ivan;
 }
 
+#if 0
 TYPED_TEST_P(BaseTest, SmartPointers) {
 	std::unique_ptr<Human> empty, read0;
 	io_impl(empty, read0);
@@ -369,6 +369,7 @@ TYPED_TEST_P(BaseTest, Inheritance) {
 	test_deref_impl(superman, read);
 	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
 }
+#endif
 
 class IntegerHolder {
 public:
@@ -388,7 +389,8 @@ void serialize(IntegerHolder& integer, Node& node) {
 	acc.access("number", &IntegerHolder::get_number, &IntegerHolder::set_number);
 }
 
-S11N_XML_OUT(IntegerHolder, serialize);
+#if 0
+S11N_BINARY_OUT(IntegerHolder, serialize);
 
 TYPED_TEST_P(BaseTest, OutOfClass) {
 	IntegerHolder integer, read;
@@ -396,7 +398,6 @@ TYPED_TEST_P(BaseTest, OutOfClass) {
 	io_impl(integer, read);
 	ASSERT_EQ(integer.get_number(), read.get_number());
 }
-
 #endif
 
 struct SampleStruct {
@@ -466,6 +467,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	Base, 
 	Strings,
 	Structs,
+	Classes,
+	Pointers,
 	Benchmark
 );
 

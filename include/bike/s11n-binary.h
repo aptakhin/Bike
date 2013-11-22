@@ -15,7 +15,7 @@ namespace BinaryImpl {
 
 struct Tag {
 	const static int Hello    = 0xA0;
-	const static int Pointer  = 1 << 3;
+	const static int Reference= 1 << 3;
 	const static int Version  = 1 << 2;
 	const static int Name     = 1 << 1;
 	const static int Extended = 1;
@@ -24,7 +24,7 @@ struct Tag {
 
 	bool check()        const { return (tag_ & Hello) == Hello; }
 	
-	bool has_pointer()  const { return (tag_ & Pointer) > 0; }
+	bool has_reference()  const { return (tag_ & Reference) > 0; }
 	bool has_version()  const { return (tag_ & Version) > 0; }
 	bool has_name()     const { return (tag_ & Name) > 0; }
 	bool has_extended() const { return (tag_ & Extended) > 0; }
@@ -32,13 +32,15 @@ struct Tag {
 	void unset_version() { tag_ &= ~Version; }
 	void set_version() { tag_ |= Version; }
 
+	void set_reference() { tag_ |= Reference; }
+
 	uint8_t tag_;
 };
 
-struct Pointer {
+struct Reference {
 	uint32_t ref_;
 
-	Pointer() : ref_(0) {}
+	Reference() : ref_(0) {}
 };
 
 struct SmallVersion {
@@ -57,8 +59,8 @@ public:
 	void ser(Node& node) {
 		node.raw_impl(tag_);
 		assert(tag_.check());
-		if (tag_.has_pointer())
-			node.raw_impl(ptr_);
+		if (tag_.has_reference())
+			node.raw_impl(ref_);
 		if (tag_.has_version())
 			node.raw_impl(ver_);
 	}
@@ -72,11 +74,20 @@ public:
 		return ver_.version_;
 	}
 
+	void set_reference(uint32_t v) {
+		tag_.set_reference();
+		ref_.ref_ = v;
+	}
+
+	uint32_t reference() const {
+		return ref_.ref_;
+	}
+
 	bool has_version() const { return tag_.has_version(); }
 
 private:
 	Tag          tag_;
-	Pointer      ptr_;
+	Reference    ref_;
 	SmallVersion ver_;
 };
 
@@ -113,8 +124,16 @@ public:
 	}
 
 	template <class T>
+	void search(T& t, const char* name) {
+	}
+
+	template <class Base>
+	void base(Base* base) {
+	}
+
+	template <class T>
 	void ptr_impl(T* t) {
-		unsigned ref = 0;
+		/*unsigned ref = 0;
 		if (t != S11N_NULLPTR) {
 			std::pair<bool, unsigned> set_result = refs_->set(t);
 			ref = set_result.second;
@@ -125,10 +144,10 @@ public:
 					type->ctor->write(t, node);
 				}
 				else // Otherwise, no choise and direct way
-					OutputXmlSerializerCall<T&>::call(*t, *this);
+					OutputBinarySerializerCall<T&>::call(*t, *this);
 			}
 		}
-		xml_.append_attribute("ref") = ref;
+		xml_.append_attribute("ref") = ref;*/
 	}
 
 	template <class T>
@@ -194,7 +213,18 @@ public:
 	}
 
 	template <class T>
+	void search(T& t, const char* name) {
+	}
+
+	template <class Base>
+	void base(Base* base) {
+	}
+
+	template <class T>
 	void ptr_impl(T*& t) {
+		/*
+		header_.has_reference();
+		//header_.
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
 		assert(ref_attr);
 		unsigned ref = ref_attr.as_uint();
@@ -216,12 +246,12 @@ public:
 				
 				if (from_ctor) {
 					t = Ctor<T*, InputBinarySerializerNode>::ctor(*this);
-					make_call(*t, xml_);
+					raw_impl(*t);
 				}
 				
 				refs_->set(ref, t);
 			}
-		}
+		}*/
 	}
 
 	template <class T>
@@ -256,6 +286,7 @@ private:
 	ReferencesId* refs_;
 	bool          header_read_;
 	PtrHolder     constructing_;
+
 	BinaryImpl::Header header_;
 };
 
@@ -372,16 +403,16 @@ public:
 }; 
 
 template <>
-class OutputBinarySerializerCall<BinaryImpl::Pointer&> {
+class OutputBinarySerializerCall<BinaryImpl::Reference&> {
 public:
-	static void call(BinaryImpl::Pointer& t, OutputBinarySerializerNode& node) {
+	static void call(BinaryImpl::Reference& t, OutputBinarySerializerNode& node) {
 		EncoderImpl<uint32_t>::encode(node.writer(), t.ref_);
 	}
 };
 template <>
-class InputBinarySerializerCall<BinaryImpl::Pointer&> {
+class InputBinarySerializerCall<BinaryImpl::Reference&> {
 public:
-	static void call(BinaryImpl::Pointer& t, InputBinarySerializerNode& node) {
+	static void call(BinaryImpl::Reference& t, InputBinarySerializerNode& node) {
 		DecoderImpl<uint32_t>::decode(node.reader(), t.ref_);
 	}
 };
