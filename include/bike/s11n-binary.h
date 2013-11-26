@@ -24,7 +24,7 @@ struct Tag {
 
 	bool check()        const { return (tag_ & Hello) == Hello; }
 	
-	bool has_reference()  const { return (tag_ & Reference) > 0; }
+	bool has_reference()const { return (tag_ & Reference) > 0; }
 	bool has_version()  const { return (tag_ & Version) > 0; }
 	bool has_name()     const { return (tag_ & Name) > 0; }
 	bool has_extended() const { return (tag_ & Extended) > 0; }
@@ -38,7 +38,8 @@ struct Tag {
 };
 
 struct Reference {
-	uint32_t ref_;
+	uint32_t    ref_;
+	std::string type_;
 
 	Reference() : ref_(0) {}
 };
@@ -74,13 +75,18 @@ public:
 		return ver_.version_;
 	}
 
-	void set_reference(uint32_t v) {
+	void set_ref(uint32_t v, const std::string& name) {
 		tag_.set_reference();
-		ref_.ref_ = v;
+		ref_.ref_  = v;
+		ref_.type_ = name;
 	}
 
-	uint32_t reference() const {
+	uint32_t ref_id() const {
 		return ref_.ref_;
+	}
+
+	const std::string& ref_type() const {
+		return ref_.type_;
 	}
 
 	bool has_version() const { return tag_.has_version(); }
@@ -129,14 +135,17 @@ public:
 
 	template <class Base>
 	void base(Base* base) {
+
 	}
 
 	template <class T>
 	void ptr_impl(T* t) {
-		/*unsigned ref = 0;
+		uint32_t ref = 0;
 		if (t != S11N_NULLPTR) {
 			std::pair<bool, unsigned> set_result = refs_->set(t);
 			ref = set_result.second;
+			header_.set_ref(ref, typeid(*t).name());
+			before_write<42>();
 			if (set_result.first) {
 				const Type* type = TypeStorageAccessor<BinarySerializerStorage>::find(typeid(*t).name());
 				if (type) { // If we found type in registered types, then initialize such way
@@ -147,7 +156,10 @@ public:
 					OutputBinarySerializerCall<T&>::call(*t, *this);
 			}
 		}
-		xml_.append_attribute("ref") = ref;*/
+		else {
+			header_.set_ref(0, "");
+			before_write<42>();
+		}
 	}
 
 	template <class T>
@@ -214,6 +226,7 @@ public:
 
 	template <class T>
 	void search(T& t, const char* name) {
+		int p = 0;
 	}
 
 	template <class Base>
@@ -222,19 +235,14 @@ public:
 
 	template <class T>
 	void ptr_impl(T*& t) {
-		/*
-		header_.has_reference();
-		//header_.
-		pugi::xml_attribute ref_attr = xml_.attribute("ref");
-		assert(ref_attr);
-		unsigned ref = ref_attr.as_uint();
+		uint32_t ref = header_.ref_id();
 		if (ref != 0) {
 			void* ptr = refs_->get(ref);
 			if (ptr == S11N_NULLPTR) {
-				pugi::xml_attribute type_attr = xml_.attribute("type");
+				const std::string& type_name = header_.ref_type();
 				bool from_ctor = true;
-				if (type_attr) {
-					const Type* type = TypeStorageAccessor<BinarySerializerStorage>::find(type_attr.as_string());
+				if (!type_name.empty()) {
+					const Type* type = TypeStorageAccessor<BinarySerializerStorage>::find(type_name.c_str());
 					if (type != S11N_NULLPTR) {
 						from_ctor = false;
 						PtrHolder node_holder(this);
@@ -251,7 +259,7 @@ public:
 				
 				refs_->set(ref, t);
 			}
-		}*/
+		}
 	}
 
 	template <class T>
@@ -407,6 +415,8 @@ class OutputBinarySerializerCall<BinaryImpl::Reference&> {
 public:
 	static void call(BinaryImpl::Reference& t, OutputBinarySerializerNode& node) {
 		EncoderImpl<uint32_t>::encode(node.writer(), t.ref_);
+		if (t.ref_ != 0)
+			EncoderImpl<std::string>::encode(node.writer(), t.type_);
 	}
 };
 template <>
@@ -414,6 +424,8 @@ class InputBinarySerializerCall<BinaryImpl::Reference&> {
 public:
 	static void call(BinaryImpl::Reference& t, InputBinarySerializerNode& node) {
 		DecoderImpl<uint32_t>::decode(node.reader(), t.ref_);
+		if (t.ref_ != 0)
+			DecoderImpl<std::string>::decode(node.reader(), t.type_);
 	}
 };
 

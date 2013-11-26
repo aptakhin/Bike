@@ -158,6 +158,8 @@ public:
 	template <class T>
 	void test_ptr_impl(const T* write, T* read)	{
 		io_ptr_impl(write, read);
+		if (write != S11N_NULLPTR)
+			ASSERT_NE(S11N_NULLPTR, read);
 		ASSERT_EQ(*write, *read);
 	}
 
@@ -293,7 +295,7 @@ public:
 
     template <class Node>
     void ser(Node& node) {
-        node.base<Human>(this);
+        //node.base<Human>(this);
 		node.named(superpower_, "power");
     }
 
