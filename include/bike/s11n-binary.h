@@ -46,7 +46,7 @@ template <class T>
 class InputBinarySerializerCall {
 public:
 	static void call(T& t, InputBinarySerializerNode& node) {
-		t.ser(node, Version(-1));
+		t.ser(node);
 	}
 };
 
@@ -54,7 +54,7 @@ template <class T>
 class OutputBinarySerializerCall {
 public:
 	static void call(T& t, OutputBinarySerializerNode& node) {
-		t.ser(node, Version(-1));
+		t.ser(node);
 	}
 };
 

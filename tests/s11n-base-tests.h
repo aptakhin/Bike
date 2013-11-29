@@ -10,7 +10,7 @@
 
 using namespace bike;
 
-typedef ::testing::Types<XmlSerializer> TestSerializers;
+typedef testing::Types<XmlSerializer> TestSerializers;
 
 template <class Serializer>
 class TemplateTest : public testing::Test {
@@ -31,7 +31,6 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	std::string bw = "Two objects", br;
 	out << bw;
 
-	out.close();
 	fout.close();
 
 	std::ifstream fin("test.txt");
@@ -43,9 +42,61 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	ASSERT_EQ(bw, br);
 }
 
+struct X1 
+{
+	int x;
+
+	X1(int x) : x(x) {}
+
+	template <class Node>
+	void ser(Node& node) {
+		node & x;
+	}
+};
+
+struct X2 
+{
+	int x, y;
+
+	X2() : x(0), y(0) {}
+	X2(int x, int y) : x(x), y(y) {}
+
+	template <class Node>
+	void ser(Node& node) {
+		node.decl_version(1);
+		node & x;
+		if (node.version() > 0)
+			node & y;
+	}
+};
+
+TYPED_TEST_P(TemplateTest, Version0) {
+	std::ofstream fout("test.txt");
+	Output out(fout);
+
+	X1 w1(5);
+	out << w1;
+
+	X2 w2(7, 9), r2, r22;
+	out << w2;
+
+	fout.close();
+
+	std::ifstream fin("test.txt");
+	Input in(fin);
+
+	in >> r2 >> r22;
+
+	ASSERT_EQ(w1.x, r2.x);
+	ASSERT_EQ(0,    r2.y);
+	ASSERT_EQ(w2.x, r22.x);
+	ASSERT_EQ(w2.y, r22.y);
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	TemplateTest, 
-	Multiply0
+	Multiply0,
+	Version0
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(TTest, TemplateTest, TestSerializers);
@@ -63,7 +114,7 @@ public:
 	}
 
 	template <class T>
-	void test_dis_impl(const T& write, T& read)	{
+	void test_deref_impl(const T& write, T& read)	{
 		io_impl(write, read);
 		ASSERT_EQ(*write, *read);
 	}
@@ -95,7 +146,6 @@ public:
 		std::ofstream fout("test.txt");\
 		Output out(fout);\
 		out << (Write);\
-		out.close();\
 		fout.close();\
 
 #define READ(Read)\
@@ -129,7 +179,7 @@ TYPED_TEST_CASE_P(BaseTest);
 
 TYPED_TEST_P(BaseTest, Base) {
 	test_val<int>(1);
-	test_val<unsigned int>(2);
+	test_val<unsigned>(2);
 	test_val<short>(3);
 	test_val<unsigned short>(4);
 }
@@ -148,7 +198,7 @@ template <class T>
 struct Vec2 {
 
 	template <class Node>
-	void ser(Node& node, Version vers) {
+	void ser(Node& node) {
 		node & x & y;
 	}
 
@@ -177,8 +227,7 @@ public:
     const std::string& name() const { return name_; }
 
 	template <class Node>
-	void ser(Node& node, Version vers) {
-		node.version(1);
+	void ser(Node& node) {
 		node.named(name_, "name");
 	}
 
@@ -210,7 +259,7 @@ public:
 	void fly() { /* Clark don't need any code to fly */ }
 
     template <class Node>
-    void ser(Node& node, Version version) {
+    void ser(Node& node) {
         node.base<Human>(this);
 		node.named(superpower_, "power");
     }
@@ -253,7 +302,7 @@ TYPED_TEST_P(BaseTest, SmartPointers) {
 
 	std::unique_ptr<Human> taras, read;
 	taras.reset(new Human("Taras Tarasov"));
-	test_dis_impl(taras, read);
+	test_deref_impl(taras, read);
 
 	std::shared_ptr<Human> empty2, read2;
 	io_impl(empty2, read2);
@@ -261,7 +310,7 @@ TYPED_TEST_P(BaseTest, SmartPointers) {
 
 	std::shared_ptr<Human> alex, read3;
 	alex.reset(new Human("Alex Alexandrov"));
-	test_dis_impl(alex, read3);
+	test_deref_impl(alex, read3);
 }
 
 TYPED_TEST_P(BaseTest, SequenceContainers) {
@@ -283,7 +332,7 @@ TYPED_TEST_P(BaseTest, SequenceContainers) {
 TYPED_TEST_P(BaseTest, Inheritance) {
 	std::unique_ptr<Human> superman, read;
 	superman.reset(new Superman(200000));
-	test_dis_impl(superman, read);
+	test_deref_impl(superman, read);
 	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
 }
 
@@ -293,7 +342,7 @@ public:
 
 	void set_number(int number) { number_ = number; }
 
-	int get_number() { return number_; }
+	int get_number() const { return number_; }
 
 private:
 	int number_;
@@ -301,8 +350,8 @@ private:
 
 template <class Node>
 void serialize(IntegerHolder& integer, Node& node) {
-	bike::access_free<int>(&integer, "number", 
-		&IntegerHolder::get_number, &IntegerHolder::set_number, node);
+	Accessor<IntegerHolder, Node> acc(&integer, node);
+	acc.access("number", &IntegerHolder::get_number, &IntegerHolder::set_number);
 }
 
 S11N_XML_OUT(IntegerHolder, serialize);
@@ -311,6 +360,7 @@ TYPED_TEST_P(BaseTest, OutOfClass) {
 	IntegerHolder integer, read;
 	integer.set_number(12);
 	io_impl(integer, read);
+	ASSERT_EQ(integer.get_number(), read.get_number());
 }
 
 struct SampleStruct {
@@ -319,7 +369,7 @@ struct SampleStruct {
 	std::vector<int> regs;
 
 	template <class Node>
-	void ser(Node& node, Version ver) {
+	void ser(Node& node) {
 		node & name & id & regs;
 	}
 };
@@ -345,6 +395,32 @@ TYPED_TEST_P(BaseTest, Benchmark) {
 	test_val(vec);
 }
 
+struct ConfigSample {
+	std::string name;
+	std::string start_url;
+	std::string desc;
+
+	ConfigSample() {
+		bike::construct(this);
+	}
+
+	template <class Node>
+	void ser(Node& node) {
+		optional(name,      "name",      "Default",                   node);
+		optional(start_url, "start_url", "http://stackoverflow.com/", node);
+		optional(desc,      "desc",      "SODD rulezz!",              node);
+	}
+};
+
+bool operator == (const ConfigSample& a, const ConfigSample& b) {
+	return a.name == b.name && a.start_url == b.start_url && a.desc == b.desc;
+}
+
+TYPED_TEST_P(BaseTest, Optional) {
+	ConfigSample conf;
+	test_val(conf);
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
@@ -356,7 +432,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	SequenceContainers,
 	Inheritance,
 	OutOfClass,
-	Benchmark
+	Benchmark,
+	Optional
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);
