@@ -235,6 +235,7 @@ public:
 
 	template <class T>
 	void ptr_impl(T*& t) {
+		before_read<42>();
 		uint32_t ref = header_.ref_id();
 		if (ref != 0) {
 			void* ptr = refs_->get(ref);
@@ -532,7 +533,7 @@ public:
 
 	template <class T>
 	OutputBinarySerializer& operator << (T& t) {
-		named(t, "");
+		raw_impl(t);
 		return *this;
 	}
 
@@ -547,7 +548,7 @@ public:
 
 	template <class T>
 	InputBinarySerializer& operator >> (T& t) {
-		named(t, "");
+		raw_impl(t);
 		return *this;
 	}
 

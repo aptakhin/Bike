@@ -11,13 +11,46 @@
 
 using namespace bike;
 
+std::string stringify_bytes(const void* buf, size_t size)
+{
+	std::string res = "";
+	const unsigned char* b = (const unsigned char*) buf;
+	size_t in_ascii_range = 0;
+	for (size_t i = 0; i < size; ++i, ++b)
+	{
+		char tmp[10] = "";
+		unsigned char p = *b;
+		sprintf(tmp, "%02X ", p);
+		res += tmp;
+		if ( p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9')
+			++in_ascii_range;
+	}
+
+	if (in_ascii_range > 0)
+	{
+		res += "\"";
+		const unsigned char* r = (const unsigned char*) buf;
+		for (size_t i = 0; i < size; ++i, ++r)
+		{
+			char tmp[10] = "";
+			unsigned char p = *r;
+			sprintf(tmp, "%c", p);
+			res += tmp;
+		}
+		res += "\"";
+	}
+	
+	return res;
+}
+
 class StdReader : public IReader
 {
 public:
-	StdReader(std::istream* in) : in_(in) {}
+	StdReader(std::istream* in) : in_(in) { std::cout << "CTOR: " << std::endl; }
 
 	virtual size_t read(void* buf, size_t size) /* override */ {
 		in_->read((char*) buf, size);
+		std::cout << "I: " << stringify_bytes(buf, size) << std::endl;
 		return size;//FIXME
 	}
 
@@ -28,10 +61,11 @@ protected:
 class StdWriter : public IWriter
 {
 public:
-	StdWriter(std::ostream* out) : out_(out) {}
+	StdWriter(std::ostream* out) : out_(out)  { std::cout << "CTOR: " << std::endl; }
 
 	virtual void write(const void* buf, size_t size) /* override */ {
 		out_->write((const char*) buf, size);
+		std::cout << "W: " << stringify_bytes(buf, size) << std::endl;
 	}
 
 	void close() {
@@ -295,7 +329,7 @@ public:
 
     template <class Node>
     void ser(Node& node) {
-        //node.base<Human>(this);
+        node.base<Human>(this);
 		node.named(superpower_, "power");
     }
 
@@ -392,6 +426,7 @@ void serialize(IntegerHolder& integer, Node& node) {
 }
 
 #if 0
+
 S11N_BINARY_OUT(IntegerHolder, serialize);
 
 TYPED_TEST_P(BaseTest, OutOfClass) {

@@ -46,9 +46,7 @@ public:
 		}
 	}
 
-	~BufferedWriter() {
-		flush();
-	}
+	~BufferedWriter() {}
 
 	void flush() {
 		backend_->write(buf, size_);
