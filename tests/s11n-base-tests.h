@@ -50,7 +50,9 @@ public:
 
 	virtual size_t read(void* buf, size_t size) /* override */ {
 		in_->read((char*) buf, size);
+#	ifdef S11N_DEBUG_LOG_IO
 		std::cout << "I: " << stringify_bytes(buf, size) << std::endl;
+#	endif
 		return size;//FIXME
 	}
 
@@ -65,7 +67,9 @@ public:
 
 	virtual void write(const void* buf, size_t size) /* override */ {
 		out_->write((const char*) buf, size);
+#	ifdef S11N_DEBUG_LOG_IO
 		std::cout << "W: " << stringify_bytes(buf, size) << std::endl;
+#	endif
 	}
 
 	void close() {
@@ -364,7 +368,6 @@ TYPED_TEST_P(BaseTest, Pointers) {
 	delete read, delete ivan;
 }
 
-#if 0
 TYPED_TEST_P(BaseTest, SmartPointers) {
 	std::unique_ptr<Human> empty, read0;
 	io_impl(empty, read0);
@@ -405,7 +408,6 @@ TYPED_TEST_P(BaseTest, Inheritance) {
 	test_deref_impl(superman, read);
 	ASSERT_NE((Superman*) S11N_NULLPTR, dynamic_cast<Superman*>(read.get()));
 }
-#endif
 
 class IntegerHolder {
 public:
@@ -425,8 +427,6 @@ void serialize(IntegerHolder& integer, Node& node) {
 	acc.access("number", &IntegerHolder::get_number, &IntegerHolder::set_number);
 }
 
-#if 0
-
 S11N_BINARY_OUT(IntegerHolder, serialize);
 
 TYPED_TEST_P(BaseTest, OutOfClass) {
@@ -435,7 +435,6 @@ TYPED_TEST_P(BaseTest, OutOfClass) {
 	io_impl(integer, read);
 	ASSERT_EQ(integer.get_number(), read.get_number());
 }
-#endif
 
 struct SampleStruct {
 	std::string name;
@@ -455,7 +454,7 @@ bool operator == (const SampleStruct& a, const SampleStruct& b) {
 TYPED_TEST_P(BaseTest, Benchmark) {
 	size_t Size = 1000;
 	std::vector<SampleStruct> vec;
-	/*vec.reserve(Size);
+	vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {
 		SampleStruct f;
 		f.id = (int) i; 
@@ -465,7 +464,7 @@ TYPED_TEST_P(BaseTest, Benchmark) {
 
 		f.name = out.str();
 		vec.push_back(f);
-	}*/
+	}
 	test_val(vec);
 }
 
@@ -506,8 +505,11 @@ REGISTER_TYPED_TEST_CASE_P(
 	Structs,
 	Classes,
 	Pointers,
-	Benchmark
+	SmartPointers,
+	SequenceContainers,
+	Inheritance,
+	Benchmark,
+	OutOfClass
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);
-

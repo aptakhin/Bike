@@ -178,6 +178,8 @@ public:
 		return constructing_.get<C>();
 	}
 
+	OutputEssence essence() { return OutputEssence(); }
+
 private:
 	template <int>
 	void before_write() {
@@ -278,6 +280,8 @@ public:
 		assert(constructing_.get());
 		return constructing_.get<C>();
 	}
+
+	InputEssence essence() { return InputEssence(); }
 
 private:
 	template <int>
@@ -504,28 +508,6 @@ public:
 	}
 };
 
-//
-// std::vector
-//
-template <class T>
-class OutputBinarySerializerCall<std::vector<T>&> {
-public:
-	static void call(std::vector<T>& t, OutputBinarySerializerNode& node) {
-		BinaryImpl::Header header;
-		node & header;
-		BinarySequence<uint32_t>::write(t, node);
-	}
-};
-template <class T>
-class InputBinarySerializerCall<std::vector<T>&> {
-public:
-	static void call(std::vector<T>& t, InputBinarySerializerNode& node) {
-		BinaryImpl::Header header;
-		node & header;
-		BinarySequence<uint32_t>::read(t, node);
-	}
-}; 
-
 class OutputBinarySerializer : public OutputBinarySerializerNode {
 public:
 	OutputBinarySerializer(IWriter* writer)
@@ -576,5 +558,93 @@ public:
 		OutputBinarySerializerCall<T&>::call(t, node);
 	}
 };
+
+#define S11N_BINARY_OUT(Type, Function)\
+	template <>\
+	class OutputBinarySerializerCall<Type&> {\
+	public:\
+		static void call(Type& t, OutputBinarySerializerNode& node) {\
+			Function(t, node);\
+		}\
+	};\
+	template <>\
+	class InputBinarySerializerCall<Type&> {\
+	public:\
+		static void call(Type& t, InputBinarySerializerNode& node) {\
+			Function(t, node);\
+		}\
+	};
+
+// ****** <vector> ext ******
+template <class T>
+class OutputBinarySerializerCall<std::vector<T>&> {
+public:
+	static void call(std::vector<T>& t, OutputBinarySerializerNode& node) {
+		BinarySequence<uint32_t>::write(t, node);
+	}
+};
+template <class T>
+class InputBinarySerializerCall<std::vector<T>&> {
+public:
+	static void call(std::vector<T>& t, InputBinarySerializerNode& node) {
+		BinarySequence<uint32_t>::read(t, node);
+	}
+}; 
+
+// ****** <list> ext ******
+template <class T>
+class OutputBinarySerializerCall<std::list<T>&> {
+public:
+	static void call(std::list<T>& t, OutputBinarySerializerNode& node) {
+		BinarySequence<uint32_t>::write(t, node);
+	}
+};
+template <class T>
+class InputBinarySerializerCall<std::list<T>&> {
+public:
+	static void call(std::list<T>& t, InputBinarySerializerNode& node) {
+		BinarySequence<uint32_t>::read(t, node);
+	}
+};
+
+#ifndef S11N_CPP03
+// ****** <memory> ext ******
+template <class T>
+class OutputBinarySerializerCall<std::unique_ptr<T>&> {
+public:
+	static void call(std::unique_ptr<T>& t, OutputBinarySerializerNode& node) {
+		OutputBinarySerializerNode sub(&node, node.writer(), node.refs());
+		T* tmp = t.get();
+		sub & tmp;
+	}
+};
+template <class T>
+class InputBinarySerializerCall<std::unique_ptr<T>&> {
+public:
+	static void call(std::unique_ptr<T>& t, InputBinarySerializerNode& node) {
+		T* ref = S11N_NULLPTR;
+		InputBinarySerializerNode sub(&node, node.reader(), node.refs());
+		sub & ref;
+		t.reset(ref);
+	}
+};
+
+template <class T>
+class OutputBinarySerializerCall<std::shared_ptr<T>&> {
+public:
+	static void call(std::shared_ptr<T>& t, OutputBinarySerializerNode& node) {
+		node.ptr_impl(t.get());
+	}
+};
+template <class T>
+class InputBinarySerializerCall<std::shared_ptr<T>&> {
+public:
+	static void call(std::shared_ptr<T>& t, InputBinarySerializerNode& node) {
+		T* ref = S11N_NULLPTR;
+		node.ptr_impl(ref);
+		t.reset(ref);
+	}
+};
+#endif // #ifndef S11N_CPP03
 
 } // namespace bike {
