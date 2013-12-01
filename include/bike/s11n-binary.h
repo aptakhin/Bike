@@ -18,7 +18,7 @@ struct Tag {
 	const static int Reference= 1 << 3;
 	const static int Version  = 1 << 2;
 	const static int Name     = 1 << 1;
-	const static int Extended = 1;
+	const static int LongSize = 1;
 
 	Tag() : tag_(Hello) {}
 
@@ -27,12 +27,14 @@ struct Tag {
 	bool has_reference()const { return (tag_ & Reference) > 0; }
 	bool has_version()  const { return (tag_ & Version) > 0; }
 	bool has_name()     const { return (tag_ & Name) > 0; }
-	bool has_extended() const { return (tag_ & Extended) > 0; }
+	bool has_long_size() const{ return (tag_ & LongSize) > 0; }
 
 	void unset_version() { tag_ &= ~Version; }
-	void set_version() { tag_ |= Version; }
+	void set_version()   { tag_ |= Version; }
 
 	void set_reference() { tag_ |= Reference; }
+
+	void set_long_size() { tag_ |= LongSize; }
 
 	uint8_t tag_;
 };
@@ -54,6 +56,14 @@ struct Name {
 	std::string name_;
 };
 
+struct Size {
+	uint32_t size_;
+
+	bool need_long_size(uint32_t size) {
+		return size > 0xFF;
+	}
+};
+
 class Header {
 public:
 	template <class Node>
@@ -64,6 +74,7 @@ public:
 			node.raw_impl(ref_);
 		if (tag_.has_version())
 			node.raw_impl(ver_);
+		node.raw_impl(size_);
 	}
 
 	void set_version(uint8_t v) {
@@ -91,17 +102,46 @@ public:
 
 	bool has_version() const { return tag_.has_version(); }
 
+	void set_size(uint32_t size) {
+		if (size_.need_long_size(size))
+			tag_.set_long_size();
+		size_.size_ = size;
+	}
+
+	uint32_t size() const {
+		return size_.size_;
+	}
+
+	void plus_size(uint32_t plus) {
+		set_size(size() + plus);
+	}
+
 private:
 	Tag          tag_;
 	Reference    ref_;
 	SmallVersion ver_;
+	Size         size_;
 };
 
 } // namespace BinaryImpl {
 
+class ISeekWriter : public IWriter {
+public:
+	virtual uint64_t tell() = 0;
+
+	virtual void seek(uint64_t pos) = 0;
+};
+
+class ISeekReader : public IReader {
+public:
+	virtual uint64_t tell() = 0;
+
+	virtual void seek(uint64_t pos) = 0;
+};
+
 class OutputBinarySerializerNode {
 public:
-	OutputBinarySerializerNode(OutputBinarySerializerNode* parent, IWriter* writer, ReferencesPtr* refs)
+	OutputBinarySerializerNode(OutputBinarySerializerNode* parent, ISeekWriter* writer, ReferencesPtr* refs)
 	:	parent_(parent),
 		writer_(writer),
 		refs_(refs),
@@ -131,6 +171,7 @@ public:
 
 	template <class T>
 	void search(T& t, const char* name) {
+
 	}
 
 	template <class Base>
@@ -170,7 +211,7 @@ public:
 
 	ReferencesPtr* refs() const { return refs_; }
 
-	IWriter* writer() { return writer_; }
+	ISeekWriter* writer() { return writer_; }
 
 	template <class C>
 	C* constructing() const {
@@ -191,16 +232,18 @@ private:
 
 private:
 	OutputBinarySerializerNode* parent_;
-	IWriter*       writer_;
+	BinaryImpl::Header          header_;
+
+	bool header_written_;
+
+	ISeekWriter*   writer_;
 	ReferencesPtr* refs_;
-	bool     header_written_;
-	PtrHolder constructing_;
-	BinaryImpl::Header header_;
+	PtrHolder      constructing_;	
 };
 
 class InputBinarySerializerNode {
 public:
-	InputBinarySerializerNode(InputBinarySerializerNode* parent, IReader* reader, ReferencesId* refs)
+	InputBinarySerializerNode(InputBinarySerializerNode* parent, ISeekReader* reader, ReferencesId* refs)
 	:	parent_(parent),
 		reader_(reader),
 		refs_(refs),
@@ -273,7 +316,7 @@ public:
 
 	ReferencesId* refs() const { return refs_; }
 
-	IReader* reader() { return reader_; }
+	ISeekReader* reader() { return reader_; }
 
 	template <class C>
 	C* constructing() const {
@@ -295,7 +338,7 @@ private:
 private:
 	InputBinarySerializerNode* parent_;
 
-	IReader*      reader_;
+	ISeekReader*      reader_;
 	ReferencesId* refs_;
 	bool          header_read_;
 	PtrHolder     constructing_;
@@ -434,6 +477,32 @@ public:
 	}
 };
 
+template <>
+class OutputBinarySerializerCall<BinaryImpl::Size&> {
+public:
+	static void call(BinaryImpl::Size& t, OutputBinarySerializerNode& node) {
+		if (t.need_long_size(t.size_))
+			EncoderImpl<uint32_t>::encode(node.writer(), t.size_);
+		else
+			EncoderImpl<uint8_t>::encode(node.writer(), uint8_t(t.size_));
+	}
+};
+template <>
+class InputBinarySerializerCall<BinaryImpl::Size&> {
+public:
+	static void call(BinaryImpl::Size& t, InputBinarySerializerNode& node) {
+
+		if (t.need_long_size(t.size_))
+			DecoderImpl<uint32_t>::decode(node.reader(), t.size_);
+		else
+		{
+			uint8_t u8size;
+			DecoderImpl<uint8_t>::decode(node.reader(), u8size);
+			t.size_ = u8size;
+		}
+	}
+};
+
 template <class T, class Iter>
 class InputBinaryIter : public std::iterator<std::input_iterator_tag, T> {
 public:
@@ -510,7 +579,7 @@ public:
 
 class OutputBinarySerializer : public OutputBinarySerializerNode {
 public:
-	OutputBinarySerializer(IWriter* writer)
+	OutputBinarySerializer(ISeekWriter* writer)
 	:	OutputBinarySerializerNode(S11N_NULLPTR, writer, &refs_) {}
 
 	template <class T>
@@ -525,7 +594,7 @@ private:
 
 class InputBinarySerializer : public InputBinarySerializerNode {
 public:
-	InputBinarySerializer(IReader* reader)
+	InputBinarySerializer(ISeekReader* reader)
 	:	InputBinarySerializerNode(S11N_NULLPTR, reader, &refs_) {}
 
 	template <class T>

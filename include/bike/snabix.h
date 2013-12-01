@@ -33,7 +33,7 @@ public:
 	:	backend_(backend),
 		size_(0) {}
 
-	void write(void* buf, size_t size) /* override */ {
+	void write(void* buf, size_t size) S11N_OVERRIDE {
 		char* ptr = reinterpret_cast<char*>(buf);
 		while (size > 0) {
 			size_t write_bytes = std::min(size, BufSize - size_);
@@ -70,7 +70,7 @@ public:
 		fclose(fout_);
 	}
 
-	void write(const void* buf, size_t size) /* override */{
+	void write(const void* buf, size_t size) S11N_OVERRIDE{
 		fwrite(buf, 1, size, fout_);
 	}
 

@@ -43,12 +43,12 @@ std::string stringify_bytes(const void* buf, size_t size)
 	return res;
 }
 
-class StdReader : public IReader
+class StdReader : public ISeekReader
 {
 public:
-	StdReader(std::istream* in) : in_(in) { std::cout << "CTOR: " << std::endl; }
+	StdReader(std::istream* in) : in_(in) {}
 
-	virtual size_t read(void* buf, size_t size) /* override */ {
+	virtual size_t read(void* buf, size_t size) S11N_OVERRIDE {
 		in_->read((char*) buf, size);
 #	ifdef S11N_DEBUG_LOG_IO
 		std::cout << "I: " << stringify_bytes(buf, size) << std::endl;
@@ -56,24 +56,36 @@ public:
 		return size;//FIXME
 	}
 
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(in_->tellg());
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		in_->seekg(pos);
+	}
+
 protected:
 	std::istream* in_;
 };
 
-class StdWriter : public IWriter
+class StdWriter : public ISeekWriter
 {
 public:
-	StdWriter(std::ostream* out) : out_(out)  { std::cout << "CTOR: " << std::endl; }
+	StdWriter(std::ostream* out) : out_(out)  {}
 
-	virtual void write(const void* buf, size_t size) /* override */ {
+	virtual void write(const void* buf, size_t size) S11N_OVERRIDE {
 		out_->write((const char*) buf, size);
 #	ifdef S11N_DEBUG_LOG_IO
 		std::cout << "W: " << stringify_bytes(buf, size) << std::endl;
 #	endif
 	}
 
-	void close() {
-		out_->flush();	
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(out_->tellp());
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		out_->seekp(pos);
 	}
 
 protected:

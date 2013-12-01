@@ -11,8 +11,10 @@
 
 #ifdef S11N_CPP03
 #	define S11N_NULLPTR NULL
+#	define S11N_OVERRIDE
 #else
-#	define S11N_NULLPTR nullptr
+#	define S11N_NULLPTR  nullptr
+#	define S11N_OVERRIDE override
 #endif
 
 // Need this for simple using vector, list
@@ -257,14 +259,14 @@ public:
 	virtual ~Plant() {}
 
 	/// Constructing object from node data
-	PtrHolder create(PtrHolder holder) /* override */ {
+	PtrHolder create(PtrHolder holder) S11N_OVERRIDE {
 		InNode* orig = holder.get<InNode>();
 		assert(orig);
 		return PtrHolder(Ctor<T*, InNode>::ctor(*orig));
 	}
 
 	/// Reading object from node data
-	void read(void* rd, PtrHolder node) /* override */ {
+	void read(void* rd, PtrHolder node) S11N_OVERRIDE {
 		InNode* orig = node.get<InNode>();
 		assert(orig);
 		T& r = *static_cast<T*>(rd);
@@ -272,7 +274,7 @@ public:
 	}
 
 	/// Writing object to node data
-	void write(void* wr, PtrHolder node) /* override */ {
+	void write(void* wr, PtrHolder node) S11N_OVERRIDE {
 		OutNode* orig = node.get<OutNode>();
 		assert(orig);
 		T& w = *static_cast<T*>(wr);

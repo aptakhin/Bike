@@ -10,29 +10,48 @@
 
 using namespace bike;
 
-class StrWriter : public IWriter
+class StrWriter : public ISeekWriter
 {
 public:
-	StrWriter(std::string& str) : out_(str) {}
+	StrWriter(std::string& str) : out_(str), offset_(0) {}
 
-	void write(const void* o, size_t size) {
-		char* s = (char*) o;
-		std::string x(s, s + size);
-		out_ += x;
+	virtual void write(const void* o, size_t size) S11N_OVERRIDE {
+		int reserve = out_.size() - offset_ + size;
+		if (reserve > 0)
+			out_.resize(reserve);
+		memcpy(&out_[offset_], o, size);
+		offset_ += size;
+	}
+
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(offset_);
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		offset_ = pos;
 	}
 
 	std::string& out_;
+	size_t offset_;
 };
 
-class StrReader : public IReader
+class StrReader : public ISeekReader
 {
 public:
 	StrReader(std::string& str) : out_(str), offset_(0) {}
 
-	size_t read(void* o, size_t size) {
+	virtual size_t read(void* o, size_t size) S11N_OVERRIDE {
 		memcpy(o, &out_[offset_], size);
 		offset_ += size;
 		return size;
+	}
+
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(offset_);
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		offset_ = size_t(pos);
 	}
 
 	std::string& out_;
