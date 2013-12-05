@@ -576,7 +576,6 @@ void cond(bool cnd, T& t, const char* name, Node& node) {
 		node.named(t, name);
 }
 
-
 // Constructor
 template <class T>
 void construct(T* obj) {

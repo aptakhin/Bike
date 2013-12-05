@@ -47,23 +47,20 @@ struct Tag {
 	const static int Reference= 1 << 3;
 	const static int Version  = 1 << 2;
 	const static int Name     = 1 << 1;
-	const static int LongSize = 1;
+	const static int Reserved = 1;
 
 	Tag() : tag_(Hello) {}
 
-	bool check()        const { return (tag_ & Hello) == Hello; }
+	bool check()         const { return (tag_ & Hello) == Hello; }
 	
-	bool has_reference()const { return (tag_ & Reference) > 0; }
-	bool has_version()  const { return (tag_ & Version) > 0; }
-	bool has_name()     const { return (tag_ & Name) > 0; }
-	bool has_long_size() const{ return (tag_ & LongSize) > 0; }
+	bool has_reference() const { return (tag_ & Reference) > 0; }
+	bool has_version()   const { return (tag_ & Version) > 0; }
+	bool has_name()      const { return (tag_ & Name) > 0; }
 
 	void unset_version() { tag_ &= ~Version; }
 	void set_version()   { tag_ |= Version; }
 
 	void set_reference() { tag_ |= Reference; }
-
-	void set_long_size() { tag_ |= LongSize; }
 
 	uint8_t tag_;
 };
@@ -87,10 +84,6 @@ struct Name {
 
 struct Size {
 	uint32_t size_;
-
-	bool need_long_size(uint32_t size) {
-		return size > 0xFF;
-	}
 };
 
 class Header {
@@ -103,6 +96,7 @@ public:
 			node.raw_impl(ref_);
 		if (tag_.has_version())
 			node.raw_impl(ver_);
+		size_pos_ = node.io()->tell();
 		node.raw_impl(size_);
 	}
 
@@ -132,8 +126,6 @@ public:
 	bool has_version() const { return tag_.has_version(); }
 
 	void set_size(uint32_t size) {
-		if (size_.need_long_size(size))
-			tag_.set_long_size();
 		size_.size_ = size;
 	}
 
@@ -150,6 +142,8 @@ private:
 	Reference    ref_;
 	SmallVersion ver_;
 	Size         size_;
+
+	ISeekable::Pos size_pos_;
 };
 
 struct Optional {
@@ -277,6 +271,7 @@ public:
 	ReferencesPtr* refs() const { return refs_; }
 
 	ISeekWriter* writer() { return writer_; }
+	ISeekable*   io()     { return writer_; }
 
 	template <class C>
 	C* constructing() const {
@@ -299,9 +294,7 @@ private:
 		}
 	}
 
-	void optional_check() {
-		return optional_check_impl<42>();
-	}
+	void optional_check() {	return optional_check_impl<42>(); }
 
 	template <int>
 	void optional_check_impl() {
@@ -412,6 +405,7 @@ public:
 	ReferencesId* refs() const { return refs_; }
 
 	ISeekReader* reader() { return reader_; }
+	ISeekable*   io()     { return reader_; }
 
 	template <class C>
 	C* constructing() const {
@@ -582,26 +576,16 @@ template <>
 class OutputBinarySerializerCall<BinaryImpl::Size&> {
 public:
 	static void call(BinaryImpl::Size& t, OutputBinarySerializerNode& node) {
-		if (t.need_long_size(t.size_))
-			EncoderImpl<uint32_t>::encode(node.writer(), t.size_);
-		else
-			EncoderImpl<uint8_t>::encode(node.writer(), uint8_t(t.size_));
+		EncoderImpl<uint32_t>::encode(node.writer(), t.size_);
 	}
 };
 template <>
 class InputBinarySerializerCall<BinaryImpl::Size&> {
 public:
 	static void call(BinaryImpl::Size& t, InputBinarySerializerNode& node) {
-		if (t.need_long_size(t.size_))
-			DecoderImpl<uint32_t>::decode(node.reader(), t.size_);
-		else {
-			uint8_t u8size;
-			DecoderImpl<uint8_t>::decode(node.reader(), u8size);
-			t.size_ = u8size;
-		}
+		DecoderImpl<uint32_t>::decode(node.reader(), t.size_);
 	}
 };
-
 
 template <>
 class OutputBinarySerializerCall<BinaryImpl::Optional&> {
