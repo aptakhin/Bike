@@ -480,8 +480,6 @@ TYPED_TEST_P(BaseTest, Benchmark) {
 	test_val(vec);
 }
 
-#if 0
-
 struct ConfigSample {
 	std::string name;
 	std::string start_url;
@@ -508,8 +506,6 @@ TYPED_TEST_P(BaseTest, Optional) {
 	test_val(conf);
 }
 
-#endif
-
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
@@ -521,7 +517,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	SequenceContainers,
 	Inheritance,
 	Benchmark,
-	OutOfClass
+	OutOfClass,
+	Optional
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);

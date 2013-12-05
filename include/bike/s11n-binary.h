@@ -7,6 +7,35 @@
 
 namespace bike {
 
+class ISeekable  {
+public:
+	typedef uint64_t Pos;
+
+	virtual ~ISeekable() {}
+
+	virtual Pos tell() = 0;
+
+	virtual void seek(Pos pos) = 0;
+};
+
+class SeekJumper {
+public:
+	SeekJumper(ISeekable* seekable, ISeekable::Pos pos) 
+	:	seekable_(seekable),
+		saved_pos_(seekable->tell()) {}
+
+	~SeekJumper() {
+		seekable_->seek(saved_pos_);
+	}
+
+private:
+	ISeekable*     seekable_;
+	ISeekable::Pos saved_pos_;
+};
+
+class ISeekWriter : public ISeekable, public IWriter {};
+class ISeekReader : public ISeekable, public IReader {};
+
 class BinarySerializerStorage {
 	S11N_TYPE_STORAGE
 };
@@ -123,21 +152,51 @@ private:
 	Size         size_;
 };
 
+struct Optional {
+	uint8_t head_;
+
+	Optional() : head_(0) {}
+};
+
+class OptionalHeader
+{
+public:
+
+	template <class Node>
+	void ser(Node& node) {
+		node.raw_impl(opt_);
+		offset_ = 0;
+	}
+
+	OptionalHeader() : offset_(7), seek_(~0) {} /* */
+
+	void clear_head() {
+		opt_.head_ = 0;
+	}
+
+	bool has_cur() const {
+		return opt_.head_ & (1 << offset_);
+	}
+
+	void set_cur() {
+		opt_.head_ |= (1 << offset_);
+	}
+
+	bool next() {
+		++offset_;
+		return offset_ < 8;
+	}
+
+	ISeekable::Pos seek() const { return seek_; }
+	void set_seek(ISeekable::Pos pos) { seek_ = pos; }
+
+private:
+	Optional       opt_;
+	uint8_t        offset_;
+	ISeekable::Pos seek_;
+};
+
 } // namespace BinaryImpl {
-
-class ISeekWriter : public IWriter {
-public:
-	virtual uint64_t tell() = 0;
-
-	virtual void seek(uint64_t pos) = 0;
-};
-
-class ISeekReader : public IReader {
-public:
-	virtual uint64_t tell() = 0;
-
-	virtual void seek(uint64_t pos) = 0;
-};
 
 class OutputBinarySerializerNode {
 public:
@@ -170,13 +229,19 @@ public:
 	}
 
 	template <class T>
-	void search(T& t, const char* name) {
-
-	}
+	void search(T& t, const char* name) {}
 
 	template <class Base>
-	void base(Base* base) {
+	void base(Base* base) {}
 
+	template <class T>
+	void optional(T& t, const char* name, const T& def) {
+		optional_check();
+
+		if (t != def) {
+			opt_.set_cur();
+			named(t, name);
+		}		
 	}
 
 	template <class T>
@@ -234,9 +299,27 @@ private:
 		}
 	}
 
+	void optional_check() {
+		return optional_check_impl<42>();
+	}
+
+	template <int>
+	void optional_check_impl() {
+		if (!opt_.next()) {
+			if (~opt_.seek()) {
+				SeekJumper jmp(writer_, opt_.seek());
+				OutputBinarySerializerCall<BinaryImpl::OptionalHeader&>::call(opt_, *this);
+			}
+			opt_.clear_head();
+			opt_.set_seek(writer_->tell());
+			OutputBinarySerializerCall<BinaryImpl::OptionalHeader&>::call(opt_, *this);
+		}
+	}
+
 private:
 	OutputBinarySerializerNode* parent_;
 	BinaryImpl::Header          header_;
+	BinaryImpl::OptionalHeader  opt_;
 
 	bool header_written_;
 
@@ -274,12 +357,20 @@ public:
 	}
 
 	template <class T>
-	void search(T& t, const char* name) {
-		int p = 0;
-	}
+	void search(T& t, const char* name) {}
 
 	template <class Base>
-	void base(Base* base) {
+	void base(Base* base) {}
+
+	template <class T>
+	void optional(T& t, const char* name, const T& def)	{
+		if (!opt_.next())
+			InputBinarySerializerCall<BinaryImpl::OptionalHeader&>::call(opt_, *this);
+
+		if (opt_.has_cur())
+			named(t, name);
+		else
+			t = def;
 	}
 
 	template <class T>
@@ -345,13 +436,13 @@ private:
 
 private:
 	InputBinarySerializerNode* parent_;
+	BinaryImpl::Header         header_;
+	BinaryImpl::OptionalHeader opt_;
 
-	ISeekReader*      reader_;
+	ISeekReader*  reader_;
 	ReferencesId* refs_;
 	bool          header_read_;
 	PtrHolder     constructing_;
-
-	BinaryImpl::Header header_;
 };
 
 template <class T>
@@ -510,6 +601,23 @@ public:
 		}
 	}
 };
+
+
+template <>
+class OutputBinarySerializerCall<BinaryImpl::Optional&> {
+public:
+	static void call(BinaryImpl::Optional& t, OutputBinarySerializerNode& node) {
+		EncoderImpl<uint8_t>::encode(node.writer(), t.head_);
+	}
+};
+template <>
+class InputBinarySerializerCall<BinaryImpl::Optional&> {
+public:
+	static void call(BinaryImpl::Optional& t, InputBinarySerializerNode& node) {
+		DecoderImpl<uint8_t>::decode(node.reader(), t.head_);
+	}
+};
+
 
 template <class T, class Iter>
 class InputBinaryIter : public std::iterator<std::input_iterator_tag, T> {

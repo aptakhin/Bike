@@ -59,8 +59,7 @@ public:
 	}
 
 	template <class T>
-	void optional(T& t, const char* name, const T& def)
-	{
+	void optional(T& t, const char* name, const T& def)	{
 		assert(name && name[0] != 0);
 		if (t != def)
 			named(t, name);
@@ -198,8 +197,7 @@ public:
 	}
 
 	template <class T>
-	void optional(T& t, const char* name, const T& def)
-	{
+	void optional(T& t, const char* name, const T& def)	{
 		assert(name && name[0] != 0);
 		pugi::xml_node found = xml_.find_child_by_attribute("name", name);
 		if (!found.empty())
