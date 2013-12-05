@@ -88,8 +88,13 @@ struct Size {
 
 class Header {
 public:
+	Header()
+	:	header_pos_(0),
+		size_pos_(0) {}
+
 	template <class Node>
 	void ser(Node& node) {
+		header_pos_ = node.io()->tell();
 		node.raw_impl(tag_);
 		assert(tag_.check());
 		if (tag_.has_reference())
@@ -97,7 +102,7 @@ public:
 		if (tag_.has_version())
 			node.raw_impl(ver_);
 		size_pos_ = node.io()->tell();
-		node.raw_impl(size_);
+		write_size(node);
 	}
 
 	void set_version(uint8_t v) {
@@ -133,8 +138,12 @@ public:
 		return size_.size_;
 	}
 
-	void plus_size(uint32_t plus) {
-		set_size(size() + plus);
+	ISeekable::Pos size_pos()   const { return size_pos_; }
+	ISeekable::Pos header_pos() const { return header_pos_; }
+
+	template <class Node>
+	void write_size(Node& node) {
+		node.raw_impl(size_);
 	}
 
 private:
@@ -143,6 +152,7 @@ private:
 	SmallVersion ver_;
 	Size         size_;
 
+	ISeekable::Pos header_pos_;
 	ISeekable::Pos size_pos_;
 };
 
@@ -218,8 +228,9 @@ public:
 	template <class T>
 	void named(T& t, const char* name) {
 		constructing_.set(&t);
-		check_header();
+		before_write();
 		raw_impl(t);
+		after_write();
 	}
 
 	template <class T>
@@ -245,7 +256,7 @@ public:
 			std::pair<bool, unsigned> set_result = refs_->set(t);
 			ref = set_result.second;
 			header_.set_ref(ref, typeid(*t).name());
-			check_header();
+			before_write();
 			if (set_result.first) {
 				const Type* type = TypeStorageAccessor<BinarySerializerStorage>::find(typeid(*t).name());
 				if (type) { // If we found type in registered types, then initialize such way
@@ -258,7 +269,7 @@ public:
 		}
 		else {
 			header_.set_ref(0, "");
-			check_header();
+			before_write();
 		}
 	}
 
@@ -281,13 +292,13 @@ public:
 
 	OutputEssence essence() { return OutputEssence(); }
 
-	void check_header() {
-		return before_write<42>();
+	void before_write() {
+		return before_write_impl<42>();
 	}
 
 private:
 	template <int>
-	void before_write() {
+	void before_write_impl() {
 		if (!header_written_) {
 			OutputBinarySerializerCall<BinaryImpl::Header&>::call(header_, *this);
 			header_written_ = true;
@@ -307,6 +318,16 @@ private:
 			opt_.set_seek(writer_->tell());
 			OutputBinarySerializerCall<BinaryImpl::OptionalHeader&>::call(opt_, *this);
 		}
+	}
+
+	void after_write() {
+		ISeekable::Pos cur = writer_->tell();
+		assert(cur > header_.header_pos());
+		ISeekable::Pos size = cur - header_.header_pos();
+		header_.set_size(size);
+
+		SeekJumper jmp(writer_, header_.size_pos());
+		header_.write_size(*this);
 	}
 
 private:
@@ -345,7 +366,7 @@ public:
 	template <class T>
 	void named(T& t, const char* name) {
 		constructing_ = &t;
-		check_header();
+		before_read();
 		raw_impl(t);
 	}
 
@@ -368,7 +389,7 @@ public:
 
 	template <class T>
 	void ptr_impl(T*& t) {
-		check_header();
+		before_read();
 		uint32_t ref = header_.ref_id();
 		if (ref != 0) {
 			void* ptr = refs_->get(ref);
@@ -415,13 +436,13 @@ public:
 
 	InputEssence essence() { return InputEssence(); }
 
-	void check_header() {
-		return before_read<42>();
+	void before_read() {
+		return before_read_impl<42>();
 	}
 
 private:
 	template <int>
-	void before_read() {
+	void before_read_impl() {
 		if (!header_read_) {
 			InputBinarySerializerCall<BinaryImpl::Header&>::call(header_, *this);
 			header_read_ = true;
@@ -460,7 +481,7 @@ public:
 	class OutputBinarySerializerCall<Type&> {\
 	public:\
 		static void call(Type& t, OutputBinarySerializerNode& node) {\
-			node.check_header();\
+			node.before_write();\
 			EncoderImpl<Type>::encode(node.writer(), t);\
 		}\
 	};\
@@ -468,7 +489,7 @@ public:
 	class InputBinarySerializerCall<Type&> {\
 	public:\
 		static void call(Type& t, InputBinarySerializerNode& node) {\
-			node.check_header();\
+			node.before_read();\
 			DecoderImpl<Type>::decode(node.reader(), t);\
 		}\
 	}; 
