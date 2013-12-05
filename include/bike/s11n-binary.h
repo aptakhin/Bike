@@ -165,7 +165,7 @@ public:
 	template <class T>
 	void named(T& t, const char* name) {
 		constructing_.set(&t);
-		before_write<42>();
+		check_header();
 		raw_impl(t);
 	}
 
@@ -186,7 +186,7 @@ public:
 			std::pair<bool, unsigned> set_result = refs_->set(t);
 			ref = set_result.second;
 			header_.set_ref(ref, typeid(*t).name());
-			before_write<42>();
+			check_header();
 			if (set_result.first) {
 				const Type* type = TypeStorageAccessor<BinarySerializerStorage>::find(typeid(*t).name());
 				if (type) { // If we found type in registered types, then initialize such way
@@ -199,7 +199,7 @@ public:
 		}
 		else {
 			header_.set_ref(0, "");
-			before_write<42>();
+			check_header();
 		}
 	}
 
@@ -220,6 +220,10 @@ public:
 	}
 
 	OutputEssence essence() { return OutputEssence(); }
+
+	void check_header() {
+		return before_write<42>();
+	}
 
 private:
 	template <int>
@@ -265,7 +269,7 @@ public:
 	template <class T>
 	void named(T& t, const char* name) {
 		constructing_ = &t;
-		before_read<42>();
+		check_header();
 		raw_impl(t);
 	}
 
@@ -280,7 +284,7 @@ public:
 
 	template <class T>
 	void ptr_impl(T*& t) {
-		before_read<42>();
+		check_header();
 		uint32_t ref = header_.ref_id();
 		if (ref != 0) {
 			void* ptr = refs_->get(ref);
@@ -326,6 +330,10 @@ public:
 
 	InputEssence essence() { return InputEssence(); }
 
+	void check_header() {
+		return before_read<42>();
+	}
+
 private:
 	template <int>
 	void before_read() {
@@ -367,6 +375,7 @@ public:
 	class OutputBinarySerializerCall<Type&> {\
 	public:\
 		static void call(Type& t, OutputBinarySerializerNode& node) {\
+			node.check_header();\
 			EncoderImpl<Type>::encode(node.writer(), t);\
 		}\
 	};\
@@ -374,6 +383,7 @@ public:
 	class InputBinarySerializerCall<Type&> {\
 	public:\
 		static void call(Type& t, InputBinarySerializerNode& node) {\
+			node.check_header();\
 			DecoderImpl<Type>::decode(node.reader(), t);\
 		}\
 	}; 
@@ -491,11 +501,9 @@ template <>
 class InputBinarySerializerCall<BinaryImpl::Size&> {
 public:
 	static void call(BinaryImpl::Size& t, InputBinarySerializerNode& node) {
-
 		if (t.need_long_size(t.size_))
 			DecoderImpl<uint32_t>::decode(node.reader(), t.size_);
-		else
-		{
+		else {
 			uint8_t u8size;
 			DecoderImpl<uint8_t>::decode(node.reader(), u8size);
 			t.size_ = u8size;

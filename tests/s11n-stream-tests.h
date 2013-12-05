@@ -16,7 +16,7 @@ public:
 	StrWriter(std::string& str) : out_(str), offset_(0) {}
 
 	virtual void write(const void* o, size_t size) S11N_OVERRIDE {
-		int reserve = out_.size() - offset_ + size;
+		int reserve = offset_ + size;
 		if (reserve > 0)
 			out_.resize(reserve);
 		memcpy(&out_[offset_], o, size);
@@ -41,6 +41,7 @@ public:
 	StrReader(std::string& str) : out_(str), offset_(0) {}
 
 	virtual size_t read(void* o, size_t size) S11N_OVERRIDE {
+		assert(offset_ + size <= out_.size());
 		memcpy(o, &out_[offset_], size);
 		offset_ += size;
 		return size;
