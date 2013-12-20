@@ -315,7 +315,7 @@ protected:
 public:
 
 	template <class T>
-	void reg(const std::string alias = "") {
+	void reg(const std::string& alias = "") {
 		Impl<T, Serializer0>::reg(alias);
 		Impl<T, Serializer1>::reg(alias);
 	}

@@ -28,7 +28,7 @@ public:
 	}
 
 	virtual void seek(uint64_t pos) S11N_OVERRIDE {
-		offset_ = pos;
+		offset_ = size_t(pos);
 	}
 
 	std::string& out_;

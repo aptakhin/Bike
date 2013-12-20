@@ -18,13 +18,15 @@ public:
 	virtual void seek(Pos pos) = 0;
 };
 
-class SeekJumper {
+class RelSeekJumper {
 public:
-	SeekJumper(ISeekable* seekable, ISeekable::Pos pos) 
+	RelSeekJumper(ISeekable* seekable, ISeekable::Pos pos) 
 	:	seekable_(seekable),
-		saved_pos_(seekable->tell()) {}
+		saved_pos_(seekable->tell()) {
+		seekable_->seek(pos);
+	}
 
-	~SeekJumper() {
+	~RelSeekJumper() {
 		seekable_->seek(saved_pos_);
 	}
 
@@ -89,8 +91,7 @@ struct Size {
 class Header {
 public:
 	Header()
-	:	header_pos_(0),
-		size_pos_(0) {}
+	:	header_pos_(0) {}
 
 	template <class Node>
 	void ser(Node& node) {
@@ -101,8 +102,6 @@ public:
 			node.raw_impl(ref_);
 		if (tag_.has_version())
 			node.raw_impl(ver_);
-		size_pos_ = node.io()->tell();
-		write_size(node);
 	}
 
 	void set_version(uint8_t v) {
@@ -130,21 +129,7 @@ public:
 
 	bool has_version() const { return tag_.has_version(); }
 
-	void set_size(uint32_t size) {
-		size_.size_ = size;
-	}
-
-	uint32_t size() const {
-		return size_.size_;
-	}
-
-	ISeekable::Pos size_pos()   const { return size_pos_; }
 	ISeekable::Pos header_pos() const { return header_pos_; }
-
-	template <class Node>
-	void write_size(Node& node) {
-		node.raw_impl(size_);
-	}
 
 private:
 	Tag          tag_;
@@ -153,7 +138,6 @@ private:
 	Size         size_;
 
 	ISeekable::Pos header_pos_;
-	ISeekable::Pos size_pos_;
 };
 
 struct Optional {
@@ -165,7 +149,6 @@ struct Optional {
 class OptionalHeader
 {
 public:
-
 	template <class Node>
 	void ser(Node& node) {
 		node.raw_impl(opt_);
@@ -200,16 +183,31 @@ private:
 	ISeekable::Pos seek_;
 };
 
+struct Index {
+	uint64_t next_index;
+	uint16_t hash[4];
+	uint64_t seek_next[4];
+};
+
+class IndexHeader {
+private:
+	Index  index_;
+	size_t offset_;
+
+	ISeekable::Pos pos_;
+};
+
 } // namespace BinaryImpl {
 
 class OutputBinarySerializerNode {
 public:
-	OutputBinarySerializerNode(OutputBinarySerializerNode* parent, ISeekWriter* writer, ReferencesPtr* refs)
+	OutputBinarySerializerNode(OutputBinarySerializerNode* parent, ISeekWriter* writer, ReferencesPtr* refs, uint8_t format_ver)
 	:	parent_(parent),
 		writer_(writer),
 		refs_(refs),
 		header_written_(false),
-		constructing_(S11N_NULLPTR) {}
+		constructing_(S11N_NULLPTR),
+		format_ver_(format_ver) {}
 
 	void decl_version(unsigned ver) {
 		header_.set_version(ver);
@@ -275,7 +273,7 @@ public:
 
 	template <class T>
 	void raw_impl(T& t) {
-		OutputBinarySerializerNode node(this, writer_, refs_);
+		OutputBinarySerializerNode node(this, writer_, refs_, format_ver_);
 		OutputBinarySerializerCall<T&>::call(t, node);
 	}
 
@@ -296,6 +294,9 @@ public:
 		return before_write_impl<42>();
 	}
 
+	uint8_t format_ver() const { return format_ver_; }
+	void format_ver(uint8_t format_ver) { format_ver_ = format_ver; }
+
 private:
 	template <int>
 	void before_write_impl() {
@@ -311,7 +312,7 @@ private:
 	void optional_check_impl() {
 		if (!opt_.next()) {
 			if (~opt_.seek()) {
-				SeekJumper jmp(writer_, opt_.seek());
+				RelSeekJumper jmp(writer_, opt_.seek());
 				OutputBinarySerializerCall<BinaryImpl::OptionalHeader&>::call(opt_, *this);
 			}
 			opt_.clear_head();
@@ -323,11 +324,6 @@ private:
 	void after_write() {
 		ISeekable::Pos cur = writer_->tell();
 		assert(cur > header_.header_pos());
-		ISeekable::Pos size = cur - header_.header_pos();
-		header_.set_size(size);
-
-		SeekJumper jmp(writer_, header_.size_pos());
-		header_.write_size(*this);
 	}
 
 private:
@@ -339,17 +335,19 @@ private:
 
 	ISeekWriter*   writer_;
 	ReferencesPtr* refs_;
-	PtrHolder      constructing_;	
+	PtrHolder      constructing_;
+	uint8_t        format_ver_;
 };
 
 class InputBinarySerializerNode {
 public:
-	InputBinarySerializerNode(InputBinarySerializerNode* parent, ISeekReader* reader, ReferencesId* refs)
+	InputBinarySerializerNode(InputBinarySerializerNode* parent, ISeekReader* reader, ReferencesId* refs, uint8_t format_ver)
 	:	parent_(parent),
 		reader_(reader),
 		refs_(refs),
 		header_read_(false),
-		constructing_(S11N_NULLPTR) {}
+		constructing_(S11N_NULLPTR),
+		format_ver_(format_ver) {}
 
 	void decl_version(unsigned ver) {}
 
@@ -419,7 +417,7 @@ public:
 
 	template <class T>
 	void raw_impl(T& t) {
-		InputBinarySerializerNode node(this, reader_, refs_);
+		InputBinarySerializerNode node(this, reader_, refs_, format_ver_);
 		InputBinarySerializerCall<T&>::call(t, node);
 	}
 
@@ -440,6 +438,9 @@ public:
 		return before_read_impl<42>();
 	}
 
+	uint8_t format_ver() const { return format_ver_; }
+	void format_ver(uint8_t format_ver) { format_ver_ = format_ver; }
+
 private:
 	template <int>
 	void before_read_impl() {
@@ -458,6 +459,7 @@ private:
 	ReferencesId* refs_;
 	bool          header_read_;
 	PtrHolder     constructing_;
+	uint8_t       format_ver_;
 };
 
 template <class T>
@@ -647,7 +649,7 @@ public:
 	}
 
 	T operator *() {
-		InputBinarySerializerNode node(parent_, parent_->reader(), parent_->refs());
+		InputBinarySerializerNode node(parent_, parent_->reader(), parent_->refs(), parent_->format_ver());
 		T t(Ctor<T, InputBinarySerializerNode>::ctor(node));
 		InputBinarySerializerCall<T&>::call(t, node);
 		return t;
@@ -701,7 +703,7 @@ public:
 class OutputBinarySerializer : public OutputBinarySerializerNode {
 public:
 	OutputBinarySerializer(ISeekWriter* writer)
-	:	OutputBinarySerializerNode(S11N_NULLPTR, writer, &refs_) {}
+	:	OutputBinarySerializerNode(S11N_NULLPTR, writer, &refs_, 0) {}
 
 	template <class T>
 	OutputBinarySerializer& operator << (T& t) {
@@ -716,7 +718,7 @@ private:
 class InputBinarySerializer : public InputBinarySerializerNode {
 public:
 	InputBinarySerializer(ISeekReader* reader)
-	:	InputBinarySerializerNode(S11N_NULLPTR, reader, &refs_) {}
+	:	InputBinarySerializerNode(S11N_NULLPTR, reader, &refs_, 0) {}
 
 	template <class T>
 	InputBinarySerializer& operator >> (T& t) {
@@ -803,7 +805,7 @@ template <class T>
 class OutputBinarySerializerCall<std::unique_ptr<T>&> {
 public:
 	static void call(std::unique_ptr<T>& t, OutputBinarySerializerNode& node) {
-		OutputBinarySerializerNode sub(&node, node.writer(), node.refs());
+		OutputBinarySerializerNode sub(&node, node.writer(), node.refs(), node.format_ver());
 		T* tmp = t.get();
 		sub & tmp;
 	}
@@ -813,7 +815,7 @@ class InputBinarySerializerCall<std::unique_ptr<T>&> {
 public:
 	static void call(std::unique_ptr<T>& t, InputBinarySerializerNode& node) {
 		T* ref = S11N_NULLPTR;
-		InputBinarySerializerNode sub(&node, node.reader(), node.refs());
+		InputBinarySerializerNode sub(&node, node.reader(), node.refs(), node.format_ver());
 		sub & ref;
 		t.reset(ref);
 	}
