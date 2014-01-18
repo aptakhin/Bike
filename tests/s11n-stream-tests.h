@@ -132,6 +132,16 @@ TEST(Snabix, Bench) {
 	ASSERT_EQ(v, w);
 }
 
+TEST(Snabix, SizeExtended) {
+	std::string str;
+	StrWriter out(str);
+	EncoderImpl<SizeT>::encode(&out, SizeT(4));
+	StrReader in(str);
+	SizeT v;
+	DecoderImpl<SizeT>::decode(&in, v);
+	ASSERT_EQ(4, v);
+}
+
 TEST(Snabix, Bench2) {
 	std::string str;
 	StrWriter strout(str);

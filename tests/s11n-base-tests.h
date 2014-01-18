@@ -22,7 +22,7 @@ std::string stringify_bytes(const void* buf, size_t size)
 		unsigned char p = *b;
 		sprintf(tmp, "%02X ", p);
 		res += tmp;
-		if ( p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9')
+		if (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9')
 			++in_ascii_range;
 	}
 
