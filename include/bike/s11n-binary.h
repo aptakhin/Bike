@@ -34,7 +34,7 @@ public:
 		: backend_(backend),
 		size_(0) {}
 
-	void write(void* buf, size_t size) S11N_OVERRIDE{
+	void write(void* buf, size_t size) S11N_OVERRIDE {
 		char* ptr = reinterpret_cast<char*>(buf);
 		while (size > 0) {
 			size_t write_bytes = std::min(size, BufSize - size_);
@@ -151,16 +151,16 @@ private:
 };
 
 #define LEAVE_SAME(Type)
-template <>\
-class ConvImpl<Type> {
-	\
-public:\
+	template <>\
+	class ConvImpl<Type> {
+		\
+	public:\
 		ConvImpl() {}\
 		Type operator ()(Type v) {
 			\
 				return v; \
 		}\
-};
+	};
 LEAVE_SAME(int8_t);
 LEAVE_SAME(uint8_t);
 
@@ -209,19 +209,19 @@ public:
 	template <>\
 	class EncoderImpl<Type> {\
 	public:\
-			static void encode(IWriter* writer, const Type& v) {\
-				Type tmp = conv().CONV_NAME(Type)(v); \
-				writer->write(&tmp, sizeof(Type)); \
-			}\
+		static void encode(IWriter* writer, const Type& v) {\
+			Type tmp = conv().CONV_NAME(Type)(v); \
+			writer->write(&tmp, sizeof(Type)); \
+		}\
 	}; \
 	template <>\
 	class DecoderImpl<Type> {\
 	public:\
-			static void decode(IReader* reader, Type& v) {\
-				Type tmp; \
-				reader->read(&tmp, sizeof(Type)); \
-				v = conv().CONV_NAME(Type)(tmp); \
-			}\
+		static void decode(IReader* reader, Type& v) {\
+			Type tmp; \
+			reader->read(&tmp, sizeof(Type)); \
+			v = conv().CONV_NAME(Type)(tmp); \
+		}\
 	};
 
 ENC_RAW(int8_t);
@@ -260,29 +260,16 @@ template <>
 class EncoderImpl<SizeT> {
 public:
 	static void encode(IWriter* writer, const SizeT& v) {
-		uint64_t tmp;
-		//if (v.val >= (1 << 31)) {     // Checking extendint flag
-		//	tmp = v.val & ~(1 << 31); // Clearing flag
-		//}
-		tmp = conv().conv_uint64_t(v.val);
-		writer->write(&tmp, sizeof(uint64_t));
+		uint64_t tmp = conv().conv_uint64_t(v.val);
+		writer->write(&tmp, sizeof(tmp));
 	}
 };
 template <>
 class DecoderImpl<SizeT> {
 public:
 	static void decode(IReader* reader, SizeT& v) {
-		//uint32_t fst, snd;
 		uint64_t tmp;
 		reader->read(&tmp, sizeof(tmp));
-		//reader->read(&fst, sizeof(fst));
-		//if (fst & (1 << 31)) {               // Checking extending flag
-		//	fst = fst & ~(1 << 31);            // Clearing flag
-		//	reader->read(&snd, sizeof(snd));   // Rest 32 bits
-		//	v.val = uint64_t(fst) << 31 + snd; // Merge
-		//}
-		//else
-		//	v.val = uint64_t(fst);
 		v.val = conv().conv_uint64_t(tmp);
 	}
 };
@@ -354,15 +341,15 @@ public:
 	virtual void seek(Pos pos) = 0;
 };
 
-class RelSeekJumper {
+class SeekJumper {
 public:
-	RelSeekJumper(ISeekable* seekable, ISeekable::Pos pos) 
+	SeekJumper(ISeekable* seekable, ISeekable::Pos pos)
 	:	seekable_(seekable),
 		saved_pos_(seekable->tell()) {
 		seekable_->seek(pos);
 	}
 
-	~RelSeekJumper() {
+	~SeekJumper() {
 		seekable_->seek(saved_pos_);
 	}
 
@@ -377,6 +364,10 @@ class ISeekReader : public ISeekable, public IReader {};
 class BinarySerializerStorage {
 	S11N_TYPE_STORAGE
 };
+
+uint16_t make_hash(const char* name) {
+	return uint16_t(name); // Kidding
+}
 
 namespace BinaryImpl {
 
@@ -491,7 +482,7 @@ public:
 		offset_ = 0;
 	}
 
-	OptionalHeader() : offset_(7), seek_(~0) {} /* */
+	OptionalHeader() : offset_(7), seek_(~0) {}
 
 	void clear_head() {
 		opt_.head_ = 0;
@@ -519,19 +510,84 @@ private:
 	ISeekable::Pos seek_;
 };
 
-struct Index {
-	uint64_t next_index;
-	uint16_t hash[4];
-	uint64_t seek_next[4];
+struct IndexNode {
+	uint16_t hash;
+	uint64_t pos_rel;
 };
 
+struct Index {
+	static const size_t Size = 4;
+
+	uint64_t next_index;
+	IndexNode ind[Size];
+
+	Index() : next_index(0) {}
+};
+
+bool operator == (const Index& a, const Index& b) {
+	return std::memcmp(&a, &b, sizeof(Index)) == 0;
+}
+
+bool operator != (const Index& a, const Index& b) {
+	return std::memcmp(&a, &b, sizeof(Index)) != 0;
+}
+
 class IndexHeader {
+public:
+	bool add(uint16_t hash, uint64_t pos_abs) {
+		if (offset_ >= Index::Size)
+			return false;
+
+		index_.ind[offset_].hash    = hash;
+		index_.ind[offset_].pos_rel = pos_abs - pos_abs_;
+
+		++offset_;
+		return true;
+	}
+
+	void set_next_index(ISeekWriter* writer, uint64_t next_index_abs) {
+		SeekJumper jmp(writer, pos_abs_);
+		index_.next_index = next_index_abs - pos_abs_;
+		writer->write(&index_, sizeof(index_));
+	}
+
+	IndexNode& node(size_t index) {
+		assert(index < size());
+		return index_.ind[index];
+	}
+
+	const IndexNode& node(size_t index) const {
+		assert(index < size());
+		return index_.ind[index];
+	}
+
+	void clear() {
+		index_.next_index = 0;
+		offset_ = 0;
+	}
+
+	size_t size() const { return offset_; }
+	uint64_t next_index_rel() const { return index_.next_index; }
+
+	ISeekable::Pos pos_abs() const { return pos_abs_; }
+
+	friend bool operator == (const IndexHeader&, const IndexHeader&);
+	friend bool operator != (const IndexHeader&, const IndexHeader&);
+
 private:
 	Index  index_;
 	size_t offset_;
 
-	ISeekable::Pos pos_;
+	ISeekable::Pos pos_abs_;
 };
+
+bool operator == (const IndexHeader& a, const IndexHeader& b) {
+	return std::memcmp(&a, &b, sizeof(IndexHeader)) == 0;
+}
+
+bool operator != (const IndexHeader& a, const IndexHeader& b) {
+	return std::memcmp(&a, &b, sizeof(IndexHeader)) != 0;
+}
 
 } // namespace BinaryImpl {
 
@@ -648,7 +704,7 @@ private:
 	void optional_check_impl() {
 		if (!opt_.next()) {
 			if (~opt_.seek()) {
-				RelSeekJumper jmp(writer_, opt_.seek());
+				SeekJumper jmp(writer_, opt_.seek());
 				OutputBinarySerializerCall<BinaryImpl::OptionalHeader&>::call(opt_, *this);
 			}
 			opt_.clear_head();
@@ -666,6 +722,7 @@ private:
 	OutputBinarySerializerNode* parent_;
 	BinaryImpl::Header          header_;
 	BinaryImpl::OptionalHeader  opt_;
+	BinaryImpl::IndexHeader     index_;
 
 	bool header_written_;
 
@@ -674,6 +731,64 @@ private:
 	PtrHolder      constructing_;
 	uint8_t        format_ver_;
 };
+
+class BinaryIndexIter : public std::iterator<std::forward_iterator_tag, BinaryImpl::IndexNode> {
+public:
+	BinaryIndexIter() : index_offset_(~0), offset_abs_(0) {}
+
+	BinaryIndexIter(ISeekReader* reader, const BinaryImpl::IndexHeader& index) 
+	:	reader_(reader),
+		index_(index),
+		offset_abs_(index.pos_abs()) {}
+
+	BinaryIndexIter operator ++() {
+		if (index_offset_ >= index_.size()) {
+			// End of index
+			if (index_.next_index_rel()) {
+				SeekJumper jmp(reader_, offset_abs_ + index_.next_index_rel());
+				reader_->read(&index_, sizeof(index_));
+				index_offset_ = 0;
+			} else { // No next index
+				index_.clear();
+				index_offset_ = ~0;
+			}
+		}
+
+		++index_offset_;
+
+		return *this;
+	}
+
+	BinaryImpl::IndexNode operator *() const {
+		return index_.node(index_offset_);
+	}
+
+	BinaryImpl::IndexNode& operator ->() {
+		return index_.node(index_offset_);
+	}
+
+	const BinaryImpl::IndexNode& operator ->() const {
+		return index_.node(index_offset_);
+	}
+
+	friend bool operator == (const BinaryIndexIter&, const BinaryIndexIter&);
+	friend bool operator != (const BinaryIndexIter&, const BinaryIndexIter&);
+
+private:
+	ISeekReader*   reader_;
+	ISeekable::Pos offset_abs_;
+	size_t         index_offset_;
+
+	BinaryImpl::IndexHeader index_;	
+};
+
+bool operator == (const BinaryIndexIter& a, const BinaryIndexIter& b) {
+	return a.index_ == b.index_ && a.index_offset_ == b.index_offset_;
+}
+
+bool operator != (const BinaryIndexIter& a, const BinaryIndexIter& b) {
+	return a.index_ != b.index_ || a.index_offset_ != b.index_offset_;
+}
 
 class InputBinarySerializerNode {
 public:
@@ -705,7 +820,14 @@ public:
 	}
 
 	template <class T>
-	void search(T& t, const char* name) {}
+	void search(T& t, const char* name) {
+		BinaryIndexIter i(reader_, index_), e;
+		uint16_t hash = make_hash(name);
+		for (; i != e; ++i)	{
+		//	if (i->hash == hash && )
+		}
+		//index_.
+	}
 
 	template <class Base>
 	void base(Base* base) {}
@@ -790,6 +912,7 @@ private:
 	InputBinarySerializerNode* parent_;
 	BinaryImpl::Header         header_;
 	BinaryImpl::OptionalHeader opt_;
+	BinaryImpl::IndexHeader    index_;
 
 	ISeekReader*  reader_;
 	ReferencesId* refs_;
