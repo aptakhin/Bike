@@ -274,6 +274,20 @@ public:
 	}
 };
 
+template <class T, size_t N>
+void Encode_array(IWriter* writer, const T(&v)[N]) {
+	const T* src = v;
+	for (size_t i = 0; i < N; ++i, ++src)
+		EncoderImpl<T>::encode(writer, *src);
+}
+
+template <class T, size_t N>
+void Decode_array(IReader* reader, T(&v)[N]) {
+	T* dst = v;
+	for (size_t i = 0; i < N; ++i, ++dst)
+		DecoderImpl<T>::decode(reader, *dst);
+}
+
 //
 // std::string
 //
@@ -366,7 +380,7 @@ class BinarySerializerStorage {
 };
 
 uint16_t make_hash(const char* name) {
-	return uint16_t(name); // Kidding
+	return uint16_t(name[0]); // Kidding
 }
 
 namespace BinaryImpl {
@@ -578,6 +592,24 @@ public:
 		offset_ = 0;
 	}
 
+	bool empty() const {
+		return pos_abs_ == 0;
+	}
+
+	template <int>
+	void readqq(IReader* reader) {
+		DecoderImpl<BinaryImpl::Index&>::decode(reader, index_);
+	}
+
+	void read(IReader* reader) {
+		readqq<42>(reader);
+		DecoderImpl<BinaryImpl::Index&>::decode(reader, index_);
+	}
+
+	void write(IWriter* writer) {
+		EncoderImpl<BinaryImpl::Index&>::encode(writer, index_);
+	}
+
 	size_t size() const { return offset_; }
 	uint64_t next_index_rel() const { return index_.next_index; }
 
@@ -751,6 +783,7 @@ public:
 	BinaryIndexCIter(ISeekReader* reader, const BinaryImpl::IndexHeader& index) 
 	:	reader_(reader),
 		index_(index),
+		index_offset_(0),
 		offset_abs_(index.pos_abs()) {}
 
 	BinaryIndexCIter operator ++() {
@@ -772,7 +805,8 @@ public:
 		return *this;
 	}
 
-	BinaryImpl::IndexNodeAbs operator ->() const {
+	BinaryImpl::IndexNodeAbs operator *() const {
+		before_read();
 		BinaryImpl::IndexNode n = index_.node(index_offset_);
 		return BinaryImpl::IndexNodeAbs(n.hash, offset_abs_ + n.pos_rel);
 	}
@@ -781,11 +815,29 @@ public:
 	friend bool operator != (const BinaryIndexCIter&, const BinaryIndexCIter&);
 
 private:
+	void before_read() const {
+		if (index_offset_ >= index_.size()) {
+			// End of index
+			if (index_.empty()) {
+				index_.read(reader_);
+			}
+			else if (index_.next_index_rel()) {
+				SeekJumper jmp(reader_, offset_abs_ + index_.next_index_rel());
+				index_.read(reader_);
+				index_offset_ = 0;
+			} else { // No next index
+				index_.clear();
+				index_offset_ = ~0;
+			}
+		}
+	}
+
+private:
 	ISeekReader*   reader_;
 	ISeekable::Pos offset_abs_;
-	size_t         index_offset_;
+	mutable size_t index_offset_;
 
-	BinaryImpl::IndexHeader index_;	
+	mutable BinaryImpl::IndexHeader index_;	
 };
 
 bool operator == (const BinaryIndexCIter& a, const BinaryIndexCIter& b) {
@@ -830,7 +882,11 @@ public:
 		BinaryIndexCIter i(reader_, index_), e;
 		uint16_t hash = make_hash(name);
 		for (; i != e; ++i)	{
-		//	if (i->hash == hash && )
+			auto ii = *i;
+			if ((*i).hash == hash) {
+				int p = 0;
+			}
+
 		}
 		//index_.
 	}
@@ -1072,6 +1128,40 @@ class InputBinarySerializerCall<BinaryImpl::Size&> {
 public:
 	static void call(BinaryImpl::Size& t, InputBinarySerializerNode& node) {
 		DecoderImpl<uint32_t>::decode(node.reader(), t.size_);
+	}
+};
+
+template <>
+class OutputBinarySerializerCall<BinaryImpl::Index&> {
+public:
+	static void call(BinaryImpl::Index& t, OutputBinarySerializerNode& node) {
+		EncoderImpl<uint64_t>::encode(node.writer(), t.next_index);
+		Encode_array(node.writer(), t.ind);
+	}
+};
+template <>
+class InputBinarySerializerCall<BinaryImpl::Index&> {
+public:
+	static void call(BinaryImpl::Index& t, InputBinarySerializerNode& node) {
+		DecoderImpl<uint64_t>::decode(node.reader(), t.next_index);
+		Decode_array(node.reader(), t.ind);
+	}
+};
+
+template <>
+class OutputBinarySerializerCall<BinaryImpl::IndexNode&> {
+public:
+	static void call(BinaryImpl::IndexNode& t, OutputBinarySerializerNode& node) {
+		EncoderImpl<uint16_t>::encode(node.writer(), t.hash);
+		EncoderImpl<uint64_t>::encode(node.writer(), t.pos_rel);
+	}
+};
+template <>
+class InputBinarySerializerCall<BinaryImpl::IndexNode&> {
+public:
+	static void call(BinaryImpl::IndexNode& t, InputBinarySerializerNode& node) {
+		DecoderImpl<uint16_t>::decode(node.reader(), t.hash);
+		DecoderImpl<uint64_t>::decode(node.reader(), t.pos_rel);
 	}
 };
 

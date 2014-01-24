@@ -235,13 +235,13 @@ public:
 		StdWriter sout(&fout);\
 		Output out(&sout);\
 		out << (Write);\
-		fout.close();\
+		fout.close();
 
 #define READ(Read)\
 		std::ifstream fin("test.txt", std::ifstream::binary);\
 		StdReader sin(&fin);\
 		Input in(&sin);\
-		in >> (Read);\
+		in >> (Read);
 
 	template <class T>
 	void io_impl(const T& write, T& read) {
