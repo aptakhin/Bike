@@ -513,6 +513,16 @@ private:
 struct IndexNode {
 	uint16_t hash;
 	uint64_t pos_rel;
+
+	IndexNode() : hash(0), pos_rel(0) {}
+};
+
+struct IndexNodeAbs {
+	uint16_t hash;
+	uint64_t pos_abs;
+
+	IndexNodeAbs() : hash(0), pos_abs(0) {}
+	IndexNodeAbs(uint16_t hash, uint64_t pos_abs) : hash(hash), pos_abs(pos_abs) {}
 };
 
 struct Index {
@@ -534,6 +544,8 @@ bool operator != (const Index& a, const Index& b) {
 
 class IndexHeader {
 public:
+	IndexHeader() : offset_(0), pos_abs_(0) {}
+
 	bool add(uint16_t hash, uint64_t pos_abs) {
 		if (offset_ >= Index::Size)
 			return false;
@@ -732,16 +744,16 @@ private:
 	uint8_t        format_ver_;
 };
 
-class BinaryIndexIter : public std::iterator<std::forward_iterator_tag, BinaryImpl::IndexNode> {
+class BinaryIndexCIter : public std::iterator<std::forward_iterator_tag, const BinaryImpl::IndexNodeAbs> {
 public:
-	BinaryIndexIter() : index_offset_(~0), offset_abs_(0) {}
+	BinaryIndexCIter() : index_offset_(~0), offset_abs_(0) {}
 
-	BinaryIndexIter(ISeekReader* reader, const BinaryImpl::IndexHeader& index) 
+	BinaryIndexCIter(ISeekReader* reader, const BinaryImpl::IndexHeader& index) 
 	:	reader_(reader),
 		index_(index),
 		offset_abs_(index.pos_abs()) {}
 
-	BinaryIndexIter operator ++() {
+	BinaryIndexCIter operator ++() {
 		if (index_offset_ >= index_.size()) {
 			// End of index
 			if (index_.next_index_rel()) {
@@ -753,26 +765,20 @@ public:
 				index_offset_ = ~0;
 			}
 		}
-
-		++index_offset_;
+		else {
+			++index_offset_;
+		}
 
 		return *this;
 	}
 
-	BinaryImpl::IndexNode operator *() const {
-		return index_.node(index_offset_);
+	BinaryImpl::IndexNodeAbs operator ->() const {
+		BinaryImpl::IndexNode n = index_.node(index_offset_);
+		return BinaryImpl::IndexNodeAbs(n.hash, offset_abs_ + n.pos_rel);
 	}
 
-	BinaryImpl::IndexNode& operator ->() {
-		return index_.node(index_offset_);
-	}
-
-	const BinaryImpl::IndexNode& operator ->() const {
-		return index_.node(index_offset_);
-	}
-
-	friend bool operator == (const BinaryIndexIter&, const BinaryIndexIter&);
-	friend bool operator != (const BinaryIndexIter&, const BinaryIndexIter&);
+	friend bool operator == (const BinaryIndexCIter&, const BinaryIndexCIter&);
+	friend bool operator != (const BinaryIndexCIter&, const BinaryIndexCIter&);
 
 private:
 	ISeekReader*   reader_;
@@ -782,11 +788,11 @@ private:
 	BinaryImpl::IndexHeader index_;	
 };
 
-bool operator == (const BinaryIndexIter& a, const BinaryIndexIter& b) {
+bool operator == (const BinaryIndexCIter& a, const BinaryIndexCIter& b) {
 	return a.index_ == b.index_ && a.index_offset_ == b.index_offset_;
 }
 
-bool operator != (const BinaryIndexIter& a, const BinaryIndexIter& b) {
+bool operator != (const BinaryIndexCIter& a, const BinaryIndexCIter& b) {
 	return a.index_ != b.index_ || a.index_offset_ != b.index_offset_;
 }
 
@@ -821,7 +827,7 @@ public:
 
 	template <class T>
 	void search(T& t, const char* name) {
-		BinaryIndexIter i(reader_, index_), e;
+		BinaryIndexCIter i(reader_, index_), e;
 		uint16_t hash = make_hash(name);
 		for (; i != e; ++i)	{
 		//	if (i->hash == hash && )
