@@ -276,16 +276,16 @@ public:
 
 template <class T, size_t N>
 void Encode_array(IWriter* writer, const T(&v)[N]) {
-	const T* src = v;
+	T* src = const_cast<T*>(v);
 	for (size_t i = 0; i < N; ++i, ++src)
-		EncoderImpl<T>::encode(writer, *src);
+		EncoderImpl<T&>::encode(writer, *src);
 }
 
 template <class T, size_t N>
 void Decode_array(IReader* reader, T(&v)[N]) {
 	T* dst = v;
 	for (size_t i = 0; i < N; ++i, ++dst)
-		DecoderImpl<T>::decode(reader, *dst);
+		DecoderImpl<T&>::decode(reader, *dst);
 }
 
 //
@@ -596,20 +596,6 @@ public:
 		return pos_abs_ == 0;
 	}
 
-	template <int>
-	void readqq(IReader* reader) {
-		DecoderImpl<BinaryImpl::Index&>::decode(reader, index_);
-	}
-
-	void read(IReader* reader) {
-		readqq<42>(reader);
-		DecoderImpl<BinaryImpl::Index&>::decode(reader, index_);
-	}
-
-	void write(IWriter* writer) {
-		EncoderImpl<BinaryImpl::Index&>::encode(writer, index_);
-	}
-
 	size_t size() const { return offset_; }
 	uint64_t next_index_rel() const { return index_.next_index; }
 
@@ -617,6 +603,8 @@ public:
 
 	friend bool operator == (const IndexHeader&, const IndexHeader&);
 	friend bool operator != (const IndexHeader&, const IndexHeader&);
+
+	Index& index_internal() { return index_; }
 
 private:
 	Index  index_;
@@ -776,6 +764,40 @@ private:
 	uint8_t        format_ver_;
 };
 
+template <>
+class EncoderImpl<BinaryImpl::Index&> {
+public:
+	static void encode(IWriter* writer, BinaryImpl::Index& t) {
+		EncoderImpl<uint64_t>::encode(writer, t.next_index);
+		Encode_array(writer, t.ind);
+	}
+};
+template <>
+class DecoderImpl<BinaryImpl::Index&> {
+public:
+	static void decode(IReader* reader, BinaryImpl::Index& t) {
+		DecoderImpl<uint64_t>::decode(reader, t.next_index);
+		Decode_array(reader, t.ind);
+	}
+};
+
+template <>
+class EncoderImpl<BinaryImpl::IndexNode&> {
+public:
+	static void encode(IWriter* writer, BinaryImpl::IndexNode& t) {
+		EncoderImpl<uint16_t>::encode(writer, t.hash);
+		EncoderImpl<uint64_t>::encode(writer, t.pos_rel);
+	}
+};
+template <>
+class DecoderImpl<BinaryImpl::IndexNode&> {
+public:
+	static void decode(IReader* reader, BinaryImpl::IndexNode& t) {
+		DecoderImpl<uint16_t>::decode(reader, t.hash);
+		DecoderImpl<uint64_t>::decode(reader, t.pos_rel);
+	}
+};
+
 class BinaryIndexCIter : public std::iterator<std::forward_iterator_tag, const BinaryImpl::IndexNodeAbs> {
 public:
 	BinaryIndexCIter() : index_offset_(~0), offset_abs_(0) {}
@@ -784,7 +806,10 @@ public:
 	:	reader_(reader),
 		index_(index),
 		index_offset_(0),
-		offset_abs_(index.pos_abs()) {}
+		offset_abs_(index.pos_abs()) {
+		if (index_.size() == 0)
+			index_offset_ = ~0;
+	}
 
 	BinaryIndexCIter operator ++() {
 		if (index_offset_ >= index_.size()) {
@@ -819,11 +844,11 @@ private:
 		if (index_offset_ >= index_.size()) {
 			// End of index
 			if (index_.empty()) {
-				index_.read(reader_);
+				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
 			}
 			else if (index_.next_index_rel()) {
 				SeekJumper jmp(reader_, offset_abs_ + index_.next_index_rel());
-				index_.read(reader_);
+				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
 				index_offset_ = 0;
 			} else { // No next index
 				index_.clear();
@@ -1132,40 +1157,6 @@ public:
 };
 
 template <>
-class OutputBinarySerializerCall<BinaryImpl::Index&> {
-public:
-	static void call(BinaryImpl::Index& t, OutputBinarySerializerNode& node) {
-		EncoderImpl<uint64_t>::encode(node.writer(), t.next_index);
-		Encode_array(node.writer(), t.ind);
-	}
-};
-template <>
-class InputBinarySerializerCall<BinaryImpl::Index&> {
-public:
-	static void call(BinaryImpl::Index& t, InputBinarySerializerNode& node) {
-		DecoderImpl<uint64_t>::decode(node.reader(), t.next_index);
-		Decode_array(node.reader(), t.ind);
-	}
-};
-
-template <>
-class OutputBinarySerializerCall<BinaryImpl::IndexNode&> {
-public:
-	static void call(BinaryImpl::IndexNode& t, OutputBinarySerializerNode& node) {
-		EncoderImpl<uint16_t>::encode(node.writer(), t.hash);
-		EncoderImpl<uint64_t>::encode(node.writer(), t.pos_rel);
-	}
-};
-template <>
-class InputBinarySerializerCall<BinaryImpl::IndexNode&> {
-public:
-	static void call(BinaryImpl::IndexNode& t, InputBinarySerializerNode& node) {
-		DecoderImpl<uint16_t>::decode(node.reader(), t.hash);
-		DecoderImpl<uint64_t>::decode(node.reader(), t.pos_rel);
-	}
-};
-
-template <>
 class OutputBinarySerializerCall<BinaryImpl::Optional&> {
 public:
 	static void call(BinaryImpl::Optional& t, OutputBinarySerializerNode& node) {
@@ -1177,6 +1168,22 @@ class InputBinarySerializerCall<BinaryImpl::Optional&> {
 public:
 	static void call(BinaryImpl::Optional& t, InputBinarySerializerNode& node) {
 		DecoderImpl<uint8_t>::decode(node.reader(), t.head_);
+	}
+};
+
+
+template <>
+class OutputBinarySerializerCall<BinaryImpl::IndexHeader&> {
+public:
+	static void call(BinaryImpl::IndexHeader& t, OutputBinarySerializerNode& node) {
+		EncoderImpl<BinaryImpl::Index&>::encode(node.writer(), t.index_internal());
+	}
+};
+template <>
+class InputBinarySerializerCall<BinaryImpl::IndexHeader&> {
+public:
+	static void call(BinaryImpl::IndexHeader& t, InputBinarySerializerNode& node) {
+		DecoderImpl<BinaryImpl::Index&>::decode(node.reader(), t.index_internal());
 	}
 };
 
