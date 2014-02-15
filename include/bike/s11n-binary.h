@@ -95,6 +95,7 @@ protected:
 #define CONCAT(a, b)     CONCATIMPL(a, b)
 #define CONV_NAME(Type)  CONCAT(conv_, Type)
 #define CONV(Type)       ConvImpl<Type> CONV_NAME(Type)
+#define SAME(Type)       SameImpl<Type> CONV_NAME(Type)
 
 bool is_little_endian() {
 	char test[] = { 1, 0 };
@@ -154,14 +155,16 @@ int64_t swap_endian(int64_t v) {
 }
 #endif
 
+static bool IsLittleEndian = is_little_endian();
+
 template <class T>
 class ConvImpl {
 public:
 	ConvImpl() {
-		if (is_little_endian())
-			conv_ = swap_endian<T>;
-		else
+		if (IsLittleEndian)
 			conv_ = same_endian<T>;
+		else
+			conv_ = swap_endian<T>;
 	}
 
 	T operator ()(T v) {
@@ -172,9 +175,17 @@ private:
 	T(*conv_) (T);
 };
 
+template <class T>
+class SameImpl {
+public:
+	T operator ()(T v) {
+		return v;
+	}
+};
+
 struct Conv {
-	CONV(int8_t);
-	CONV(uint8_t);
+	SAME(int8_t);
+	SAME(uint8_t);
 	CONV(int16_t);
 	CONV(uint16_t);
 	CONV(int32_t);
@@ -265,7 +276,7 @@ public:
 // std::vector
 //
 template <class T>
-class EncoderImpl<std::vector<T> > {
+class EncoderImpl< std::vector<T> > {
 public:
 	static void encode(IWriter* writer, const std::vector<T>& v) {
 		uint32_t size = (uint32_t) v.size();
@@ -276,7 +287,7 @@ public:
 	}
 };
 template <class T>
-class DecoderImpl<std::vector<T> > {
+class DecoderImpl< std::vector<T> > {
 public:
 	static void decode(IReader* reader, std::vector<T>& v) {
 		v.clear();
@@ -381,14 +392,14 @@ template <class T>
 class OutputBinarySerializerCall<std::vector<T>&> {
 public:
 	static void call(std::vector<T>& t, OutputBinarySerializerNode& node) {
-		EncoderImpl<std::vector<T> >::encode(node.writer(), t);
+		EncoderImpl< std::vector<T> >::encode(node.writer(), t);
 	}
 };
 template <class T>
 class InputBinarySerializerCall<std::vector<T>&> {
 public:
 	static void call(std::vector<T>& t, InputBinarySerializerNode& node) {
-		DecoderImpl<std::vector<T> >::decode(node.reader(), t);
+		DecoderImpl< std::vector<T> >::decode(node.reader(), t);
 	}
 }; 
 
