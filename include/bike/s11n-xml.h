@@ -349,6 +349,9 @@ SN_RAW(unsigned,       as_uint);
 SN_RAW(short,          as_int); 
 SN_RAW(unsigned short, as_uint); 
 
+SN_RAW(char,           as_int);
+SN_RAW(unsigned char,  as_uint);
+
 SN_RAW(float,          as_float); 
 SN_RAW(double,         as_double); 
 
