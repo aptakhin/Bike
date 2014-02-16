@@ -29,7 +29,7 @@ class BufferedWriter : public IWriter
 {
 public:
 	BufferedWriter(IWriter* backend)
-		: backend_(backend),
+	:	backend_(backend),
 		size_(0) {}
 
 	void write(void* buf, size_t size) /* override */ {
@@ -38,8 +38,8 @@ public:
 			size_t write_bytes = std::min(size, BufSize - size_);
 			memcpy(buf_ + size_, ptr, write_bytes);
 			size_ += write_bytes;
-			ptr += write_bytes;
-			size -= write_bytes;
+			ptr   += write_bytes;
+			size  -= write_bytes;
 			if (size_ == BufSize)
 				flush();
 		}
@@ -56,8 +56,8 @@ public:
 
 protected:
 	IWriter* backend_;
-	char buf_[BufSize];
-	size_t size_;
+	char     buf_[BufSize];
+	size_t   size_;
 };
 
 class FileWriter : public IWriter
@@ -125,13 +125,13 @@ template <typename T>
 T swap_endian(T u) {
 	union {
 		T u;
-		unsigned char u8[sizeof(T)];
+		uint8_t u8[sizeof(T)];
 	} source, dest;
 
 	source.u = u;
 
-	for (size_t i = 0; i < sizeof(T); i++)
-		dest.u8[i] = source.u8[sizeof(T) -i - 1];
+	for (size_t i = 0; i < sizeof(T); ++i)
+		dest.u8[i] = source.u8[sizeof(T) - i - 1];
 
 	return dest.u;
 }
@@ -174,19 +174,15 @@ static bool IsLittleEndian = is_little_endian();
 template <class T>
 class ConvImpl {
 public:
-	ConvImpl() {
-		if (IsLittleEndian)
-			conv_ = same_endian<T>;
-		else
-			conv_ = swap_endian<T>;
-	}
+	ConvImpl() 
+	:	conv_(IsLittleEndian? same_endian<T> : swap_endian<T>) {}
 
 	T operator ()(T v) {
 		return conv_(v);
 	}
 
 private:
-	T(*conv_) (T);
+	T (*conv_) (T);
 };
 
 template <class T>
@@ -258,6 +254,14 @@ ENC_RAW(int32_t);
 ENC_RAW(uint32_t);
 ENC_RAW(int64_t);
 ENC_RAW(uint64_t);
+
+#undef ENC_RAW
+
+#undef CONCATIMPL
+#undef CONCAT
+#undef CONV_NAME
+#undef CONV
+#undef SAME
 
 template <>
 class EncoderImpl<UnsignedNumber> {
