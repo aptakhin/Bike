@@ -39,6 +39,54 @@ public:
 	size_t offset_;
 };
 
+class SnabixTest : public testing::Test {
+public:
+	template <class T>
+	void test_val(const T& write) {
+		T read;
+		test_val_impl(write, read);
+	}
+
+private:
+	template <class T>
+	void test_val_impl(const T& write, T& read)	{
+		io_impl(write, read);
+		ASSERT_EQ(write, read);
+	}
+
+	template <class T>
+	void io_impl(const T& write, T& read) {
+		std::string str;
+		StrWriter out(str);
+		EncoderImpl<T>::encode(&out, const_cast<T&>(write));
+		StrReader in(str);
+		DecoderImpl<T>::decode(&in, read);
+	}
+};
+
+template <typename Tester>
+void test_near(Tester* t, uint64_t val) {
+	t->test_val(UnsignedNumber(val - 1));
+	t->test_val(UnsignedNumber(val));
+	t->test_val(UnsignedNumber(val + 1));
+}
+
+template <typename Type, typename Tester>
+void test_bounds(Tester* t) {
+	auto mn = uint64_t(std::numeric_limits<Type>::min()) + 1;
+	auto mx = uint64_t(std::numeric_limits<Type>::max()) - 1;
+	//test_near(t, mn);
+	test_near(t, mx);
+}
+
+TEST_F(SnabixTest, Number) {
+	test_val(UnsignedNumber(0));
+	test_bounds<char>(this);
+	test_bounds<short>(this);
+	test_bounds<int>(this);
+	//test_bounds<long long>(this);
+}
+
 TEST(Snabix, 0) {
 	std::string str;
 	StrWriter out(str);

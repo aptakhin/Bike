@@ -385,6 +385,53 @@ SN_RAW(std::string);
 
 #undef SN_RAW
 
+struct UnsignedNumber {
+	uint64_t num;
+
+	UnsignedNumber(uint64_t num = 0) : num(num) {}
+
+	operator uint64_t() const {
+		return num;
+	}
+
+	operator uint64_t&() {
+		return num;
+	}
+};
+
+template <>
+class EncoderImpl<UnsignedNumber> {
+public:
+	static void encode(IWriter* writer, const UnsignedNumber& value) {
+		UnsignedNumber v = value;
+		do {
+			uint8_t w = v & 0x7F;
+			v >>= 7;
+			if (v > 0)
+				w |= 0x80;
+			writer->write(&w, 1);
+		}
+		while (v > 0);
+	}
+};
+template <>
+class DecoderImpl<UnsignedNumber> {
+public:
+	static void decode(IReader* reader, UnsignedNumber& v) {
+		bool next = true;
+		int i = 0;
+		v = 0;
+		do {
+			uint8_t r;
+			reader->read(&r, 1);
+			next = (r & 0x80) > 0;
+			v |= (r & 0x7F) << (7 * i);
+			++i;
+		}
+		while (next);
+	}
+};
+
 //
 // std::vector
 //
