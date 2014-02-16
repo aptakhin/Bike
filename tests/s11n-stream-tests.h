@@ -85,6 +85,10 @@ TEST_F(SnabixTest, Number) {
 	test_bounds<short>(this);
 	test_bounds<int>(this);
 	//test_bounds<long long>(this);
+
+	test_bounds<unsigned char>(this);
+	test_bounds<unsigned short>(this);
+	//test_bounds<unsigned int>(this);
 }
 
 TEST(Snabix, 0) {

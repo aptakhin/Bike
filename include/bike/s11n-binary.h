@@ -91,6 +91,20 @@ protected:
 	std::ostream* fout_;
 };
 
+struct UnsignedNumber {
+	uint64_t num;
+
+	UnsignedNumber(uint64_t num = 0) : num(num) {}
+
+	operator uint64_t() const {
+		return num;
+	}
+
+	operator uint64_t&() {
+		return num;
+	}
+};
+
 #define CONCATIMPL(a, b) a##b
 #define CONCAT(a, b)     CONCATIMPL(a, b)
 #define CONV_NAME(Type)  CONCAT(conv_, Type)
@@ -245,6 +259,37 @@ ENC_RAW(uint32_t);
 ENC_RAW(int64_t);
 ENC_RAW(uint64_t);
 
+template <>
+class EncoderImpl<UnsignedNumber> {
+public:
+	static void encode(IWriter* writer, const UnsignedNumber& value) {
+		UnsignedNumber v = value;
+		do {
+			uint8_t w = v & 0x7F;
+			v >>= 7;
+			if (v > 0)
+				w |= 0x80;
+			writer->write(&w, 1);
+		} while (v > 0);
+	}
+};
+template <>
+class DecoderImpl<UnsignedNumber> {
+public:
+	static void decode(IReader* reader, UnsignedNumber& v) {
+		bool next = true;
+		int i = 0;
+		v = 0;
+		do {
+			uint8_t r;
+			reader->read(&r, 1);
+			next = (r & 0x80) > 0;
+			v |= (r & 0x7F) << (7 * i);
+			++i;
+		} while (next);
+	}
+};
+
 //
 // std::string
 //
@@ -252,8 +297,8 @@ template <>
 class EncoderImpl<std::string> {
 public:
 	static void encode(IWriter* writer, const std::string& v) {
-		uint32_t size = (uint32_t) v.size();
-		writer->write(&size, sizeof(uint32_t));
+		UnsignedNumber size = v.size();
+		EncoderImpl<UnsignedNumber>::encode(writer, size);
 		if (size)
 			writer->write(&v[0], (size_t) size);
 	}
@@ -263,10 +308,10 @@ class DecoderImpl<std::string> {
 public:
 	static void decode(IReader* reader, std::string& v) {
 		v = "";
-		uint32_t size;
-		reader->read(&size, sizeof(uint32_t));
+		UnsignedNumber size;
+		DecoderImpl<UnsignedNumber>::decode(reader, size);
 		if (size) {
-			v.resize(size);
+			v.resize(size_t(size));
 			reader->read(&v[0], (size_t) size);
 		}
 	}
@@ -279,8 +324,8 @@ template <class T>
 class EncoderImpl< std::vector<T> > {
 public:
 	static void encode(IWriter* writer, const std::vector<T>& v) {
-		uint32_t size = (uint32_t) v.size();
-		writer->write(&size, sizeof(uint32_t));
+		UnsignedNumber size = v.size();
+		EncoderImpl<UnsignedNumber>::encode(writer, size);
 		std::vector<T>::const_iterator i = v.begin(), e = v.end();
 		for (; i != e; ++i)
 			EncoderImpl<T>::encode(writer, *i);
@@ -291,9 +336,9 @@ class DecoderImpl< std::vector<T> > {
 public:
 	static void decode(IReader* reader, std::vector<T>& v) {
 		v.clear();
-		uint32_t size = (uint32_t) v.size();
-		reader->read(&size, sizeof(uint32_t));
-		v.reserve(size);
+		UnsignedNumber size;
+		DecoderImpl<UnsignedNumber>::decode(reader, size);
+		v.reserve(size_t(size));
 		for (size_t i = 0; i < size; ++i) {
 			T tmp;
 			DecoderImpl<T>::decode(reader, tmp);
@@ -302,9 +347,7 @@ public:
 	}
 };
 
-
 class OutputBinarySerializerNode {
-
 public:
 	OutputBinarySerializerNode(IWriter* writer)
 	:	writer_(writer) {}
@@ -322,7 +365,6 @@ protected:
 };
 
 class InputBinarySerializerNode {
-
 public:
 	InputBinarySerializerNode(IReader* reader)
 	:	reader_(reader) {}
@@ -384,53 +426,6 @@ SN_RAW(uint64_t);
 SN_RAW(std::string);
 
 #undef SN_RAW
-
-struct UnsignedNumber {
-	uint64_t num;
-
-	UnsignedNumber(uint64_t num = 0) : num(num) {}
-
-	operator uint64_t() const {
-		return num;
-	}
-
-	operator uint64_t&() {
-		return num;
-	}
-};
-
-template <>
-class EncoderImpl<UnsignedNumber> {
-public:
-	static void encode(IWriter* writer, const UnsignedNumber& value) {
-		UnsignedNumber v = value;
-		do {
-			uint8_t w = v & 0x7F;
-			v >>= 7;
-			if (v > 0)
-				w |= 0x80;
-			writer->write(&w, 1);
-		}
-		while (v > 0);
-	}
-};
-template <>
-class DecoderImpl<UnsignedNumber> {
-public:
-	static void decode(IReader* reader, UnsignedNumber& v) {
-		bool next = true;
-		int i = 0;
-		v = 0;
-		do {
-			uint8_t r;
-			reader->read(&r, 1);
-			next = (r & 0x80) > 0;
-			v |= (r & 0x7F) << (7 * i);
-			++i;
-		}
-		while (next);
-	}
-};
 
 //
 // std::vector
