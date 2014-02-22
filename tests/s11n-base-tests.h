@@ -1,7 +1,9 @@
 // s11n
 //
+#include "s11n-tests.h"
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
+#include <bike/s11n-xml-stl.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <fstream>

@@ -8,8 +8,9 @@ include_directories("tests/pugixml")
 set(S11NT_SRC
   include/bike/s11n.h
   include/bike/s11n-xml.h
+  include/bike/s11n-xml-stl.h
   include/bike/s11n-binary.h
-  include/bike/snabix.h
+  tests/s11n-tests.h
   tests/s11n-tests.cpp
   tests/s11n-base-tests.h
   tests/s11n-stream-tests.h
@@ -26,7 +27,10 @@ source_group("s11n" FILES
   include/bike/s11n.h 
   include/bike/s11n-xml.h
   include/bike/s11n-binary.h
-  include/bike/snabix.h
+)
+
+source_group("stl" FILES 
+  include/bike/s11n-xml-stl.h 
 )
 
 source_group("gtest" FILES 
@@ -35,6 +39,7 @@ source_group("gtest" FILES
 )
 
 source_group("tests" FILES 
+  tests/s11n-tests.h
   tests/s11n-tests.cpp
   tests/s11n-base-tests.h
   tests/s11n-stream-tests.h
