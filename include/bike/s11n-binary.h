@@ -263,33 +263,69 @@ ENC_RAW(uint64_t);
 #undef CONV
 #undef SAME
 
+//
+// TODO: FIXME: Do I know about endianness?
+//
+uint32_t msb32(uint32_t x)
+{
+	static const uint32_t bval[] = { 
+		0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4 
+	};
+
+	uint32_t r = 0;
+	if (x & 0xFFFF0000) r += 16 / 1, x >>= 16 / 1;
+	if (x & 0x0000FF00) r += 16 / 2, x >>= 16 / 2;
+	if (x & 0x000000F0) r += 16 / 4, x >>= 16 / 4;
+	return r + bval[x];
+}
+
+//
+// TODO: FIXME: Do I know about endianness?
+//
+uint32_t msb64(uint64_t x)
+{
+	uint32_t w1 = *((uint32_t*) &x);
+	uint32_t w2 = *((uint32_t*) &x + 1);
+	uint32_t a1 = msb32(w1), a2 = msb32(w2);
+	return a2? a2 + 32 : a1;
+}
+
+class UnsignedNumberEncoding {
+protected:
+	const static uint8_t NEXT_MASK  = 0x80;
+	const static uint8_t VALUE_MASK = 0x7F;
+};
+
 template <>
-class EncoderImpl<UnsignedNumber> {
+class EncoderImpl<UnsignedNumber> : public UnsignedNumberEncoding {
 public:
-	static void encode(IWriter* writer, const UnsignedNumber& value) {
-		UnsignedNumber v = value;
+	static void encode(IWriter* writer, const UnsignedNumber& v) {
+		uint32_t msb     = msb64(v);
+		uint32_t maskmsb = msb32(VALUE_MASK);
+		int enc_ofs = (msb + 6) / 7 * 7; // FIXME: Need next divisor of 7. Not sure about compiler not-optimization
 		do {
-			uint8_t w = v & 0x7F;
-			v >>= 7;
-			if (v > 0)
-				w |= 0x80;
+			enc_ofs -= maskmsb;
+			uint32_t flmask = VALUE_MASK << enc_ofs;
+			uint8_t w = uint8_t((v & flmask) >> enc_ofs);
+			if (enc_ofs > 0)
+				w |= NEXT_MASK;
 			writer->write(&w, 1);
-		} while (v > 0);
+		} while (enc_ofs > 0);
 	}
 };
 template <>
-class DecoderImpl<UnsignedNumber> {
+class DecoderImpl<UnsignedNumber> : public UnsignedNumberEncoding {
 public:
 	static void decode(IReader* reader, UnsignedNumber& v) {
 		bool next = true;
-		int i = 0;
 		v = 0;
 		do {
 			uint8_t r;
 			reader->read(&r, 1);
-			next = (r & 0x80) > 0;
-			v |= (r & 0x7F) << (7 * i);
-			++i;
+			next = (r & NEXT_MASK) > 0;
+			uint8_t m = r & VALUE_MASK;
+			v <<= 7;
+			v |= r & VALUE_MASK;
 		} while (next);
 	}
 };

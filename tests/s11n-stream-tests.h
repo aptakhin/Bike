@@ -74,7 +74,7 @@ void test_near(Tester* t, uint64_t val) {
 template <typename Type, typename Tester>
 void test_bounds(Tester* t) {
 	auto mn = uint64_t(std::numeric_limits<Type>::min()) + 1;
-	auto mx = uint64_t(std::numeric_limits<Type>::max()) - 1;
+	auto mx = uint64_t(std::numeric_limits<Type>::max());
 	//test_near(t, mn);
 	test_near(t, mx);
 }
@@ -193,4 +193,26 @@ TEST(Snabix, Bench2) {
 		SampleStruct f;
 		in >> f;
 	}
+}
+
+TEST(Msb32, 0) {
+	ASSERT_EQ(32, msb32(0xFF000000));
+	ASSERT_EQ(24, msb32(0x00FF0000));
+	ASSERT_EQ(16, msb32(0x0000FF00));
+	ASSERT_EQ(8,  msb32(0x000000FF));
+	ASSERT_EQ(0,  msb32(0));
+}
+
+namespace shorts {
+	uint64_t u(uint32_t a, uint32_t b) {
+		return (uint64_t(a) << 32) + b;
+	}
+}
+
+TEST(Msb64, 0) {
+	using shorts::u;
+	ASSERT_EQ(64, msb64(u(0xFF000000, 0x00000000)));
+	ASSERT_EQ(56, msb64(u(0x00FF0000, 0x00000000)));
+	ASSERT_EQ(32, msb64(u(0x00000000, 0xFF000000)));
+	ASSERT_EQ(8,  msb64(u(0x00000000, 0x000000FF)));
 }
