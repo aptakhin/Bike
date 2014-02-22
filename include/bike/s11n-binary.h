@@ -266,6 +266,8 @@ ENC_RAW(uint64_t);
 //
 // TODO: FIXME: Do I know about endianness?
 //
+/// Returns most significant bit in range [1, 32], 0 if not present
+/// [http://stackoverflow.com/a/10273678/79674]
 uint32_t msb32(uint32_t x)
 {
 	static const uint32_t bval[] = { 
@@ -302,7 +304,7 @@ public:
 	static void encode(IWriter* writer, const UnsignedNumber& v) {
 		uint32_t msb     = msb64(v);
 		uint32_t maskmsb = msb32(VALUE_MASK);
-		int enc_ofs = (msb + 6) / 7 * 7; // FIXME: Need next divisor of 7. Not sure about compiler not-optimization
+		int enc_ofs = ((msb + 6) / 7) * 7; // FIXME: Need next divisor of 7. Not sure about compiler not-optimization
 		do {
 			enc_ofs -= maskmsb;
 			uint32_t flmask = VALUE_MASK << enc_ofs;

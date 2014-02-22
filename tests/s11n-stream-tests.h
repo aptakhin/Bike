@@ -75,7 +75,7 @@ template <typename Type, typename Tester>
 void test_bounds(Tester* t) {
 	auto mn = uint64_t(std::numeric_limits<Type>::min()) + 1;
 	auto mx = uint64_t(std::numeric_limits<Type>::max());
-	//test_near(t, mn);
+	test_near(t, mn);
 	test_near(t, mx);
 }
 
@@ -89,6 +89,11 @@ TEST_F(SnabixTest, Number) {
 	test_bounds<unsigned char>(this);
 	test_bounds<unsigned short>(this);
 	//test_bounds<unsigned int>(this);
+}
+
+TEST_F(SnabixTest, Range1_1000) {
+	for (unsigned i = 1; i <= 1000; ++i)
+		test_val(UnsignedNumber(i));
 }
 
 TEST(Snabix, 0) {
