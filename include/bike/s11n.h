@@ -48,7 +48,7 @@ public:
 	TypeIndex& operator = (const TypeIndex& index) {
 		info_ = index.info_;
 		return *this;
-    }
+	}
 
 	bool operator < (const TypeIndex& index) const	{
 		return info_->before(*index.info_) != 0;
@@ -63,8 +63,8 @@ public:
 	}
 
 	const char* name() const {
-        return info_->name();
-    }
+		return info_->name();
+	}
 
 private:
 	const std::type_info* info_;

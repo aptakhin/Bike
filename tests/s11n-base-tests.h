@@ -305,11 +305,11 @@ TYPED_TEST_P(BaseTest, Structs) {
 
 class Human {
 public:
-    Human(const std::string& name) : name_(name) {} 
+	Human(const std::string& name) : name_(name) {} 
 
-    virtual ~Human() {}
+	virtual ~Human() {}
 
-    const std::string& name() const { return name_; }
+	const std::string& name() const { return name_; }
 
 	template <class Node>
 	void ser(Node& node) {
@@ -317,7 +317,7 @@ public:
 	}
 
 protected:
-    std::string name_;
+	std::string name_;
 };
 
 template <class Node>
