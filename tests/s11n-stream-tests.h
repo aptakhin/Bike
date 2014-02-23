@@ -27,7 +27,7 @@ public:
 class StrReader : public IReader
 {
 public:
-	StrReader(std::string& str) : out_(str), offset_(0) {}
+	StrReader(const std::string& str) : out_(str), offset_(0) {}
 
 	size_t read(void* o, size_t size) /* override */ {
 		memcpy(o, &out_[offset_], size);
@@ -35,7 +35,8 @@ public:
 		return size;
 	}
 
-	std::string& out_;
+	const std::string& out_;
+
 	size_t offset_;
 };
 
@@ -111,8 +112,6 @@ TEST_F(SnabixTest, Base) {
 	w3.push_back(2);
 	w3.push_back(4);
 	test_val(w3);
-
-	test_val(Vec2<int>(1, 2));
 }
 
 TEST(Snabix, Bench) {
