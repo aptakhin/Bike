@@ -1,7 +1,7 @@
 // s11n
 //
 #include <bike/s11n.h>
-#include <bike/s11n-binary.h>
+#include <bike/s11n-sbinary.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <fstream>
@@ -38,7 +38,7 @@ public:
 class StrReader : public ISeekReader
 {
 public:
-	StrReader(std::string& str) : out_(str), offset_(0) {}
+	StrReader(const std::string& str) : out_(str), offset_(0) {}
 
 	virtual size_t read(void* o, size_t size) S11N_OVERRIDE {
 		assert(offset_ + size <= out_.size());
@@ -55,61 +55,83 @@ public:
 		offset_ = size_t(pos);
 	}
 
-	std::string& out_;
+	const std::string& out_;
+
 	size_t offset_;
 };
 
-TEST(Snabix, 0) {
-	std::string str;
-	StrWriter out(str);
-	EncoderImpl<int>::encode(&out,  4);
-	StrReader in(str);
-	int v;
-	DecoderImpl<int>::decode(&in, v);
-	ASSERT_EQ(4, v);
+class SnabixTest : public testing::Test {
+public:
+	template <class T>
+	void test_val(const T& write) {
+		T read;
+		test_val_impl(write, read);
+	}
 
-	EncoderImpl<int>::encode(&out, std::numeric_limits<int>::max());
-	int v2;
-	DecoderImpl<int>::decode(&in, v2);
-	ASSERT_EQ(std::numeric_limits<int>::max(), v2);
+private:
+	template <class T>
+	void test_val_impl(const T& write, T& read)	{
+		io_impl(write, read);
+		ASSERT_EQ(write, read);
+	}
 
-	uint32_t r, w = 5;
-	EncoderImpl<uint32_t>::encode(&out, w);
-	DecoderImpl<uint32_t>::decode(&in,  r);
-	ASSERT_EQ(r, w);
+	template <class T>
+	void io_impl(const T& write, T& read) {
+		std::string str;
+		StrWriter out(str);
+		EncoderImpl<T>::encode(&out, const_cast<T&>(write));
+		StrReader in(str);
+		DecoderImpl<T>::decode(&in, read);
+	}
+};
 
-	std::string r2, w2 = "Tiny string";
-	EncoderImpl<std::string>::encode(&out, w2);
-	DecoderImpl<std::string>::decode(&in,  r2);
-	ASSERT_EQ(r2, w2);
-
-	std::vector<int> r3, w3;
-	EncoderImpl<std::vector<int> >::encode(&out, w3);
-	DecoderImpl<std::vector<int> >::decode(&in,  r3);
-	ASSERT_EQ(r3, w3);
-
-	std::vector<int> r4, w4;
-	w4.push_back(1);
-	w4.push_back(2);
-	w4.push_back(4);
-	EncoderImpl<std::vector<int> >::encode(&out, w4);
-	DecoderImpl<std::vector<int> >::decode(&in,  r4);
-	ASSERT_EQ(r4, w4);
+template <typename Tester>
+void test_near(Tester* t, uint64_t val) {
+	t->test_val(UnsignedNumber(val - 1));
+	t->test_val(UnsignedNumber(val));
+	t->test_val(UnsignedNumber(val + 1));
 }
 
-TEST(Snabix, 1) {
-	std::string str;
-	StrWriter strout(str);
-	StrReader strin(str);
-	
-	OutputBinarySerializer out(&strout);
-	InputBinarySerializer in(&strin);
+template <typename Type, typename Tester>
+void test_bounds(Tester* t) {
+	auto mn = uint64_t(std::numeric_limits<Type>::min()) + 1;
+	auto mx = uint64_t(std::numeric_limits<Type>::max());
+	//test_near(t, mn);
+	test_near(t, mx);
+}
 
-	Vec2<int> v(1, 2), w;
+TEST_F(SnabixTest, Number) {
+	test_val(UnsignedNumber(0));
+	test_bounds<char>(this);
+	test_bounds<short>(this);
+	test_bounds<int>(this);
+	//test_bounds<long long>(this);
 
-	out << v;
-	in >> w;
-	ASSERT_EQ(v, w);
+	test_bounds<unsigned char>(this);
+	test_bounds<unsigned short>(this);
+	//test_bounds<unsigned int>(this);
+}
+
+TEST_F(SnabixTest, Range1_1000) {
+	for (unsigned i = 1; i <= 1000; ++i)
+		test_val(UnsignedNumber(i));
+}
+
+TEST_F(SnabixTest, Base) {
+	test_val(int(4));
+	test_val(std::numeric_limits<int>::max());
+
+	test_val(uint32_t(5));
+
+	test_val(std::string("Tiny string"));
+
+	test_val(std::vector<int>());
+
+	std::vector<int> w3;
+	w3.push_back(1);
+	w3.push_back(2);
+	w3.push_back(4);
+	test_val(w3);
 }
 
 TEST(Snabix, Bench) {
@@ -129,7 +151,6 @@ TEST(Snabix, Bench) {
 
 	for (size_t i = 0; i < Size; ++i)
 		in >> w;
-	ASSERT_EQ(v, w);
 }
 
 TEST(Snabix, SizeExtended) {
@@ -171,4 +192,26 @@ TEST(Snabix, Bench2) {
 		SampleStruct f;
 		in >> f;
 	}
+}
+
+TEST(Msb32, 0) {
+	ASSERT_EQ(32, msb32(0xFF000000));
+	ASSERT_EQ(24, msb32(0x00FF0000));
+	ASSERT_EQ(16, msb32(0x0000FF00));
+	ASSERT_EQ(8,  msb32(0x000000FF));
+	ASSERT_EQ(0,  msb32(0));
+}
+
+namespace shorts {
+	uint64_t u(uint32_t a, uint32_t b) {
+		return (uint64_t(a) << 32) + b;
+	}
+}
+
+TEST(Msb64, 0) {
+	using shorts::u;
+	ASSERT_EQ(64, msb64(u(0xFF000000, 0x00000000)));
+	ASSERT_EQ(56, msb64(u(0x00FF0000, 0x00000000)));
+	ASSERT_EQ(32, msb64(u(0x00000000, 0xFF000000)));
+	ASSERT_EQ(8,  msb64(u(0x00000000, 0x000000FF)));
 }

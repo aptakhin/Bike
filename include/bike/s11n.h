@@ -554,6 +554,11 @@ private:
  * Standard extensions
  */
 template <class T, class Node>
+void named(T& t, const char* name, Node& node) {
+	node.named(t, name);
+}
+
+template <class T, class Node>
 void optional(T& t, const char* name, const T& def, Node& node) {
 	node.optional(t, name, def);
 }
