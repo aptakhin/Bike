@@ -204,6 +204,8 @@ struct Conv {
 	CONV(uint32_t);
 	CONV(int64_t);
 	CONV(uint64_t);
+	CONV(float);
+	CONV(double);
 };
 
 Conv& conv() {
@@ -256,6 +258,8 @@ ENC_RAW(int32_t);
 ENC_RAW(uint32_t);
 ENC_RAW(int64_t);
 ENC_RAW(uint64_t);
+ENC_RAW(float);
+ENC_RAW(double);
 
 #undef ENC_RAW
 
@@ -381,7 +385,6 @@ public:
 			uint8_t r;
 			reader->read(&r, 1);
 			next = (r & NEXT_MASK) > 0;
-			uint8_t m = r & VALUE_MASK;
 			v <<= 7;
 			v |= r & VALUE_MASK;
 		} while (next);

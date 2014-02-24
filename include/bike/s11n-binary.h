@@ -61,11 +61,11 @@ uint16_t make_hash(const char* str) { // Better be than not to be
 namespace BinaryImpl {
 
 struct Tag {
-	const static int Hello    = 0xA0;
-	const static int Reference= 1 << 3;
-	const static int Version  = 1 << 2;
-	const static int Name     = 1 << 1;
-	const static int Reserved = 1;
+	const static int Hello     = 0xA0;
+	const static int Reference = 1 << 3;
+	const static int Version   = 1 << 2;
+	const static int Name      = 1 << 1;
+	const static int Index     = 1;
 
 	Tag() : tag_(Hello) {}
 
@@ -74,11 +74,13 @@ struct Tag {
 	bool has_reference() const { return (tag_ & Reference) > 0; }
 	bool has_version()   const { return (tag_ & Version) > 0; }
 	bool has_name()      const { return (tag_ & Name) > 0; }
+	bool has_index()     const { return (tag_ & Index) > 0; }
 
-	void unset_version() { tag_ &= ~Version; }
-	void set_version()   { tag_ |= Version; }
-
+	void set_name()      { tag_ |= Name; }
 	void set_reference() { tag_ |= Reference; }
+	void set_version()   { tag_ |= Version; }
+	void unset_version() { tag_ &= ~Version; }
+	void set_index()     { tag_ |= Index; }
 
 	uint8_t tag_;
 };
@@ -100,8 +102,8 @@ struct Name {
 	std::string name_;
 };
 
-struct Size {
-	uint32_t size_;
+struct IndexOffset {
+	uint32_t offset_;
 };
 
 class Header {
@@ -118,6 +120,10 @@ public:
 			node.raw_impl(ref_);
 		if (tag_.has_version())
 			node.raw_impl(ver_);
+		if (tag_.has_name())
+			node.raw_impl(name_);
+		if (tag_.has_index())
+			node.raw_impl(index_);
 	}
 
 	void set_version(uint8_t v) {
@@ -147,11 +153,21 @@ public:
 
 	ISeekable::Pos header_pos() const { return header_pos_; }
 
+	void set_index_offset(uint32_t offset) {
+		tag_.set_index();
+		index_.offset_ = offset;
+	}
+
+	uint32_t index_offset() const {
+		return index_.offset_;
+	}
+
 private:
 	Tag          tag_;
 	Reference    ref_;
 	SmallVersion ver_;
-	Size         size_;
+	std::string  name_;
+	IndexOffset  index_;
 
 	ISeekable::Pos header_pos_;
 };
@@ -178,7 +194,7 @@ public:
 	}
 
 	bool has_cur() const {
-		return opt_.head_ & (1 << offset_);
+		return (opt_.head_ & (1 << offset_)) > 0;
 	}
 
 	void set_cur() {
@@ -855,17 +871,17 @@ public:
 };
 
 template <>
-class OutputBinarySerializerCall<BinaryImpl::Size&> {
+class OutputBinarySerializerCall<BinaryImpl::IndexOffset&> {
 public:
-	static void call(BinaryImpl::Size& t, OutputBinarySerializerNode& node) {
-		EncoderImpl<uint32_t>::encode(node.writer(), t.size_);
+	static void call(BinaryImpl::IndexOffset& t, OutputBinarySerializerNode& node) {
+		EncoderImpl<uint32_t>::encode(node.writer(), t.offset_);
 	}
 };
 template <>
-class InputBinarySerializerCall<BinaryImpl::Size&> {
+class InputBinarySerializerCall<BinaryImpl::IndexOffset&> {
 public:
-	static void call(BinaryImpl::Size& t, InputBinarySerializerNode& node) {
-		DecoderImpl<uint32_t>::decode(node.reader(), t.size_);
+	static void call(BinaryImpl::IndexOffset& t, InputBinarySerializerNode& node) {
+		DecoderImpl<uint32_t>::decode(node.reader(), t.offset_);
 	}
 };
 
@@ -994,6 +1010,7 @@ public:
 
 	template <class T>
 	OutputBinarySerializer& operator << (T& t) {
+		// TODO: Write header with appropriate format_ver_
 		raw_impl(t);
 		return *this;
 	}
@@ -1009,6 +1026,7 @@ public:
 
 	template <class T>
 	InputBinarySerializer& operator >> (T& t) {
+		// TODO: Write header and read format_ver_
 		raw_impl(t);
 		return *this;
 	}
