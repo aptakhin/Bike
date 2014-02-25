@@ -36,25 +36,40 @@ public:
 		return !*i;
 	}
 
-	void set(const char* str, size_t size) {
-		if (size < InternalSize) {
-			delete[] (void*) ptr_;
-			memcpy(struct_offset(0), str, size);
-			*(struct_offset(size)) = 0;
-			size_ = size;
+	static bool equals(const UString& a, const char* b) {
+		const char* i = a.c_str(), *j = b;
+		while (*i && *i == *j)
+			++i, ++j;
+		return !*i;
+	}
+
+	void set(const char* str, size_t set_size) {
+		if (set_size < InternalSize) {
+			if (size_ >= InternalSize) 
+				delete[] ptr_;
+			memcpy(struct_offset(0), str, set_size);
+			*(struct_offset(set_size)) = 0;
+			size_ = set_size;
 			hash_ = hash_impl(struct_offset(0), size_);
 		} else {
-			char* new_ptr = new char[size + 1];
-			try {
-				memcpy(new_ptr, (void*)ptr_, size);
+			if (size_ < set_size) {
+				char* new_ptr = new char[set_size + 1];
+				try {
+					memcpy(new_ptr, str, set_size);
+				}
+				catch (...) {
+					delete[] new_ptr;
+				}
+				new_ptr[set_size] = 0;
+				if (size_ < InternalSize) 
+					delete[] ptr_;
+				ptr_  = new_ptr;
 			}
-			catch (...) {
-				delete[] new_ptr;
+			else {
+				memcpy(ptr_, str, set_size);
+				ptr_[set_size] = 0;
 			}
-			new_ptr[size] = 0;
-			size_ = size;
-			delete[] (void*) ptr_;
-			ptr_  = (uint64_t) new_ptr;
+			size_ = set_size;
 			hash_ = hash_impl((char*)ptr_, size_);
 		}
 	}
@@ -68,7 +83,7 @@ public:
 		} else {
 			char* new_ptr = new char[size_ + size + 1];
 			try {
-				memcpy(new_ptr,         (void*)ptr_, size_);
+				memcpy(new_ptr,         (void*)ptr_, size_t(size_));
 				memcpy(new_ptr + size_, (void*)str,  size);
 			}
 			catch (...) {
@@ -77,7 +92,7 @@ public:
 			size_ += size;
 			new_ptr[size] = 0;
 			delete[] (void*) ptr_;
-			ptr_  = (uint64_t) new_ptr;
+			ptr_  = new_ptr;
 			hash_ = hash_impl(str, size_, hash_);
 		}
 	}
@@ -87,12 +102,12 @@ public:
 	}
 
 protected:
-	char* struct_offset(size_t off) const {
+	char* struct_offset(uint64_t off) const {
 		return ((char*) this) + off;
 	}
 
 	uint64_t hash_impl(const char* buf, uint64_t size, uint64_t seed = 0) {
-		// Heh, http://stackoverflow.com/a/107657/79674
+		// The simplest [http://stackoverflow.com/a/107657/79674}
 		uint64_t hash = seed;
 		for (size_t i = 0; i < size; ++i) {
 			hash = hash * 101 + buf[i];
@@ -105,8 +120,10 @@ protected:
 protected:
 	union {
 	struct {
-	uint64_t ptr_;
-	
+	union {
+	//uint64_t ptr_;
+	char*    ptr_;
+	};
 	};
 	__m128   w0_;
 	};
@@ -124,5 +141,8 @@ bool operator == (const UString& a, const UString& b) {
 	return UString::equals(a, b);
 }
 
+bool operator == (const UString& a, const char* b) {
+	return UString::equals(a, b);
+}
 
 } // namespace bike {
