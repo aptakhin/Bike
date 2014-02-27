@@ -1,7 +1,9 @@
 // s11n
 //
+#include "s11n-tests.h"
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
+#include <bike/s11n-xml-stl.h>
 #include <bike/s11n-binary.h>
 #include <gtest/gtest.h>
 #include <iostream>
@@ -126,8 +128,7 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	ASSERT_EQ(bw, br);
 }
 
-struct X1 
-{
+struct X1 {
 	int x;
 
 	X1(int x) : x(x) {}
@@ -138,8 +139,7 @@ struct X1
 	}
 };
 
-struct X2 
-{
+struct X2 {
 	int x, y;
 
 	X2() : x(0), y(0) {}
@@ -296,11 +296,11 @@ struct Vec2 {
 };
 
 TYPED_TEST_P(BaseTest, Structs) {
-	test_val<Vec2<int> >   (1,      2);
-	test_val<Vec2<float> > (3.f,    4.f);
-	test_val<Vec2<float> > (3.5f,   4.5f);
-	test_val<Vec2<double> >(5.,     6.);
-	test_val<Vec2<double> >(5.5555, 6.6666);
+	test_val< Vec2<int>    >(1,      2);
+	test_val< Vec2<float>  >(3.f,    4.f);
+	test_val< Vec2<float>  >(3.5f,   4.5f);
+	test_val< Vec2<double> >(5.,     6.);
+	test_val< Vec2<double> >(5.5555, 6.6666);
 }
 
 class Human {

@@ -1,4 +1,5 @@
 
+#include "s11n-tests.h"
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
 #include <gtest/gtest.h>

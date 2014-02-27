@@ -2,7 +2,6 @@
 //
 #pragma once
 
-#include "s11n.h"
 #include <string>
 #include <vector>
 #include <cstring>
@@ -47,7 +46,6 @@ class ISeekReader : public ISeekable, public IReader {};
 class BinarySerializerStorage {
 	S11N_TYPE_STORAGE
 };
-
 
 uint16_t make_hash(const char* str) { // Better be than not to be
 	// djb2 [http://www.cse.yorku.ca/~oz/hash.html]
@@ -459,9 +457,12 @@ private:
 	}
 
 	void flush_index(bool inplace = false) {
-		if (!inplace)
+		if (!inplace) {
 			SeekJumper jmp(writer_, index_.pos_abs());
-		EncoderImpl<BinaryImpl::Index&>::encode(writer_, index_.index_internal());
+			EncoderImpl<BinaryImpl::Index&>::encode(writer_, index_.index_internal());
+		}
+		else
+			EncoderImpl<BinaryImpl::Index&>::encode(writer_, index_.index_internal());
 	}
 
 	template <int>

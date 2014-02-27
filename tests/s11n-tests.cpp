@@ -1,5 +1,6 @@
 // s11n
 //
+#include "s11n-tests.h"
 #include <iostream>
 #include <fstream>
 #include <cmath>
@@ -10,6 +11,7 @@
 
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
+#include <bike/s11n-xml-stl.h>
 #include "s11n-base-tests.h"
 #include "s11n-stream-tests.h"
 #include "s11n-docs-tests.h"
