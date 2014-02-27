@@ -269,7 +269,6 @@ ENC_RAW(double);
 #undef CONV
 #undef SAME
 
-
 struct SizeT {
 	uint64_t val;
 	SizeT() {}

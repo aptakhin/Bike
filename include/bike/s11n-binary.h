@@ -125,6 +125,7 @@ public:
 	}
 
 	void set_version(uint8_t v) {
+		assert(!tag_.has_version());
 		tag_.set_version();
 		ver_.version_ = v;
 	}
@@ -134,6 +135,7 @@ public:
 	}
 
 	void set_ref(uint32_t v, const std::string& name) {
+		assert(!tag_.has_reference());
 		tag_.set_reference();
 		ref_.ref_  = v;
 		ref_.type_ = name;
@@ -152,6 +154,7 @@ public:
 	ISeekable::Pos header_pos() const { return header_pos_; }
 
 	void set_index_offset(uint32_t offset) {
+		assert(!tag_.has_index());
 		tag_.set_index();
 		index_.offset_ = offset;
 	}
