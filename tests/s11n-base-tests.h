@@ -22,7 +22,7 @@ std::string stringify_bytes(const void* buf, size_t size)
 	{
 		char tmp[10] = "";
 		unsigned char p = *b;
-		sprintf(tmp, "%02X ", p);
+		std::sprintf(tmp, "%02X ", p);
 		res += tmp;
 		if (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9')
 			++in_ascii_range;
@@ -36,7 +36,7 @@ std::string stringify_bytes(const void* buf, size_t size)
 		{
 			char tmp[10] = "";
 			unsigned char p = *r;
-			sprintf(tmp, "%c", p);
+			std::sprintf(tmp, "%c", p);
 			res += tmp;
 		}
 		res += "\"";

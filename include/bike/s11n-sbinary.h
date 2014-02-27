@@ -385,7 +385,6 @@ public:
 			uint8_t r;
 			reader->read(&r, 1);
 			next = (r & NEXT_MASK) > 0;
-			uint8_t m = r & VALUE_MASK;
 			v <<= 7;
 			v |= r & VALUE_MASK;
 		} while (next);
