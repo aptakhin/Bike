@@ -26,6 +26,12 @@ GTEST_API_ int main(int argc, char **argv) {
 	serializers.reg<Human>();
 	serializers.reg<Superman>();
 
+	//std::ofstream fout("rr.txt");
+	//fout << "abcdefghxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+	//fout.seekp(3);
+	//fout << "DEFGHYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY";
+	//int code = 0;
+
 	testing::InitGoogleTest(&argc, argv);
 	int code = RUN_ALL_TESTS();
 	if (code != 0)

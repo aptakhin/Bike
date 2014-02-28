@@ -102,16 +102,17 @@ struct Name {
 
 struct IndexOffset {
 	uint32_t offset_rel_;
+
+	IndexOffset() : offset_rel_(0) {}
 };
 
 class Header {
 public:
-	Header()
-	:	header_pos_(0) {}
+	Header() : pos_abs_(0), index_pos_abs_(0) {}
 
 	template <class Node>
 	void ser(Node& node) {
-		header_pos_ = node.io()->tell();
+		pos_abs_ = node.io()->tell();
 		node.raw_impl(tag_);
 		assert(tag_.check());
 		if (tag_.has_reference())
@@ -120,8 +121,10 @@ public:
 			node.raw_impl(ver_);
 		if (tag_.has_name())
 			node.raw_impl(name_);
+		index_pos_abs_ = node.io()->tell();
 		if (tag_.has_index())
 			node.raw_impl(index_);
+		auto w = node.io()->tell();
 	}
 
 	void set_version(uint8_t v) {
@@ -151,7 +154,8 @@ public:
 
 	bool has_version() const { return tag_.has_version(); }
 
-	ISeekable::Pos header_pos() const { return header_pos_; }
+	ISeekable::Pos pos_abs() const { return pos_abs_; }
+	ISeekable::Pos index_pos_abs() const { return index_pos_abs_; }
 
 	void set_index_offset_rel(uint32_t offset_rel) {
 		assert(!tag_.has_index());
@@ -163,6 +167,13 @@ public:
 		return index_.offset_rel_;
 	}
 
+	template <class Node>
+	void update_index_offset(Node& node) {
+		SeekJumper jmp(node.writer(), index_pos_abs_);
+		assert(tag_.has_index());
+		node.raw_impl(index_);
+	}
+
 private:
 	Tag          tag_;
 	Reference    ref_;
@@ -170,7 +181,8 @@ private:
 	std::string  name_;
 	IndexOffset  index_;
 
-	ISeekable::Pos header_pos_;
+	ISeekable::Pos pos_abs_;
+	ISeekable::Pos index_pos_abs_;
 };
 
 struct Optional {
@@ -218,23 +230,23 @@ private:
 
 struct IndexNode {
 	uint16_t hash;
-	uint64_t pos_rel;
+	uint32_t pos_rel;
 
 	IndexNode() : hash(0), pos_rel(0) {}
 };
 
 struct IndexNodeAbs {
 	uint16_t hash;
-	uint64_t pos_abs;
+	uint32_t pos_abs;
 
 	IndexNodeAbs() : hash(0), pos_abs(0) {}
-	IndexNodeAbs(uint16_t hash, uint64_t pos_abs) : hash(hash), pos_abs(pos_abs) {}
+	IndexNodeAbs(uint16_t hash, uint32_t pos_abs) : hash(hash), pos_abs(pos_abs) {}
 };
 
 struct Index {
 	static const size_t Size = 4;
 
-	uint64_t next_index_rel;
+	uint32_t next_index_rel;
 	IndexNode ind[Size];
 
 	Index() : next_index_rel(0) {}
@@ -325,7 +337,7 @@ template <>
 class EncoderImpl<BinaryImpl::Index&> {
 public:
 	static void encode(IWriter* writer, BinaryImpl::Index& t) {
-		EncoderImpl<uint64_t>::encode(writer, t.next_index_rel);
+		EncoderImpl<uint32_t>::encode(writer, t.next_index_rel);
 		Encode_array(writer, t.ind);
 	}
 };
@@ -333,7 +345,8 @@ template <>
 class DecoderImpl<BinaryImpl::Index&> {
 public:
 	static void decode(IReader* reader, BinaryImpl::Index& t) {
-		DecoderImpl<uint64_t>::decode(reader, t.next_index_rel);
+		DecoderImpl<uint32_t>::decode(reader, t.next_index_rel);
+		auto q = dynamic_cast<ISeekReader*>(reader)->tell();
 		Decode_array(reader, t.ind);
 	}
 };
@@ -343,7 +356,7 @@ class EncoderImpl<BinaryImpl::IndexNode&> {
 public:
 	static void encode(IWriter* writer, BinaryImpl::IndexNode& t) {
 		EncoderImpl<uint16_t>::encode(writer, t.hash);
-		EncoderImpl<uint64_t>::encode(writer, t.pos_rel);
+		EncoderImpl<uint32_t>::encode(writer, t.pos_rel);
 	}
 };
 template <>
@@ -351,7 +364,7 @@ class DecoderImpl<BinaryImpl::IndexNode&> {
 public:
 	static void decode(IReader* reader, BinaryImpl::IndexNode& t) {
 		DecoderImpl<uint16_t>::decode(reader, t.hash);
-		DecoderImpl<uint64_t>::decode(reader, t.pos_rel);
+		DecoderImpl<uint32_t>::decode(reader, t.pos_rel);
 	}
 };
 
@@ -382,8 +395,8 @@ public:
 	template <class T>
 	void named(T& t, const char* name) {
 		constructing_.set(&t);
-		index(name);
 		before_write();
+		index(name);
 		raw_impl(t);
 		after_write();
 	}
@@ -467,7 +480,13 @@ private:
 				index_.clear(); // Start new index
 			}
 			index_.set_pos_abs(writer_->tell());
-			flush_index(true);  // Write inplace new index
+			
+			if (header_.index_offset_rel() == 0) {
+				header_.set_index_offset_rel(index_.pos_abs() - header_.pos_abs());
+				header_.update_index_offset(*this);
+			}
+
+			flush_index(true);  // Write inplace new index		
 		}
 
 		index_.add(make_hash(name), writer_->tell());
@@ -509,7 +528,7 @@ private:
 
 	void after_write() {
 		ISeekable::Pos cur = writer_->tell();
-		assert(cur > header_.header_pos());
+		assert(cur > header_.pos_abs());
 	}
 
 private:
@@ -537,12 +556,17 @@ public:
 		offset_abs_(index.pos_abs()) {
 		if (index_.size() == 0)
 			index_offset_ = ~0;
+		++*this;
 	}
 
 	BinaryIndexCIter operator ++() {
 		if (index_offset_ >= index_.size()) {
 			// End of index
-			if (index_.next_index_rel()) {
+			if (index_.empty()) {
+				auto q = reader_->tell();
+				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
+				auto v = reader_->tell();
+			} else if (index_.next_index_rel()) {
 				SeekJumper jmp(reader_, offset_abs_ + index_.next_index_rel());
 				reader_->read(&index_, sizeof(index_));
 				index_offset_ = 0;
@@ -559,9 +583,8 @@ public:
 	}
 
 	BinaryImpl::IndexNodeAbs operator *() const {
-		before_read();
-		BinaryImpl::IndexNode n = index_.node(index_offset_);
-		return BinaryImpl::IndexNodeAbs(n.hash, offset_abs_ + n.pos_rel);
+		BinaryImpl::IndexNode node = index_.node(index_offset_);
+		return BinaryImpl::IndexNodeAbs(node.hash, offset_abs_ + node.pos_rel);
 	}
 
 	friend bool operator == (const BinaryIndexCIter&, const BinaryIndexCIter&);
@@ -627,16 +650,19 @@ public:
 	template <class T>
 	void named(T& t, const char* name) {
 		constructing_ = &t;
-		index(name);
 		before_read();
+		index(name);
 		raw_impl(t);
 	}
 
 	template <class T>
 	void search(T& t, const char* name) {
-		uint32_t offset_abs = header_.header_pos() + header_.index_offset_rel();
+		ISeekable::Pos offset_abs = header_.pos_abs() + header_.index_offset_rel();
+		auto w = reader_->tell();
 		SeekJumper jmp(reader_, offset_abs);
+		auto q = reader_->tell();
 		BinaryIndexCIter i(reader_, index_), e;
+		auto m = reader_->tell();
 		uint16_t hash = make_hash(name);
 		for (; i != e; ++i)	{
 			auto ii = *i;
