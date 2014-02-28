@@ -48,7 +48,7 @@ int main()
 
 ### Structures
 ```cpp
-// headers missed...
+// Headers missed...
 
 struct Vector2
 {
@@ -58,7 +58,7 @@ struct Vector2
 
 	// Just implement serialization method
 	template <class Node>
-	void ser(Node& node, bike::Version version) 
+	void ser(Node& node) 
 	{
 		node & x & y;
 	}
@@ -96,7 +96,7 @@ int main()
 
 ### Non-default constructors
 ```cpp
-// headers missed...
+// Headers missed...
 #include <string> // Ok, add one
 
 class Human
@@ -144,7 +144,7 @@ public:
 	void fly() { /* Clark don't need any code to fly */ }
 
     template <class Node>
-    void ser(Node& node, bike::Version version) {
+    void ser(Node& node) {
         node.base<Human>(this);
 		node.named(superpower_, "power");
     }
@@ -159,12 +159,12 @@ protected:
 — Unfortunately, not. In C++ we haven't any tools to bind information about type with it's constructing. So we have to register new derived type.
 
 ```cpp
+Serializers<XmlSerializer> serializers;
 int main()
 {
 	// Registering such way
-	bike::Register<bike::XmlSerializer> reg;
-	reg.reg_type<Human>();
-	reg.reg_type<Superman>();
+	serializers.reg<Human>();
+	serializers.reg<Superman>();
 
 	// Then we can save and load any types, which Superman derives
 	Human* superman = new Superman(200000), *man = 0;
@@ -194,6 +194,11 @@ int main()
 STL-support included.
 
 ```cpp
+// Previous headers hidden...
+#define S11N_USE_VECTOR
+#define S11N_USE_LIST
+#define S11N_USE_MEMORY
+#include <bike/s11n-xml-stl.h>
 
 int main()
 {

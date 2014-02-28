@@ -11,11 +11,11 @@ template <class T>
 class InputXmlIter : public std::iterator<std::input_iterator_tag, T> {
 public:
 	InputXmlIter(InputXmlSerializerNode* parent, pugi::xml_node::iterator iter)
-		: parent_(parent),
+	:	parent_(parent),
 		iter_(iter) {}
 
 	InputXmlIter(const InputXmlIter& i)
-		: parent_(i.parent_),
+	:	parent_(i.parent_),
 		iter_(i.iter_) {}
 
 	InputXmlIter operator ++() {
