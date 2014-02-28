@@ -74,26 +74,26 @@ public:
 		}
 	}
 
-	void cat(const char* str, size_t size) {
-		if (size + size_ < InternalSize) {
-			memcpy(struct_offset(size_), str, size);
-			size_ += size;
+	void cat(const char* str, size_t add_size) {
+		if (size_ + add_size < InternalSize) {
+			memcpy(struct_offset(size_), str, add_size);
+			size_ += add_size;
 			*(struct_offset(size_)) = 0;
 			hash_ = hash_impl(str, size_, hash_);
 		} else {
-			char* new_ptr = new char[size_ + size + 1];
+			char* new_ptr = new char[size_ + add_size + 1];
 			try {
 				memcpy(new_ptr,         (void*)ptr_, size_t(size_));
-				memcpy(new_ptr + size_, (void*)str,  size);
+				memcpy(new_ptr + size_, (void*)str,  add_size);
 			}
 			catch (...) {
 				delete[] new_ptr;
 			}
-			size_ += size;
-			new_ptr[size] = 0;
-			delete[] (void*) ptr_;
+			size_ += add_size;
+			new_ptr[add_size] = 0;
+			delete[] ptr_;
 			ptr_  = new_ptr;
-			hash_ = hash_impl(str, size_, hash_);
+			hash_ = hash_impl(str, add_size, hash_);
 		}
 	}
 
@@ -107,7 +107,7 @@ protected:
 	}
 
 	uint64_t hash_impl(const char* buf, uint64_t size, uint64_t seed = 0) {
-		// The simplest [http://stackoverflow.com/a/107657/79674}
+		// The simplest [http://stackoverflow.com/a/107657/79674]
 		uint64_t hash = seed;
 		for (size_t i = 0; i < size; ++i) {
 			hash = hash * 101 + buf[i];
