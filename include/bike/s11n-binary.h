@@ -101,7 +101,7 @@ struct Name {
 };
 
 struct IndexOffset {
-	uint32_t offset_;
+	uint32_t offset_rel_;
 };
 
 class Header {
@@ -153,14 +153,14 @@ public:
 
 	ISeekable::Pos header_pos() const { return header_pos_; }
 
-	void set_index_offset(uint32_t offset) {
+	void set_index_offset_rel(uint32_t offset_rel) {
 		assert(!tag_.has_index());
 		tag_.set_index();
-		index_.offset_ = offset;
+		index_.offset_rel_ = offset_rel;
 	}
 
-	uint32_t index_offset() const {
-		return index_.offset_;
+	uint32_t index_offset_rel() const {
+		return index_.offset_rel_;
 	}
 
 private:
@@ -605,6 +605,7 @@ class InputBinarySerializerNode {
 public:
 	InputBinarySerializerNode(InputBinarySerializerNode* parent, ISeekReader* reader, ReferencesId* refs, uint8_t format_ver)
 	:	parent_(parent),
+		index_offset_(~0),
 		reader_(reader),
 		refs_(refs),
 		header_read_(false),
@@ -633,6 +634,8 @@ public:
 
 	template <class T>
 	void search(T& t, const char* name) {
+		uint32_t offset_abs = header_.header_pos() + header_.index_offset_rel();
+		SeekJumper jmp(reader_, offset_abs);
 		BinaryIndexCIter i(reader_, index_), e;
 		uint16_t hash = make_hash(name);
 		for (; i != e; ++i)	{
@@ -725,7 +728,15 @@ private:
 	}
 
 	void index(const char* name) {
-
+		if (name[0] == 0)
+			return;
+		if (index_offset_ >= index_.size()) {
+			// No previous read index or can read next
+			if (index_.empty() || !index_.empty() && index_.next_index_rel() != 0) { 
+				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
+				index_offset_ = 0;
+			}
+		}
 	}
 
 private:
@@ -733,6 +744,8 @@ private:
 	BinaryImpl::Header         header_;
 	BinaryImpl::OptionalHeader opt_;
 	BinaryImpl::IndexHeader    index_;
+
+	mutable size_t index_offset_;
 
 	ISeekReader*  reader_;
 	ReferencesId* refs_;
@@ -878,14 +891,14 @@ template <>
 class OutputBinarySerializerCall<BinaryImpl::IndexOffset&> {
 public:
 	static void call(BinaryImpl::IndexOffset& t, OutputBinarySerializerNode& node) {
-		EncoderImpl<uint32_t>::encode(node.writer(), t.offset_);
+		EncoderImpl<uint32_t>::encode(node.writer(), t.offset_rel_);
 	}
 };
 template <>
 class InputBinarySerializerCall<BinaryImpl::IndexOffset&> {
 public:
 	static void call(BinaryImpl::IndexOffset& t, InputBinarySerializerNode& node) {
-		DecoderImpl<uint32_t>::decode(node.reader(), t.offset_);
+		DecoderImpl<uint32_t>::decode(node.reader(), t.offset_rel_);
 	}
 };
 
