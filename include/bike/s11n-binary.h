@@ -65,7 +65,7 @@ struct Tag {
 	const static int Name      = 1 << 1;
 	const static int Index     = 1;
 
-	Tag() : tag_(Hello) {}
+	Tag() : tag_(Hello | Index) {}
 
 	bool check()         const { return (tag_ & Hello) == Hello; }
 	
@@ -79,6 +79,7 @@ struct Tag {
 	void set_version()   { tag_ |= Version; }
 	void unset_version() { tag_ &= ~Version; }
 	void set_index()     { tag_ |= Index; }
+	void unset_index()   { tag_ &= ~Index; }
 
 	uint8_t tag_;
 };
@@ -158,8 +159,7 @@ public:
 	ISeekable::Pos index_pos_abs() const { return index_pos_abs_; }
 
 	void set_index_offset_rel(uint32_t offset_rel) {
-		assert(!tag_.has_index());
-		tag_.set_index();
+		assert(tag_.has_index());
 		index_.offset_rel_ = offset_rel;
 	}
 
@@ -301,7 +301,16 @@ public:
 	}
 
 	bool empty() const {
-		return pos_abs_ == 0;
+		return pos_abs_ == 0 && index_.ind[0].pos_rel == 0;
+	}
+
+	void after_read() {
+		for (size_t i = 0; i < Index::Size; ++i)
+		{
+			if (!index_.ind[i].hash && !index_.ind[i].pos_rel)
+				break;
+			++offset_;
+		}
 	}
 
 	size_t size() const { return offset_; }
@@ -549,10 +558,10 @@ class BinaryIndexCIter : public std::iterator<std::forward_iterator_tag, const B
 public:
 	BinaryIndexCIter() : index_offset_(~0), offset_abs_(0) {}
 
-	BinaryIndexCIter(ISeekReader* reader, const BinaryImpl::IndexHeader& index) 
+	BinaryIndexCIter(ISeekReader* reader, size_t offset_abs, const BinaryImpl::IndexHeader& index) 
 	:	reader_(reader),
 		index_(index),
-		index_offset_(0),
+		index_offset_(offset_abs),
 		offset_abs_(index.pos_abs()) {
 		if (index_.size() == 0)
 			index_offset_ = ~0;
@@ -560,23 +569,26 @@ public:
 	}
 
 	BinaryIndexCIter operator ++() {
+		if (~index_offset_)
+			++index_offset_;
+
 		if (index_offset_ >= index_.size()) {
 			// End of index
 			if (index_.empty()) {
 				auto q = reader_->tell();
 				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
+				index_.after_read();
 				auto v = reader_->tell();
+				index_offset_ = 0;
 			} else if (index_.next_index_rel()) {
 				SeekJumper jmp(reader_, offset_abs_ + index_.next_index_rel());
-				reader_->read(&index_, sizeof(index_));
+				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
+				index_.after_read();
 				index_offset_ = 0;
 			} else { // No next index
 				index_.clear();
 				index_offset_ = ~0;
 			}
-		}
-		else {
-			++index_offset_;
 		}
 
 		return *this;
@@ -591,24 +603,6 @@ public:
 	friend bool operator != (const BinaryIndexCIter&, const BinaryIndexCIter&);
 
 private:
-	void before_read() const {
-		if (index_offset_ >= index_.size()) {
-			// End of index
-			if (index_.empty()) {
-				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
-			}
-			else if (index_.next_index_rel()) {
-				SeekJumper jmp(reader_, offset_abs_ + index_.next_index_rel());
-				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
-				index_offset_ = 0;
-			} else { // No next index
-				index_.clear();
-				index_offset_ = ~0;
-			}
-		}
-	}
-
-private:
 	ISeekReader*   reader_;
 	ISeekable::Pos offset_abs_;
 	mutable size_t index_offset_;
@@ -621,7 +615,7 @@ bool operator == (const BinaryIndexCIter& a, const BinaryIndexCIter& b) {
 }
 
 bool operator != (const BinaryIndexCIter& a, const BinaryIndexCIter& b) {
-	return a.index_ != b.index_ || a.index_offset_ != b.index_offset_;
+	return a.index_offset_ != b.index_offset_; // Lol, hahaha. TODO: FIXME: Need something more strong, than working comparison with empty iterator
 }
 
 class InputBinarySerializerNode {
@@ -661,17 +655,17 @@ public:
 		auto w = reader_->tell();
 		SeekJumper jmp(reader_, offset_abs);
 		auto q = reader_->tell();
-		BinaryIndexCIter i(reader_, index_), e;
+		BinaryIndexCIter i(reader_, offset_abs, index_), e;
 		auto m = reader_->tell();
 		uint16_t hash = make_hash(name);
 		for (; i != e; ++i)	{
-			auto ii = *i;
-			if ((*i).hash == hash) {
-				int p = 0;
+			const BinaryImpl::IndexNodeAbs& node = *i;
+			if (node.hash == hash) {
+				SeekJumper jmp(reader_, node.pos_abs);
+				named(t, name);
+				return;
 			}
-
 		}
-		//index_.
 	}
 
 	template <class Base>

@@ -51,9 +51,10 @@ public:
 	StdReader(std::istream* in) : in_(in) {}
 
 	virtual size_t read(void* buf, size_t size) S11N_OVERRIDE {
+		uint64_t t = tell();
 		in_->read((char*) buf, size);
 #	ifdef S11N_DEBUG_LOG_IO
-		std::cout << "I: " << stringify_bytes(buf, size) << std::endl;
+		std::cout << "I: " << stringify_bytes(buf, size) << " (" << t << ")" << std::endl;
 #	endif
 		return size;//FIXME
 	}
@@ -76,10 +77,10 @@ public:
 	StdWriter(std::ostream* out) : out_(out)  {}
 
 	virtual void write(const void* buf, size_t size) S11N_OVERRIDE {
-		out_->write((const char*) buf, size);
 #	ifdef S11N_DEBUG_LOG_IO
-		std::cout << "W: " << stringify_bytes(buf, size) << std::endl;
+		std::cout << "W: " << stringify_bytes(buf, size) << " (" << tell() << ")" << std::endl;
 #	endif
+		out_->write((const char*) buf, size);
 	}
 
 	virtual uint64_t tell() S11N_OVERRIDE {
@@ -370,12 +371,14 @@ TYPED_TEST_P(BaseTest, Classes) {
 	test_val<Superman>();
 }
 
-TYPED_TEST_P(BaseTest, Pointers) {
+TYPED_TEST_P(BaseTest, NullPointers) {
 	Human* ivan = S11N_NULLPTR, *read = S11N_NULLPTR;
 	io_impl(ivan, read);
 	ASSERT_EQ(ivan, read);
+}
 
-	ivan = new Human("Ivan Ivanov"), read = S11N_NULLPTR;
+TYPED_TEST_P(BaseTest, Pointers) {
+	Human* ivan = new Human("Ivan Ivanov"), *read = S11N_NULLPTR;
 	test_ptr_impl(ivan, read);
 	delete read, delete ivan;
 }
@@ -512,6 +515,7 @@ REGISTER_TYPED_TEST_CASE_P(
 	Strings,
 	Structs,
 	Classes,
+	NullPointers,
 	Pointers,
 	SmartPointers,
 	SequenceContainers,
