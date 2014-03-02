@@ -56,6 +56,18 @@ uint16_t make_hash(const char* str) { // Better be than not to be
     return hash;
 }
 
+template <typename To, typename From>
+void cut_number(To* to, const From& from) {
+	assert(from <= From(std::numeric_limits<To>::max()));
+	*to = To(from);
+}
+
+template <typename To, typename From>
+To cut_return(const From& from) {
+	assert(from <= From(std::numeric_limits<To>::max()));
+	return To(from);
+}
+
 namespace BinaryImpl {
 
 struct Tag {
@@ -125,7 +137,6 @@ public:
 		index_pos_abs_ = node.io()->tell();
 		if (tag_.has_index())
 			node.raw_impl(index_);
-		auto w = node.io()->tell();
 	}
 
 	void set_version(uint8_t v) {
@@ -286,7 +297,7 @@ public:
 
 	void set_next_index(ISeekWriter* writer, uint64_t next_index_abs) {
 		SeekJumper jmp(writer, pos_abs_);
-		index_.next_index_rel = next_index_abs - pos_abs_;
+		cut_number(&index_.next_index_rel, next_index_abs - pos_abs_);
 		writer->write(&index_, sizeof(index_));
 	}
 
@@ -346,7 +357,6 @@ bool operator != (const IndexHeader& a, const IndexHeader& b) {
 
 } // namespace BinaryImpl {
 
-
 template <>
 class EncoderImpl<BinaryImpl::Index&> {
 public:
@@ -360,7 +370,6 @@ class DecoderImpl<BinaryImpl::Index&> {
 public:
 	static void decode(IReader* reader, BinaryImpl::Index& t) {
 		DecoderImpl<uint32_t>::decode(reader, t.next_index_rel);
-		auto q = dynamic_cast<ISeekReader*>(reader)->tell();
 		Decode_array(reader, t.ind);
 	}
 };
@@ -496,7 +505,8 @@ private:
 			index_.set_pos_abs(writer_->tell());
 			
 			if (header_.index_offset_rel() == 0) {
-				header_.set_index_offset_rel(index_.pos_abs() - header_.pos_abs());
+				header_.set_index_offset_rel(cut_return<uint32_t>(
+					index_.pos_abs() - header_.pos_abs()));
 				header_.update_index_offset(*this);
 			}
 
@@ -580,10 +590,8 @@ public:
 		if (index_offset_ >= index_.size()) {
 			// End of index
 			if (index_.empty()) {
-				auto q = reader_->tell();
 				DecoderImpl<BinaryImpl::Index&>::decode(reader_, index_.index_internal());
 				index_.after_read();
-				auto v = reader_->tell();
 				index_offset_ = 0;
 			} else if (index_.next_index_rel()) {
 				SeekJumper jmp(reader_, offset_abs_ + index_.next_index_rel());
@@ -601,7 +609,8 @@ public:
 
 	BinaryImpl::IndexNodeAbs operator *() const {
 		BinaryImpl::IndexNode node = index_.node(index_offset_);
-		return BinaryImpl::IndexNodeAbs(node.hash, BinaryImpl::IndexNode::PosT(offset_abs_ + node.pos_rel));
+		return BinaryImpl::IndexNodeAbs(node.hash, 
+			cut_return<BinaryImpl::IndexNode::PosT>(offset_abs_ + node.pos_rel));
 	}
 
 	friend bool operator == (const BinaryIndexCIter&, const BinaryIndexCIter&);
@@ -657,11 +666,8 @@ public:
 	template <class T>
 	void search(T& t, const char* name) {
 		ISeekable::Pos offset_abs = header_.pos_abs() + header_.index_offset_rel();
-		auto w = reader_->tell();
 		SeekJumper jmp(reader_, offset_abs);
-		auto q = reader_->tell();
 		BinaryIndexCIter i(reader_, offset_abs, index_), e;
-		auto m = reader_->tell();
 		uint16_t hash = make_hash(name);
 		for (; i != e; ++i)	{
 			const BinaryImpl::IndexNodeAbs& node = *i;
