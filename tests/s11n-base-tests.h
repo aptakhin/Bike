@@ -467,7 +467,11 @@ bool operator == (const SampleStruct& a, const SampleStruct& b) {
 }
 
 TYPED_TEST_P(BaseTest, Benchmark) {
-	size_t Size = 1000;
+#ifdef S11N_DEBUG_LOG_IO
+	const size_t Size = 1;
+#else
+	const size_t Size = 1000;
+#endif
 	std::vector<SampleStruct> vec;
 	vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {

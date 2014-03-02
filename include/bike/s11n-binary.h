@@ -229,18 +229,22 @@ private:
 };
 
 struct IndexNode {
-	uint16_t hash;
-	uint32_t pos_rel;
+	typedef uint16_t HashT;
+	typedef uint32_t PosT;
+
+	HashT hash;
+	PosT  pos_rel;
 
 	IndexNode() : hash(0), pos_rel(0) {}
 };
 
 struct IndexNodeAbs {
-	uint16_t hash;
-	uint32_t pos_abs;
+	IndexNode::HashT hash;
+	IndexNode::PosT pos_abs;
 
 	IndexNodeAbs() : hash(0), pos_abs(0) {}
-	IndexNodeAbs(uint16_t hash, uint32_t pos_abs) : hash(hash), pos_abs(pos_abs) {}
+	IndexNodeAbs(IndexNode::HashT hash, IndexNode::PosT pos_abs) 
+	:	hash(hash), pos_abs(pos_abs) {}
 };
 
 struct Index {
@@ -264,12 +268,13 @@ class IndexHeader {
 public:
 	IndexHeader() : offset_(0), pos_abs_(0) {}
 
-	bool add(uint16_t hash, uint64_t pos_abs) {
+	bool add(uint16_t hash, uint64_t item_pos_abs) {
 		if (!can_add())
 			return false;
 
 		index_.ind[offset_].hash    = hash;
-		index_.ind[offset_].pos_rel = pos_abs - pos_abs_;
+		assert(item_pos_abs - pos_abs_ <= std::numeric_limits<uint32_t>::max());
+		index_.ind[offset_].pos_rel = uint32_t(item_pos_abs - pos_abs_);
 
 		++offset_;
 		return true;
@@ -558,11 +563,11 @@ class BinaryIndexCIter : public std::iterator<std::forward_iterator_tag, const B
 public:
 	BinaryIndexCIter() : index_offset_(~0), offset_abs_(0) {}
 
-	BinaryIndexCIter(ISeekReader* reader, size_t offset_abs, const BinaryImpl::IndexHeader& index) 
+	BinaryIndexCIter(ISeekReader* reader, bike::ISeekable::Pos offset_abs, const BinaryImpl::IndexHeader& index)
 	:	reader_(reader),
 		index_(index),
-		index_offset_(offset_abs),
-		offset_abs_(index.pos_abs()) {
+		index_offset_(0),
+		offset_abs_(offset_abs) {
 		if (index_.size() == 0)
 			index_offset_ = ~0;
 		++*this;
@@ -596,7 +601,7 @@ public:
 
 	BinaryImpl::IndexNodeAbs operator *() const {
 		BinaryImpl::IndexNode node = index_.node(index_offset_);
-		return BinaryImpl::IndexNodeAbs(node.hash, offset_abs_ + node.pos_rel);
+		return BinaryImpl::IndexNodeAbs(node.hash, BinaryImpl::IndexNode::PosT(offset_abs_ + node.pos_rel));
 	}
 
 	friend bool operator == (const BinaryIndexCIter&, const BinaryIndexCIter&);
@@ -662,7 +667,9 @@ public:
 			const BinaryImpl::IndexNodeAbs& node = *i;
 			if (node.hash == hash) {
 				SeekJumper jmp(reader_, node.pos_abs);
-				named(t, name);
+				constructing_ = &t;
+				before_read();
+				raw_impl(t);
 				return;
 			}
 		}
