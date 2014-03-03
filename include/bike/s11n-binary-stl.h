@@ -59,9 +59,9 @@ public:
 
 	template <class Cont, class T>
 	static void read(Cont& container, InputBinarySerializerNode& node) {
-		SizeT size;
+		UnsignedNumber size;
 		node & size;
-		InputBinaryIter<T, SizeT> b(&node, 0), e(&node, size);
+		InputBinaryIter<T, UnsignedNumber> b(&node, 0), e(&node, size);
 		Cont tmp(b, e);
 		std::swap(container, tmp);
 	}
@@ -73,7 +73,7 @@ public:
 
 	template <class FwdIter>
 	static void write(FwdIter begin, FwdIter end, OutputBinarySerializerNode& node) {
-		SizeT size = std::distance(begin, end);
+		UnsignedNumber size = std::distance(begin, end);
 		node & size;
 		for (; begin != end; ++begin)
 			node.named(*begin, "");

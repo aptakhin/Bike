@@ -830,6 +830,7 @@ SN_RAW(int32_t);
 SN_RAW(uint32_t);
 SN_RAW(int64_t);
 SN_RAW(uint64_t);
+SN_RAW(UnsignedNumber);
 SN_RAW(float);
 SN_RAW(double);
 
@@ -962,21 +963,6 @@ class InputBinarySerializerCall<BinaryImpl::IndexHeader&> {
 public:
 	static void call(BinaryImpl::IndexHeader& t, InputBinarySerializerNode& node) {
 		DecoderImpl<BinaryImpl::Index&>::decode(node.reader(), t.index_internal());
-	}
-};
-
-template <>
-class OutputBinarySerializerCall<SizeT&> {
-public:
-	static void call(SizeT& t, OutputBinarySerializerNode& node) {
-		EncoderImpl<SizeT>::encode(node.writer(), t);
-	}
-};
-template <>
-class InputBinarySerializerCall<SizeT&> {
-public:
-	static void call(SizeT& t, InputBinarySerializerNode& node) {
-		DecoderImpl<SizeT>::decode(node.reader(), t);
 	}
 };
 

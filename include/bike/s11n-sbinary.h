@@ -269,45 +269,6 @@ ENC_RAW(double);
 #undef CONV
 #undef SAME
 
-struct SizeT {
-	uint64_t val;
-	SizeT() {}
-	SizeT(size_t val) : val((uint64_t) val) {}
-
-	size_t to_size_t() const { return size_t(val); }
-
-	SizeT operator ++ () {
-		++val;
-		return *this;
-	}
-};
-
-bool operator == (const SizeT& a, const SizeT& b) {
-	return a.val == b.val;
-}
-
-bool operator != (const SizeT& a, const SizeT& b) {
-	return a.val != b.val;
-}
-
-template <>
-class EncoderImpl<SizeT> {
-public:
-	static void encode(IWriter* writer, const SizeT& v) {
-		uint64_t tmp = conv().conv_uint64_t(v.val);
-		writer->write(&tmp, sizeof(tmp));
-	}
-};
-template <>
-class DecoderImpl<SizeT> {
-public:
-	static void decode(IReader* reader, SizeT& v) {
-		uint64_t tmp;
-		reader->read(&tmp, sizeof(tmp));
-		v.val = conv().conv_uint64_t(tmp);
-	}
-};
-
 template <class T, size_t N>
 void Encode_array(IWriter* writer, const T(&v)[N]) {
 	T* src = const_cast<T*>(v);
