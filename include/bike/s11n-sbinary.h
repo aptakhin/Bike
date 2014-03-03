@@ -326,6 +326,7 @@ public:
 		uint32_t msb     = msb64(v);
 		uint32_t maskmsb = msb32(VALUE_MASK);
 		int enc_ofs = ((msb + 6) / 7) * 7; // FIXME: Need next divisor of 7. Not sure about compiler not-optimization
+		assert(enc_ofs % 7 == 0);
 		do {
 			enc_ofs -= maskmsb;
 			uint32_t flmask = VALUE_MASK << enc_ofs;
@@ -355,7 +356,7 @@ public:
 //
 // std::string
 //
-template <typename Elem, typename Traits, typename Alloc>
+template <class Elem, class Traits, class Alloc>
 class EncoderImpl< std::basic_string<Elem, Traits, Alloc> > {
 public:
 	static void encode(IWriter* writer, const std::basic_string<Elem, Traits, Alloc>& v) {
@@ -365,7 +366,7 @@ public:
 			writer->write(&v[0], (size_t) size);
 	}
 };
-template <typename Elem, typename Traits, typename Alloc>
+template <class Elem, class Traits, class Alloc>
 class DecoderImpl< std::basic_string<Elem, Traits, Alloc> > {
 public:
 	static void decode(IReader* reader, std::basic_string<Elem, Traits, Alloc>& v) {
@@ -381,21 +382,21 @@ public:
 //
 // std::vector
 //
-template <class T>
-class EncoderImpl< std::vector<T> > {
+template <class T, class Alloc>
+class EncoderImpl< std::vector<T, Alloc> > {
 public:
-	static void encode(IWriter* writer, const std::vector<T>& v) {
+	static void encode(IWriter* writer, const std::vector<T, Alloc>& v) {
 		UnsignedNumber size = v.size();
 		EncoderImpl<UnsignedNumber>::encode(writer, size);
-		std::vector<T>::const_iterator i = v.begin(), e = v.end();
+		std::vector<T, Alloc>::const_iterator i = v.begin(), e = v.end();
 		for (; i != e; ++i)
 			EncoderImpl<T>::encode(writer, *i);
 	}
 };
-template <class T>
-class DecoderImpl< std::vector<T> > {
+template <class T, class Alloc>
+class DecoderImpl< std::vector<T, Alloc> > {
 public:
-	static void decode(IReader* reader, std::vector<T>& v) {
+	static void decode(IReader* reader, std::vector<T, Alloc>& v) {
 		v.clear();
 		UnsignedNumber size;
 		DecoderImpl<UnsignedNumber>::decode(reader, size);
@@ -491,18 +492,18 @@ SN_RAW(std::string);
 //
 // std::vector
 //
-template <class T>
-class OutputStreamingBinarySerializerCall<std::vector<T>&> {
+template <class T, class Alloc>
+class OutputStreamingBinarySerializerCall<std::vector<T, Alloc>&> {
 public:
-	static void call(std::vector<T>& t, OutputStreamingBinarySerializerNode& node) {
-		EncoderImpl< std::vector<T> >::encode(node.writer(), t);
+	static void call(std::vector<T, Alloc>& t, OutputStreamingBinarySerializerNode& node) {
+		EncoderImpl< std::vector<T, Alloc> >::encode(node.writer(), t);
 	}
 };
-template <class T>
-class InputStreamingBinarySerializerCall<std::vector<T>&> {
+template <class T, class Alloc>
+class InputStreamingBinarySerializerCall<std::vector<T, Alloc>&> {
 public:
-	static void call(std::vector<T>& t, InputStreamingBinarySerializerNode& node) {
-		DecoderImpl< std::vector<T> >::decode(node.reader(), t);
+	static void call(std::vector<T, Alloc>& t, InputStreamingBinarySerializerNode& node) {
+		DecoderImpl< std::vector<T, Alloc> >::decode(node.reader(), t);
 	}
 }; 
 

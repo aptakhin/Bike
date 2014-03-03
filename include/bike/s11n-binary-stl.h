@@ -121,17 +121,17 @@ public:
 #ifdef S11N_USE_VECTOR
 #include <vector>
 namespace bike {
-template <class T>
-class OutputBinarySerializerCall<std::vector<T>&> {
+template <class T, class Alloc>
+class OutputBinarySerializerCall<std::vector<T, Alloc>&> {
 public:
-	static void call(std::vector<T>& t, OutputBinarySerializerNode& node) {
+	static void call(std::vector<T, Alloc>& t, OutputBinarySerializerNode& node) {
 		BinarySequence::write(t, node);
 	}
 };
-template <class T>
-class InputBinarySerializerCall<std::vector<T>&> {
+template <class T, class Alloc>
+class InputBinarySerializerCall<std::vector<T, Alloc>&> {
 public:
-	static void call(std::vector<T>& t, InputBinarySerializerNode& node) {
+	static void call(std::vector<T, Alloc>& t, InputBinarySerializerNode& node) {
 		BinarySequence::read(t, node);
 	}
 }; 
@@ -141,17 +141,17 @@ public:
 #ifdef S11N_USE_LIST
 #include <list>
 namespace bike {
-template <class T>
-class OutputBinarySerializerCall<std::list<T>&> {
+template <class T, class Alloc>
+class OutputBinarySerializerCall<std::list<T, Alloc>&> {
 public:
-	static void call(std::list<T>& t, OutputBinarySerializerNode& node) {
+	static void call(std::list<T, Alloc>& t, OutputBinarySerializerNode& node) {
 		BinarySequence::write(t, node);
 	}
 };
-template <class T>
-class InputBinarySerializerCall<std::list<T>&> {
+template <class T, class Alloc>
+class InputBinarySerializerCall<std::list<T, Alloc>&> {
 public:
-	static void call(std::list<T>& t, InputBinarySerializerNode& node) {
+	static void call(std::list<T, Alloc>& t, InputBinarySerializerNode& node) {
 		BinarySequence::read(t, node);
 	}
 };
@@ -161,17 +161,17 @@ public:
 #ifdef S11N_USE_MAP
 #include <map>
 namespace bike {
-template <class K, class V>
-class OutputBinarySerializerCall<std::map<K, V>&> {
+template <class K, class V, class Pred, class Alloc>
+class OutputBinarySerializerCall<std::map<K, V, Pred, Alloc>&> {
 public:
-	static void call(std::map<K, V>& t, OutputBinarySerializerNode& node) {
+	static void call(std::map<K, V, Pred, Alloc>& t, OutputBinarySerializerNode& node) {
 		BinarySequence::write(t, node);
 	}
 };
-template <class K, class V>
-class InputBinarySerializerCall<std::map<K, V>&> {
+template <class K, class V, class Pred, class Alloc>
+class InputBinarySerializerCall<std::map<K, V, Pred, Alloc>&> {
 public:
-	static void call(std::map<K, V>& t, InputBinarySerializerNode& node) {
+	static void call(std::map<K, V, Pred, Alloc>& t, InputBinarySerializerNode& node) {
 		BinarySequence::read(t, node);
 	}
 };
@@ -182,19 +182,19 @@ public:
 #ifndef S11N_CPP03
 #include <memory>
 namespace bike {
-template <class T>
-class OutputBinarySerializerCall<std::unique_ptr<T>&> {
+template <class T, class Del>
+class OutputBinarySerializerCall<std::unique_ptr<T, Del>&> {
 public:
-	static void call(std::unique_ptr<T>& t, OutputBinarySerializerNode& node) {
+	static void call(std::unique_ptr<T, Del>& t, OutputBinarySerializerNode& node) {
 		OutputBinarySerializerNode sub(&node, node.writer(), node.refs(), node.format_ver());
 		T* tmp = t.get();
 		sub & tmp;
 	}
 };
-template <class T>
-class InputBinarySerializerCall<std::unique_ptr<T>&> {
+template <class T, class Del>
+class InputBinarySerializerCall<std::unique_ptr<T, Del>&> {
 public:
-	static void call(std::unique_ptr<T>& t, InputBinarySerializerNode& node) {
+	static void call(std::unique_ptr<T, Del>& t, InputBinarySerializerNode& node) {
 		T* ref = S11N_NULLPTR;
 		InputBinarySerializerNode sub(&node, node.reader(), node.refs(), node.format_ver());
 		sub & ref;
