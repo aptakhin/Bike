@@ -13,8 +13,7 @@ typedef std::unique_ptr<Widget> WidgetUPtr;
 class Widget {
 public:
 	Widget(Widget* parent = nullptr)
-	:	parent_(parent) {
-	}
+	:	parent_(parent) {}
 
 	void add_child(WidgetUPtr&& ptr) {
 		widgets_.emplace_back(std::move(ptr));
@@ -50,8 +49,7 @@ void serialize_widget(Widget& widget, Node& node) {
 
 S11N_XML_OUT(Widget, serialize_widget);
 
-bool operator == (const Widget& a, const Widget& b)
-{
+bool operator == (const Widget& a, const Widget& b) {
 	return a.name() == b.name();// FIXME: add child widgets comparison
 }
 

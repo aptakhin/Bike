@@ -204,6 +204,8 @@ struct Conv {
 	CONV(uint32_t);
 	CONV(int64_t);
 	CONV(uint64_t);
+	CONV(float);
+	CONV(double);
 };
 
 Conv& conv() {
@@ -256,6 +258,8 @@ ENC_RAW(int32_t);
 ENC_RAW(uint32_t);
 ENC_RAW(int64_t);
 ENC_RAW(uint64_t);
+ENC_RAW(float);
+ENC_RAW(double);
 
 #undef ENC_RAW
 
@@ -264,6 +268,21 @@ ENC_RAW(uint64_t);
 #undef CONV_NAME
 #undef CONV
 #undef SAME
+
+template <class T, size_t N>
+void encode_array(IWriter* writer, const T(&v)[N]) {
+	T* src = const_cast<T*>(v);
+	for (size_t i = 0; i < N; ++i, ++src)
+		EncoderImpl<T&>::encode(writer, *src);
+}
+
+template <class T, size_t N>
+void decode_array(IReader* reader, T(&v)[N]) {
+	T* dst = v;
+	auto q = dynamic_cast<ISeekReader*>(reader)->tell();
+	for (size_t i = 0; i < N; ++i, ++dst)
+		DecoderImpl<T&>::decode(reader, *dst);
+}
 
 //
 // TODO: FIXME: Do I know about endianness?
@@ -307,6 +326,7 @@ public:
 		uint32_t msb     = msb64(v);
 		uint32_t maskmsb = msb32(VALUE_MASK);
 		int enc_ofs = ((msb + 6) / 7) * 7; // FIXME: Need next divisor of 7. Not sure about compiler not-optimization
+		assert(enc_ofs % 7 == 0);
 		do {
 			enc_ofs -= maskmsb;
 			uint32_t flmask = VALUE_MASK << enc_ofs;
@@ -327,7 +347,6 @@ public:
 			uint8_t r;
 			reader->read(&r, 1);
 			next = (r & NEXT_MASK) > 0;
-			uint8_t m = r & VALUE_MASK;
 			v <<= 7;
 			v |= r & VALUE_MASK;
 		} while (next);
@@ -337,21 +356,20 @@ public:
 //
 // std::string
 //
-template <>
-class EncoderImpl<std::string> {
+template <class Elem, class Traits, class Alloc>
+class EncoderImpl< std::basic_string<Elem, Traits, Alloc> > {
 public:
-	static void encode(IWriter* writer, const std::string& v) {
+	static void encode(IWriter* writer, const std::basic_string<Elem, Traits, Alloc>& v) {
 		UnsignedNumber size = v.size();
 		EncoderImpl<UnsignedNumber>::encode(writer, size);
 		if (size)
 			writer->write(&v[0], (size_t) size);
 	}
 };
-template <>
-class DecoderImpl<std::string> {
+template <class Elem, class Traits, class Alloc>
+class DecoderImpl< std::basic_string<Elem, Traits, Alloc> > {
 public:
-	static void decode(IReader* reader, std::string& v) {
-		v = "";
+	static void decode(IReader* reader, std::basic_string<Elem, Traits, Alloc>& v) {
 		UnsignedNumber size;
 		DecoderImpl<UnsignedNumber>::decode(reader, size);
 		if (size) {
@@ -364,25 +382,25 @@ public:
 //
 // std::vector
 //
-template <class T>
-class EncoderImpl< std::vector<T> > {
+template <class T, class Alloc>
+class EncoderImpl< std::vector<T, Alloc> > {
 public:
-	static void encode(IWriter* writer, const std::vector<T>& v) {
+	static void encode(IWriter* writer, const std::vector<T, Alloc>& v) {
 		UnsignedNumber size = v.size();
 		EncoderImpl<UnsignedNumber>::encode(writer, size);
-		std::vector<T>::const_iterator i = v.begin(), e = v.end();
+		std::vector<T, Alloc>::const_iterator i = v.begin(), e = v.end();
 		for (; i != e; ++i)
 			EncoderImpl<T>::encode(writer, *i);
 	}
 };
-template <class T>
-class DecoderImpl< std::vector<T> > {
+template <class T, class Alloc>
+class DecoderImpl< std::vector<T, Alloc> > {
 public:
-	static void decode(IReader* reader, std::vector<T>& v) {
+	static void decode(IReader* reader, std::vector<T, Alloc>& v) {
 		v.clear();
 		UnsignedNumber size;
 		DecoderImpl<UnsignedNumber>::decode(reader, size);
-		v.reserve(size_t(size));
+		v.reserve(cut_return<size_t>(size));
 		for (size_t i = 0; i < size; ++i) {
 			T tmp;
 			DecoderImpl<T>::decode(reader, tmp);
@@ -391,14 +409,14 @@ public:
 	}
 };
 
-class OutputBinarySerializerNode {
+class OutputStreamingBinarySerializerNode {
 public:
-	OutputBinarySerializerNode(IWriter* writer)
+	OutputStreamingBinarySerializerNode(IWriter* writer)
 	:	writer_(writer) {}
 
 	template <class T>
-	OutputBinarySerializerNode& operator & (T& t) {
-		OutputBinarySerializerCall<T&>::call(t, *this);
+	OutputStreamingBinarySerializerNode& operator & (T& t) {
+		OutputStreamingBinarySerializerCall<T&>::call(t, *this);
 		return *this;
 	}
 
@@ -408,14 +426,14 @@ protected:
 	IWriter* writer_;
 };
 
-class InputBinarySerializerNode {
+class InputStreamingBinarySerializerNode {
 public:
-	InputBinarySerializerNode(IReader* reader)
+	InputStreamingBinarySerializerNode(IReader* reader)
 	:	reader_(reader) {}
 
 	template <class T>
-	InputBinarySerializerNode& operator & (T& t) {
-		InputBinarySerializerCall<T&>::call(t, *this);
+	InputStreamingBinarySerializerNode& operator & (T& t) {
+		InputStreamingBinarySerializerCall<T&>::call(t, *this);
 		return *this;
 	}
 
@@ -426,33 +444,33 @@ protected:
 };
 
 template <class T>
-class InputBinarySerializerCall {
+class InputStreamingBinarySerializerCall {
 public:
-	static void call(T& t, InputBinarySerializerNode& node) {
+	static void call(T& t, InputStreamingBinarySerializerNode& node) {
 		t.ser(node);
 	}
 };
 
 template <class T>
-class OutputBinarySerializerCall {
+class OutputStreamingBinarySerializerCall {
 public:
-	static void call(T& t, OutputBinarySerializerNode& node) {
+	static void call(T& t, OutputStreamingBinarySerializerNode& node) {
 		t.ser(node);
 	}
 };
 
 #define SN_RAW(Type)\
 	template <>\
-	class OutputBinarySerializerCall<Type&> {\
+	class OutputStreamingBinarySerializerCall<Type&> {\
 	public:\
-		static void call(Type& t, OutputBinarySerializerNode& node) {\
+		static void call(Type& t, OutputStreamingBinarySerializerNode& node) {\
 			EncoderImpl<Type>::encode(node.writer(), t);\
 		}\
 	};\
 	template <>\
-	class InputBinarySerializerCall<Type&> {\
+	class InputStreamingBinarySerializerCall<Type&> {\
 	public:\
-		static void call(Type& t, InputBinarySerializerNode& node) {\
+		static void call(Type& t, InputStreamingBinarySerializerNode& node) {\
 			DecoderImpl<Type>::decode(node.reader(), t);\
 		}\
 	}; 
@@ -474,41 +492,41 @@ SN_RAW(std::string);
 //
 // std::vector
 //
-template <class T>
-class OutputBinarySerializerCall<std::vector<T>&> {
+template <class T, class Alloc>
+class OutputStreamingBinarySerializerCall<std::vector<T, Alloc>&> {
 public:
-	static void call(std::vector<T>& t, OutputBinarySerializerNode& node) {
-		EncoderImpl< std::vector<T> >::encode(node.writer(), t);
+	static void call(std::vector<T, Alloc>& t, OutputStreamingBinarySerializerNode& node) {
+		EncoderImpl< std::vector<T, Alloc> >::encode(node.writer(), t);
 	}
 };
-template <class T>
-class InputBinarySerializerCall<std::vector<T>&> {
+template <class T, class Alloc>
+class InputStreamingBinarySerializerCall<std::vector<T, Alloc>&> {
 public:
-	static void call(std::vector<T>& t, InputBinarySerializerNode& node) {
-		DecoderImpl< std::vector<T> >::decode(node.reader(), t);
+	static void call(std::vector<T, Alloc>& t, InputStreamingBinarySerializerNode& node) {
+		DecoderImpl< std::vector<T, Alloc> >::decode(node.reader(), t);
 	}
 }; 
 
-class OutputBinaryStreaming : public OutputBinarySerializerNode {
+class OutputStreamingBinary : public OutputStreamingBinarySerializerNode {
 public:
-	OutputBinaryStreaming(IWriter* writer)
-	:	OutputBinarySerializerNode(writer) {}
+	OutputStreamingBinary(IWriter* writer)
+	:	OutputStreamingBinarySerializerNode(writer) {}
 
 	template <class T>
-	OutputBinaryStreaming& operator << (T& t) {
-		(*((OutputBinarySerializerNode*) this)) & t;
+	OutputStreamingBinarySerializerNode& operator << (T& t) {
+		(*((OutputStreamingBinarySerializerNode*) this)) & t;
 		return *this;
 	}
 };
 
-class InputBinaryStreaming : public InputBinarySerializerNode {
+class InputStreamingBinary : public InputStreamingBinarySerializerNode {
 public:
-	InputBinaryStreaming(IReader* reader)
-	:	InputBinarySerializerNode(reader) {}
+	InputStreamingBinary(IReader* reader)
+	:	InputStreamingBinarySerializerNode(reader) {}
 
 	template <class T>
-	InputBinaryStreaming& operator >> (T& t) {
-		(*((InputBinarySerializerNode*) this)) & t;
+	InputStreamingBinarySerializerNode& operator >> (T& t) {
+		(*((InputStreamingBinarySerializerNode*) this)) & t;
 		return *this;
 	}
 };

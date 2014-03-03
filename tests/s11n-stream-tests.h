@@ -11,29 +11,49 @@
 
 using namespace bike;
 
-class StrWriter : public IWriter
+class StrWriter : public ISeekWriter
 {
 public:
-	StrWriter(std::string& str) : out_(str) {}
+	StrWriter(std::string& str) : out_(str), offset_(0) {}
 
-	void write(const void* o, size_t size) /* override */ {
-		char* s = (char*) o;
-		std::string x(s, s + size);
-		out_ += x;
+	virtual void write(const void* o, size_t size) S11N_OVERRIDE {
+		int reserve = offset_ + size;
+		if (reserve > 0)
+			out_.resize(reserve);
+		memcpy(&out_[offset_], o, size);
+		offset_ += size;
+	}
+
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(offset_);
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		offset_ = size_t(pos);
 	}
 
 	std::string& out_;
+	size_t offset_;
 };
 
-class StrReader : public IReader
+class StrReader : public ISeekReader
 {
 public:
 	StrReader(const std::string& str) : out_(str), offset_(0) {}
 
-	size_t read(void* o, size_t size) /* override */ {
+	virtual size_t read(void* o, size_t size) S11N_OVERRIDE {
+		assert(offset_ + size <= out_.size());
 		memcpy(o, &out_[offset_], size);
 		offset_ += size;
 		return size;
+	}
+
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(offset_);
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		offset_ = size_t(pos);
 	}
 
 	const std::string& out_;
@@ -75,8 +95,8 @@ void test_near(Tester* t, uint64_t val) {
 
 template <typename Type, typename Tester>
 void test_bounds(Tester* t) {
-	auto mn = uint64_t(std::numeric_limits<Type>::min()) + 1;
-	auto mx = uint64_t(std::numeric_limits<Type>::max());
+	uint64_t mn = uint64_t(std::numeric_limits<Type>::min()) + 1;
+	uint64_t mx = uint64_t(std::numeric_limits<Type>::max());
 	//test_near(t, mn);
 	test_near(t, mx);
 }
@@ -120,12 +140,12 @@ TEST(Snabix, Bench) {
 	StrWriter strout(str);
 	StrReader strin(str);
 	
-	OutputBinaryStreaming out(&strout);
-	InputBinaryStreaming in(&strin);
+	OutputBinarySerializer out(&strout);
+	InputBinarySerializer in(&strin);
 
 	Vec2<int> v(1, 2), w;
 
-	size_t Size = 100000;
+	size_t Size = 1000;
 
 	for (size_t i = 0; i < Size; ++i)
 		out << v;
@@ -139,10 +159,10 @@ TEST(Snabix, Bench2) {
 	StrWriter strout(str);
 	StrReader strin(str);
 	
-	OutputBinaryStreaming out(&strout);
-	InputBinaryStreaming in(&strin);
+	OutputBinarySerializer out(&strout);
+	InputBinarySerializer in(&strin);
 
-	size_t Size = 10000;
+	size_t Size = 100;
 	std::vector<SampleStruct> vec;
 	vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {

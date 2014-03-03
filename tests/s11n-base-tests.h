@@ -4,6 +4,8 @@
 #include <bike/s11n.h>
 #include <bike/s11n-xml.h>
 #include <bike/s11n-xml-stl.h>
+#include <bike/s11n-binary.h>
+#include <bike/s11n-binary-stl.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <fstream>
@@ -12,7 +14,89 @@
 
 using namespace bike;
 
-typedef testing::Types<XmlSerializer> TestSerializers;
+std::string stringify_bytes(const void* buf, size_t size)
+{
+	std::string res = "";
+	const unsigned char* b = (const unsigned char*) buf;
+	size_t in_ascii_range = 0;
+	for (size_t i = 0; i < size; ++i, ++b)
+	{
+		char tmp[10] = "";
+		unsigned char p = *b;
+		std::sprintf(tmp, "%02X ", p);
+		res += tmp;
+		if (p >= 'a' && p <= 'z' || p >= 'A' && p <= 'Z' || p >= '0' && p <= '9')
+			++in_ascii_range;
+	}
+
+	if (in_ascii_range > 0)
+	{
+		res += "\"";
+		const unsigned char* r = (const unsigned char*) buf;
+		for (size_t i = 0; i < size; ++i, ++r)
+		{
+			char tmp[10] = "";
+			unsigned char p = *r;
+			std::sprintf(tmp, "%c", p);
+			res += tmp;
+		}
+		res += "\"";
+	}
+	
+	return res;
+}
+
+class StdReader : public ISeekReader
+{
+public:
+	StdReader(std::istream* in) : in_(in) {}
+
+	virtual size_t read(void* buf, size_t size) S11N_OVERRIDE {
+		uint64_t t = tell();
+		in_->read((char*) buf, size);
+#	ifdef S11N_DEBUG_LOG_IO
+		std::cout << "I: " << stringify_bytes(buf, size) << " (" << t << ")" << std::endl;
+#	endif
+		return size;//FIXME
+	}
+
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(in_->tellg());
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		in_->seekg(pos);
+	}
+
+protected:
+	std::istream* in_;
+};
+
+class StdWriter : public ISeekWriter
+{
+public:
+	StdWriter(std::ostream* out) : out_(out)  {}
+
+	virtual void write(const void* buf, size_t size) S11N_OVERRIDE {
+#	ifdef S11N_DEBUG_LOG_IO
+		std::cout << "W: " << stringify_bytes(buf, size) << " (" << tell() << ")" << std::endl;
+#	endif
+		out_->write((const char*) buf, size);
+	}
+
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(out_->tellp());
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		out_->seekp(pos);
+	}
+
+protected:
+	std::ostream* out_;
+};
+
+typedef testing::Types<BinarySerializer> TestSerializers;
 
 template <class Serializer>
 class TemplateTest : public testing::Test {
@@ -25,8 +109,9 @@ TYPED_TEST_CASE_P(TemplateTest);
 
 TYPED_TEST_P(TemplateTest, Multiply0) {
 	std::ofstream fout("test.txt");
-	Output out(fout);
-
+	StdWriter sout(&fout);
+	Output out(&sout);
+	
 	std::string aw = "One object", ar;
 	out << aw;
 
@@ -36,7 +121,8 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	fout.close();
 
 	std::ifstream fin("test.txt");
-	Input in(fin);
+	StdReader sin(&fin);
+	Input in(&sin);
 
 	in >> ar >> br;
 
@@ -44,8 +130,7 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	ASSERT_EQ(bw, br);
 }
 
-struct X1 
-{
+struct X1 {
 	int x;
 
 	X1(int x) : x(x) {}
@@ -56,8 +141,7 @@ struct X1
 	}
 };
 
-struct X2 
-{
+struct X2 {
 	int x, y;
 
 	X2() : x(0), y(0) {}
@@ -74,7 +158,8 @@ struct X2
 
 TYPED_TEST_P(TemplateTest, Version0) {
 	std::ofstream fout("test.txt");
-	Output out(fout);
+	StdWriter sout(&fout);
+	Output out(&sout);
 
 	X1 w1(5);
 	out << w1;
@@ -85,7 +170,8 @@ TYPED_TEST_P(TemplateTest, Version0) {
 	fout.close();
 
 	std::ifstream fin("test.txt");
-	Input in(fin);
+	StdReader sin(&fin);
+	Input in(&sin);
 
 	in >> r2 >> r22;
 
@@ -124,6 +210,8 @@ public:
 	template <class T>
 	void test_ptr_impl(const T* write, T* read)	{
 		io_ptr_impl(write, read);
+		if (write != S11N_NULLPTR)
+			ASSERT_NE(S11N_NULLPTR, read);
 		ASSERT_EQ(*write, *read);
 	}
 
@@ -145,15 +233,17 @@ public:
 	}
 
 #define WRITE(Write)\
-		std::ofstream fout("test.txt");\
-		Output out(fout);\
+		std::ofstream fout("test.txt", std::ofstream::binary);\
+		StdWriter sout(&fout);\
+		Output out(&sout);\
 		out << (Write);\
-		fout.close();\
+		fout.close();
 
 #define READ(Read)\
-		std::ifstream fin("test.txt");\
-		Input in(fin);\
-		in >> (Read);\
+		std::ifstream fin("test.txt", std::ifstream::binary);\
+		StdReader sin(&fin);\
+		Input in(&sin);\
+		in >> (Read);
 
 	template <class T>
 	void io_impl(const T& write, T& read) {
@@ -189,11 +279,6 @@ TYPED_TEST_P(BaseTest, Base) {
 TYPED_TEST_P(BaseTest, Strings) {
 	test_val<std::string>("");
 	test_val<std::string>("First string in test suite");
-
-	char buf[32] = "Second string";
-	char read[32];
-	io_arr_impl<char, 32>(buf, read);
-	ASSERT_EQ(0, std::strcmp(buf, read));
 }
 
 template <class T>
@@ -213,20 +298,20 @@ struct Vec2 {
 };
 
 TYPED_TEST_P(BaseTest, Structs) {
-	test_val<Vec2<int> >   (1,      2);
-	test_val<Vec2<float> > (3.f,    4.f);
-	test_val<Vec2<float> > (3.5f,   4.5f);
-	test_val<Vec2<double> >(5.,     6.);
-	test_val<Vec2<double> >(5.5555, 6.6666);
+	test_val< Vec2<int>    >(1,      2);
+	test_val< Vec2<float>  >(3.f,    4.f);
+	test_val< Vec2<float>  >(3.5f,   4.5f);
+	test_val< Vec2<double> >(5.,     6.);
+	test_val< Vec2<double> >(5.5555, 6.6666);
 }
 
 class Human {
 public:
-    Human(const std::string& name) : name_(name) {} 
+	Human(const std::string& name) : name_(name) {} 
 
-    virtual ~Human() {}
+	virtual ~Human() {}
 
-    const std::string& name() const { return name_; }
+	const std::string& name() const { return name_; }
 
 	template <class Node>
 	void ser(Node& node) {
@@ -234,7 +319,7 @@ public:
 	}
 
 protected:
-    std::string name_;
+	std::string name_;
 };
 
 template <class Node>
@@ -258,7 +343,7 @@ public:
 		superpower_(superpower) {
 	}    
 
-	void fly() { /* Clark don't need any code to fly */ }
+	void fly() { /* Clark doesn't need any code to fly */ }
 
     template <class Node>
     void ser(Node& node) {
@@ -287,12 +372,14 @@ TYPED_TEST_P(BaseTest, Classes) {
 	test_val<Superman>();
 }
 
-TYPED_TEST_P(BaseTest, Pointers) {
+TYPED_TEST_P(BaseTest, NullPointers) {
 	Human* ivan = S11N_NULLPTR, *read = S11N_NULLPTR;
 	io_impl(ivan, read);
 	ASSERT_EQ(ivan, read);
+}
 
-	ivan = new Human("Ivan Ivanov"), read = S11N_NULLPTR;
+TYPED_TEST_P(BaseTest, Pointers) {
+	Human* ivan = new Human("Ivan Ivanov"), *read = S11N_NULLPTR;
 	test_ptr_impl(ivan, read);
 	delete read, delete ivan;
 }
@@ -356,7 +443,7 @@ void serialize(IntegerHolder& integer, Node& node) {
 	acc.access("number", &IntegerHolder::get_number, &IntegerHolder::set_number);
 }
 
-S11N_XML_OUT(IntegerHolder, serialize);
+S11N_BINARY_OUT(IntegerHolder, serialize);
 
 TYPED_TEST_P(BaseTest, OutOfClass) {
 	IntegerHolder integer, read;
@@ -381,7 +468,11 @@ bool operator == (const SampleStruct& a, const SampleStruct& b) {
 }
 
 TYPED_TEST_P(BaseTest, Benchmark) {
-	size_t Size = 1000;
+#ifdef S11N_DEBUG_LOG_IO
+	const size_t Size = 1;
+#else
+	const size_t Size = 1000;
+#endif
 	std::vector<SampleStruct> vec;
 	vec.reserve(Size);
 	for (size_t i = 0; i < Size; ++i) {
@@ -423,19 +514,29 @@ TYPED_TEST_P(BaseTest, Optional) {
 	test_val(conf);
 }
 
+TYPED_TEST_P(BaseTest, StlMap) {
+	std::map<std::string, int> map;
+	test_val(map);
+
+	map["a"] = 1, map["b"] = 2, map["c"] = 3;
+	test_val(map);
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
 	Strings,
-	Structs, 
-	Classes, 
-	Pointers, 
+	Structs,
+	Classes,
+	NullPointers,
+	Pointers,
 	SmartPointers,
 	SequenceContainers,
 	Inheritance,
-	OutOfClass,
 	Benchmark,
-	Optional
+	OutOfClass,
+	Optional,
+	StlMap
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);

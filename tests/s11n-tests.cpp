@@ -20,7 +20,7 @@
 #	include "s11n-complex-tests.h"
 #endif
 
-Serializers<XmlSerializer> serializers;
+Serializers<BinarySerializer> serializers;
 
 GTEST_API_ int main(int argc, char **argv) {
 	serializers.reg<Human>();

@@ -11,8 +11,10 @@
 
 #ifdef S11N_CPP03
 #	define S11N_NULLPTR NULL
+#	define S11N_OVERRIDE
 #else
-#	define S11N_NULLPTR nullptr
+#	define S11N_NULLPTR  nullptr
+#	define S11N_OVERRIDE override
 #endif
 
 #ifdef _MSC_VER
@@ -42,7 +44,7 @@ public:
 	TypeIndex& operator = (const TypeIndex& index) {
 		info_ = index.info_;
 		return *this;
-    }
+	}
 
 	bool operator < (const TypeIndex& index) const	{
 		return info_->before(*index.info_) != 0;
@@ -57,10 +59,10 @@ public:
 	}
 
 	const char* name() const {
-        return info_->name();
-    }
+		return info_->name();
+	}
 
-protected:
+private:
 	const std::type_info* info_;
 };
 
@@ -104,7 +106,7 @@ public:
 		refs_.insert(std::make_pair(key, val));
 	}
 
-protected:
+private:
 	RefMap refs_;
 };
 
@@ -135,7 +137,7 @@ public:
 		return std::make_pair(inserted, id);
 	}
 
-protected:
+private:
 	RefMap refs_;
 	unsigned id_;
 };
@@ -207,8 +209,11 @@ public:
 /// Just keeping pointer
 class PtrHolder {
 public:
-	template <class T>
-	explicit PtrHolder(T* ptr) : ptr_(ptr) {}
+	PtrHolder(void* ptr) : ptr_(ptr) {}
+
+	void set(void* ptr) {
+		ptr_ = ptr;
+	}
 
 	template <class T>
 	T* get() const {
@@ -220,7 +225,7 @@ public:
 		return dynamic_cast<T*>(ptr_);
 	}
 
-protected:
+private:
 	void* ptr_;
 };
 
@@ -239,7 +244,7 @@ public:
 /// Plant for constructing types specific to serializer type
 template <class T, class Serializer>
 class Plant : public BasePlant {
-protected:
+private:
 	typedef typename Serializer::InNode  InNode;
 	typedef typename Serializer::OutNode OutNode;
 
@@ -250,14 +255,14 @@ public:
 	virtual ~Plant() {}
 
 	/// Constructing object from node data
-	PtrHolder create(PtrHolder holder) /* override */ {
+	PtrHolder create(PtrHolder holder) S11N_OVERRIDE {
 		InNode* orig = holder.get<InNode>();
 		assert(orig);
 		return PtrHolder(Ctor<T*, InNode>::ctor(*orig));
 	}
 
 	/// Reading object from node data
-	void read(void* rd, PtrHolder node) /* override */ {
+	void read(void* rd, PtrHolder node) S11N_OVERRIDE {
 		InNode* orig = node.get<InNode>();
 		assert(orig);
 		T& r = *static_cast<T*>(rd);
@@ -265,14 +270,14 @@ public:
 	}
 
 	/// Writing object to node data
-	void write(void* wr, PtrHolder node) /* override */ {
+	void write(void* wr, PtrHolder node) S11N_OVERRIDE {
 		OutNode* orig = node.get<OutNode>();
 		assert(orig);
 		T& w = *static_cast<T*>(wr);
 		typename Serializer::output_call<T&>(w, *orig); 
 	}
 
-protected:
+private:
 	std::string name_;
 };
 
@@ -306,7 +311,7 @@ protected:
 public:
 
 	template <class T>
-	void reg(const std::string alias = "") {
+	void reg(const std::string& alias = "") {
 		Impl<T, Serializer0>::reg(alias);
 		Impl<T, Serializer1>::reg(alias);
 	}
@@ -536,7 +541,7 @@ protected:
 		obj_->set(def);
 	}
 
-protected:
+private:
 	Object* obj_;
 	Node&   node_;
 };
@@ -558,6 +563,18 @@ void optional(T& t, const char* name, const T& def, Node& node) {
 template <class Node>
 void optional(std::string& t, const char* name, const char* def, Node& node) {
 	node.optional(t, name, std::string(def));
+}
+
+template <class T, class Node>
+void cond(bool cnd, T& t, Node& node) {
+	if (cnd)
+		node & t;
+}
+
+template <class T, class Node>
+void cond(bool cnd, T& t, const char* name, Node& node) {
+	if (cnd)
+		node.named(t, name);
 }
 
 // Constructor
