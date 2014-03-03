@@ -5,6 +5,7 @@
 #include <bike/s11n-xml.h>
 #include <bike/s11n-xml-stl.h>
 #include <bike/s11n-binary.h>
+#include <bike/s11n-binary-stl.h>
 #include <gtest/gtest.h>
 #include <iostream>
 #include <fstream>

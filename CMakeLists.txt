@@ -11,6 +11,7 @@ set(S11NT_SRC
   include/bike/s11n-binary.h
   include/bike/s11n-sbinary.h
   include/bike/s11n-xml-stl.h
+  include/bike/s11n-binary-stl.h
   tests/s11n-tests.h
   tests/s11n-tests.cpp
   tests/s11n-base-tests.h
@@ -33,6 +34,7 @@ source_group("s11n" FILES
 
 source_group("stl" FILES 
   include/bike/s11n-xml-stl.h 
+  include/bike/s11n-binary-stl.h
 )
 
 source_group("gtest" FILES 
@@ -56,6 +58,5 @@ source_group("xml" FILES
 )
 
 add_definitions(-D_VARIADIC_MAX=10)
-add_definitions(-DS11N_CPP11)
 
 add_executable(s11n_tests ${S11NT_SRC})
