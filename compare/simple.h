@@ -24,6 +24,7 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/serialization/set.hpp>
+#include <boost/serialization/vector.hpp>
 
 using namespace bike;
 
@@ -45,6 +46,7 @@ protected:
 	std::string name_;
 };
 S11N_BINARY_BOOST(Street);
+S11N_SBINARY_BOOST(Street);
 
 bool operator < (const Street& a, const Street& b) {
 	return a.name() < b.name();
@@ -55,8 +57,8 @@ public:
 	City() {}
 	City(const char* str) : name_(str) {}
 
-	void add_street(const Street& street) {
-		streets_.insert(street);
+	void add_street(const char* street) {
+		streets_.push_back(street);
 	}
 
 	template <class Archive>
@@ -68,6 +70,7 @@ public:
 
 protected:
 	std::string      name_;
-	std::set<Street> streets_;
+	std::vector<std::string> streets_;
 };
 S11N_BINARY_BOOST(City);
+S11N_SBINARY_BOOST(City);

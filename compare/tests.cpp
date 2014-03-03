@@ -4,7 +4,7 @@ Serializers<BinarySerializer> serializers;
 
 City c("Default");
 
-const size_t Size = 200;
+const size_t Size = 10;
 size_t bin_boost = 0;
 size_t bin_s11n = 0;
 
@@ -21,14 +21,14 @@ TEST(City, S11n) {
 	for (size_t i = 0; i < Size; ++i) {
 		std::ofstream fout("compare.s11n.bin");
 		StdWriter o2(&fout);
-		OutputBinarySerializer out(&o2);
+		OutputStreamingBinary out(&o2);
 		out << c;
 		bin_s11n = size_t(fout.tellp());
 	}
 }
 
 GTEST_API_ int main(int argc, char **argv) {
-	for (size_t i = 1; i <= 500; ++i) {
+	for (size_t i = 1; i <= 50000; ++i) {
 		std::ostringstream o;
 		o << i << "street";
 		c.add_street(o.str().c_str());

@@ -559,6 +559,23 @@ public:
 	}
 }; 
 
+#define S11N_SBINARY_BOOST(Type)\
+	template <>\
+	class OutputStreamingBinarySerializerCall<Type&> {\
+	public:\
+		static void call(Type& t, bike::OutputStreamingBinarySerializerNode& node) {\
+			unsigned int version = 0;\
+			t.serialize(node, version);\
+		}\
+	};\
+	template <>\
+	class InputStreamingBinarySerializerCall<Type&> {\
+	public:\
+		static void call(Type& t, bike::InputStreamingBinarySerializerNode& node) {\
+			unsigned int version = 0;\
+		}\
+	};
+
 class OutputStreamingBinary : public OutputStreamingBinarySerializerNode {
 public:
 	OutputStreamingBinary(IWriter* writer)
