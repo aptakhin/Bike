@@ -73,6 +73,7 @@ public:
 
 	template <class FwdIter>
 	static void write(FwdIter begin, FwdIter end, OutputBinarySerializerNode& node) {
+		node.no_index();
 		UnsignedNumber size = std::distance(begin, end);
 		node & size;
 		for (; begin != end; ++begin)
@@ -81,6 +82,7 @@ public:
 
 	template <class Cast, class FwdIter>
 	static void write_const_cast(FwdIter begin, FwdIter end, OutputBinarySerializerNode& node) {
+		node.no_index();
 		UnsignedNumber size = std::distance(begin, end);
 		node & size;
 		for (; begin != end; ++begin)
@@ -95,6 +97,7 @@ template <class F, class S>
 class OutputBinarySerializerCall<std::pair<F, S>&> {
 public:
 	static void call(std::pair<F, S>& t, OutputBinarySerializerNode& node) {
+		node.no_index();
 		OutputBinarySerializerCall<F&>::call(t.first, node);
 		OutputBinarySerializerCall<S&>::call(t.second, node);
 	}
@@ -112,6 +115,7 @@ template <class F, class S>
 class OutputBinarySerializerCall<std::pair<const F, S>&> {
 public:
 	static void call(std::pair<const F, S>& t, OutputBinarySerializerNode& node) {
+		node.no_index();
 		OutputBinarySerializerCall<F&>::call(const_cast<F&>(t.first), node);
 		OutputBinarySerializerCall<S&>::call(t.second, node);
 	}
@@ -214,6 +218,7 @@ template <class T, class Del>
 class OutputBinarySerializerCall<std::unique_ptr<T, Del>&> {
 public:
 	static void call(std::unique_ptr<T, Del>& t, OutputBinarySerializerNode& node) {
+		node.no_index();
 		OutputBinarySerializerNode sub(&node, node.writer(), node.refs(), node.format_ver());
 		T* tmp = t.get();
 		sub & tmp;
@@ -234,6 +239,7 @@ template <class T>
 class OutputBinarySerializerCall<std::shared_ptr<T>&> {
 public:
 	static void call(std::shared_ptr<T>& t, OutputBinarySerializerNode& node) {
+		node.no_index();
 		node.ptr_impl(t.get());
 	}
 };

@@ -21,7 +21,8 @@ TEST(City, S11n) {
 	for (size_t i = 0; i < Size; ++i) {
 		std::ofstream fout("compare.s11n.bin");
 		StdWriter writer(&fout);
-		OutputBinarySerializer out(&writer);
+		BufferedWriter<2048> wr(&writer);
+		OutputBinarySerializer out(&wr);
 		out << city;
 		if (!bin_s11n) bin_s11n = size_t(fout.tellp());
 	}

@@ -154,6 +154,10 @@ public:
 		node.raw_impl(index_);
 	}
 
+	void no_index() {
+		tag_.unset_index();	
+	}
+
 private:
 	Tag          tag_;
 	Reference    ref_;
@@ -458,6 +462,10 @@ public:
 	uint8_t format_ver() const { return format_ver_; }
 	void format_ver(uint8_t format_ver) { format_ver_ = format_ver; }
 
+	void no_index() {
+		header_.no_index();
+	}
+
 private:
 	void index(const char* name) {
 		if (name[0] == 0)
@@ -519,8 +527,6 @@ private:
 	}
 
 	void after_write() {
-		ISeekable::Pos cur = writer_->tell();
-		assert(cur > header_.pos_abs());
 	}
 
 private:
@@ -806,6 +812,7 @@ template <typename Elem, typename Traits, typename Alloc>
 class OutputBinarySerializerCall<std::basic_string<Elem, Traits, Alloc>&> {
 public:
 	static void call(std::basic_string<Elem, Traits, Alloc>& t, OutputBinarySerializerNode& node) {
+		node.no_index();
 		EncoderImpl< std::basic_string<Elem, Traits, Alloc> >::encode(node.writer(), t);
 	}
 };
@@ -820,17 +827,17 @@ public:
 #undef SN_RAW
 
 template <class T>
-class InputBinarySerializerCall<T*&> {
-public:
-	static void call(T*& t, InputBinarySerializerNode& node) {
-		node.ptr_impl(t);
-	}
-};
-
-template <class T>
 class OutputBinarySerializerCall<T*&> {
 public:
 	static void call(T*& t, OutputBinarySerializerNode& node) {
+		node.no_index();
+		node.ptr_impl(t);
+	}
+};
+template <class T>
+class InputBinarySerializerCall<T*&> {
+public:
+	static void call(T*& t, InputBinarySerializerNode& node) {
 		node.ptr_impl(t);
 	}
 };

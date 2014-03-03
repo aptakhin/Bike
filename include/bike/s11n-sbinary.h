@@ -26,43 +26,6 @@ public:
 	virtual ~IReader() {}
 };
 
-template <size_t BufSize>
-class BufferedWriter : public IWriter
-{
-public:
-	BufferedWriter(IWriter* backend)
-	:	backend_(backend),
-		size_(0) {}
-
-	void write(void* buf, size_t size) /* override */ {
-		char* ptr = reinterpret_cast<char*>(buf);
-		while (size > 0) {
-			size_t write_bytes = std::min(size, BufSize - size_);
-			memcpy(buf_ + size_, ptr, write_bytes);
-			size_ += write_bytes;
-			ptr   += write_bytes;
-			size  -= write_bytes;
-			if (size_ == BufSize)
-				flush();
-		}
-	}
-
-	~BufferedWriter() {
-		flush();
-	}
-
-	void flush() {
-		backend_->write(buf, size_);
-		size_ = 0;
-	}
-
-protected:
-	IWriter* backend_;
-	char     buf_[BufSize];
-	size_t   size_;
-};
-
-
 class ISeekable  {
 public:
 	typedef uint64_t Pos;
@@ -94,6 +57,49 @@ private:
 class ISeekWriter : public ISeekable, public IWriter {};
 class ISeekReader : public ISeekable, public IReader {};
 
+template <size_t BufSize>
+class BufferedWriter : public ISeekWriter
+{
+public:
+	BufferedWriter(ISeekWriter* backend)
+	:	backend_(backend),
+		size_(0) {}
+
+	~BufferedWriter() {
+	}
+
+	void flush() {
+		backend_->write(buf_, size_);
+		size_ = 0;
+	}
+
+	virtual void write(const void* buf, size_t size) S11N_OVERRIDE {
+		const char* ptr = reinterpret_cast<const char*>(buf);
+		while (size > 0) {
+			size_t write_bytes = std::min(size, BufSize - size_);
+			memcpy(buf_ + size_, ptr, write_bytes);
+			size_ += write_bytes;
+			ptr   += write_bytes;
+			size  -= write_bytes;
+			if (size_ == BufSize)
+				flush();
+		}
+	}
+
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return backend_->tell();
+	}
+
+	virtual void seek(Pos pos) S11N_OVERRIDE {
+		flush();
+		backend_->seek(pos);
+	}
+
+protected:
+	ISeekWriter* backend_;
+	char     buf_[BufSize];
+	size_t   size_;
+};
 
 class StdReader : public ISeekReader
 {
