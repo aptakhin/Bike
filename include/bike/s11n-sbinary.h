@@ -270,14 +270,14 @@ ENC_RAW(double);
 #undef SAME
 
 template <class T, size_t N>
-void Encode_array(IWriter* writer, const T(&v)[N]) {
+void encode_array(IWriter* writer, const T(&v)[N]) {
 	T* src = const_cast<T*>(v);
 	for (size_t i = 0; i < N; ++i, ++src)
 		EncoderImpl<T&>::encode(writer, *src);
 }
 
 template <class T, size_t N>
-void Decode_array(IReader* reader, T(&v)[N]) {
+void decode_array(IReader* reader, T(&v)[N]) {
 	T* dst = v;
 	auto q = dynamic_cast<ISeekReader*>(reader)->tell();
 	for (size_t i = 0; i < N; ++i, ++dst)

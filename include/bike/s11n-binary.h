@@ -251,7 +251,7 @@ struct IndexNode {
 
 struct IndexNodeAbs {
 	IndexNode::HashT hash;
-	IndexNode::PosT pos_abs;
+	IndexNode::PosT  pos_abs;
 
 	IndexNodeAbs() : hash(0), pos_abs(0) {}
 	IndexNodeAbs(IndexNode::HashT hash, IndexNode::PosT pos_abs) 
@@ -261,7 +261,7 @@ struct IndexNodeAbs {
 struct Index {
 	static const size_t Size = 4;
 
-	uint32_t next_index_rel;
+	uint32_t  next_index_rel;
 	IndexNode ind[Size];
 
 	Index() : next_index_rel(0) {}
@@ -284,8 +284,7 @@ public:
 			return false;
 
 		index_.ind[offset_].hash    = hash;
-		assert(item_pos_abs - pos_abs_ <= std::numeric_limits<uint32_t>::max());
-		index_.ind[offset_].pos_rel = uint32_t(item_pos_abs - pos_abs_);
+		index_.ind[offset_].pos_rel = cut_return<uint32_t>(item_pos_abs - pos_abs_);
 
 		++offset_;
 		return true;
@@ -362,7 +361,7 @@ class EncoderImpl<BinaryImpl::Index&> {
 public:
 	static void encode(IWriter* writer, BinaryImpl::Index& t) {
 		EncoderImpl<uint32_t>::encode(writer, t.next_index_rel);
-		Encode_array(writer, t.ind);
+		encode_array(writer, t.ind);
 	}
 };
 template <>
@@ -370,7 +369,7 @@ class DecoderImpl<BinaryImpl::Index&> {
 public:
 	static void decode(IReader* reader, BinaryImpl::Index& t) {
 		DecoderImpl<uint32_t>::decode(reader, t.next_index_rel);
-		Decode_array(reader, t.ind);
+		decode_array(reader, t.ind);
 	}
 };
 

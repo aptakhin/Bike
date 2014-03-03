@@ -95,8 +95,8 @@ void test_near(Tester* t, uint64_t val) {
 
 template <typename Type, typename Tester>
 void test_bounds(Tester* t) {
-	auto mn = uint64_t(std::numeric_limits<Type>::min()) + 1;
-	auto mx = uint64_t(std::numeric_limits<Type>::max());
+	uint64_t mn = uint64_t(std::numeric_limits<Type>::min()) + 1;
+	uint64_t mx = uint64_t(std::numeric_limits<Type>::max());
 	//test_near(t, mn);
 	test_near(t, mx);
 }
