@@ -12,37 +12,6 @@
 
 namespace bike {
 
-class ISeekable  {
-public:
-	typedef uint64_t Pos;
-
-	virtual ~ISeekable() {}
-
-	virtual Pos tell() = 0;
-
-	virtual void seek(Pos pos) = 0;
-};
-
-class SeekJumper {
-public:
-	SeekJumper(ISeekable* seekable, ISeekable::Pos pos)
-	:	seekable_(seekable),
-		saved_pos_(seekable->tell()) {
-		seekable_->seek(pos);
-	}
-
-	~SeekJumper() {
-		seekable_->seek(saved_pos_);
-	}
-
-private:
-	ISeekable*     seekable_;
-	ISeekable::Pos saved_pos_;
-};
-
-class ISeekWriter : public ISeekable, public IWriter {};
-class ISeekReader : public ISeekable, public IReader {};
-
 class BinarySerializerStorage {
 	S11N_TYPE_STORAGE
 };
@@ -1044,6 +1013,23 @@ public:
 	public:\
 		static void call(Type& t, InputBinarySerializerNode& node) {\
 			Function(t, node);\
+		}\
+	};
+
+#define S11N_BINARY_BOOST(Type)\
+	template <>\
+	class OutputBinarySerializerCall<Type&> {\
+	public:\
+		static void call(Type& t, bike::OutputBinarySerializerNode& node) {\
+			unsigned int version = node.version();\
+			t.serialize(node, version);\
+		}\
+	};\
+	template <>\
+	class InputBinarySerializerCall<Type&> {\
+	public:\
+		static void call(Type& t, bike::InputBinarySerializerNode& node) {\
+			unsigned int version = node.version();\
 		}\
 	};
 

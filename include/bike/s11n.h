@@ -209,10 +209,10 @@ public:
 /// Just keeping pointer
 class PtrHolder {
 public:
-	PtrHolder(void* ptr) : ptr_(ptr) {}
+	PtrHolder(const void* ptr) : ptr_((void*)ptr) {}
 
-	void set(void* ptr) {
-		ptr_ = ptr;
+	void set(const void* ptr) {
+		ptr_ = (void*)ptr;
 	}
 
 	template <class T>

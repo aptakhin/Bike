@@ -46,56 +46,6 @@ std::string stringify_bytes(const void* buf, size_t size)
 	return res;
 }
 
-class StdReader : public ISeekReader
-{
-public:
-	StdReader(std::istream* in) : in_(in) {}
-
-	virtual size_t read(void* buf, size_t size) S11N_OVERRIDE {
-		uint64_t t = tell();
-		in_->read((char*) buf, size);
-#	ifdef S11N_DEBUG_LOG_IO
-		std::cout << "I: " << stringify_bytes(buf, size) << " (" << t << ")" << std::endl;
-#	endif
-		return size;//FIXME
-	}
-
-	virtual uint64_t tell() S11N_OVERRIDE {
-		return uint64_t(in_->tellg());
-	}
-
-	virtual void seek(uint64_t pos) S11N_OVERRIDE {
-		in_->seekg(pos);
-	}
-
-protected:
-	std::istream* in_;
-};
-
-class StdWriter : public ISeekWriter
-{
-public:
-	StdWriter(std::ostream* out) : out_(out)  {}
-
-	virtual void write(const void* buf, size_t size) S11N_OVERRIDE {
-#	ifdef S11N_DEBUG_LOG_IO
-		std::cout << "W: " << stringify_bytes(buf, size) << " (" << tell() << ")" << std::endl;
-#	endif
-		out_->write((const char*) buf, size);
-	}
-
-	virtual uint64_t tell() S11N_OVERRIDE {
-		return uint64_t(out_->tellp());
-	}
-
-	virtual void seek(uint64_t pos) S11N_OVERRIDE {
-		out_->seekp(pos);
-	}
-
-protected:
-	std::ostream* out_;
-};
-
 typedef testing::Types<BinarySerializer> TestSerializers;
 
 template <class Serializer>

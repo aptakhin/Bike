@@ -78,6 +78,14 @@ public:
 		for (; begin != end; ++begin)
 			node.named(*begin, "");
 	}
+
+	template <class Cast, class FwdIter>
+	static void write_const_cast(FwdIter begin, FwdIter end, OutputBinarySerializerNode& node) {
+		UnsignedNumber size = std::distance(begin, end);
+		node & size;
+		for (; begin != end; ++begin)
+			node.named(const_cast<Cast&>(*begin), "");
+	}
 };
 
 } // namespace bike {
@@ -132,6 +140,26 @@ template <class T, class Alloc>
 class InputBinarySerializerCall<std::vector<T, Alloc>&> {
 public:
 	static void call(std::vector<T, Alloc>& t, InputBinarySerializerNode& node) {
+		BinarySequence::read(t, node);
+	}
+}; 
+} // namespace bike {
+#endif // #ifdef S11N_USE_VECTOR
+
+#ifdef S11N_USE_VECTOR
+#include <set>
+namespace bike {
+template <class T, class Pred, class Alloc>
+class OutputBinarySerializerCall<std::set<T, Pred, Alloc>&> {
+public:
+	static void call(std::set<T, Pred, Alloc>& t, OutputBinarySerializerNode& node) {
+		BinarySequence::write_const_cast<T>(t.begin(), t.end(), node);
+	}
+};
+template <class T, class Pred, class Alloc>
+class InputBinarySerializerCall<std::set<T, Pred, Alloc>&> {
+public:
+	static void call(std::set<T, Pred, Alloc>& t, InputBinarySerializerNode& node) {
 		BinarySequence::read(t, node);
 	}
 }; 

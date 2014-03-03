@@ -62,35 +62,87 @@ protected:
 	size_t   size_;
 };
 
-class FileWriter : public IWriter
-{
+
+class ISeekable  {
 public:
-	FileWriter(const char* filename) {
-		fout_ = fopen(filename, "wb");
-	}
+	typedef uint64_t Pos;
 
-	~FileWriter() {
-		fclose(fout_);
-	}
+	virtual ~ISeekable() {}
 
-	void write(const void* buf, size_t size) /* override */{
-		fwrite(buf, 1, size, fout_);
-	}
+	virtual Pos tell() = 0;
 
-protected:
-	FILE* fout_;
+	virtual void seek(Pos pos) = 0;
 };
 
-class OstreamWriter : public IWriter
+class SeekJumper {
+public:
+	SeekJumper(ISeekable* seekable, ISeekable::Pos pos)
+	:	seekable_(seekable),
+		saved_pos_(seekable->tell()) {
+		seekable_->seek(pos);
+	}
+
+	~SeekJumper() {
+		seekable_->seek(saved_pos_);
+	}
+
+private:
+	ISeekable*     seekable_;
+	ISeekable::Pos saved_pos_;
+};
+
+class ISeekWriter : public ISeekable, public IWriter {};
+class ISeekReader : public ISeekable, public IReader {};
+
+
+class StdReader : public ISeekReader
 {
 public:
-	OstreamWriter(const char* filename);
+	StdReader(std::istream* in) : in_(in) {}
 
-	~OstreamWriter();
+	virtual size_t read(void* buf, size_t size) S11N_OVERRIDE {
+		uint64_t t = tell();
+		in_->read((char*) buf, size);
+#	ifdef S11N_DEBUG_LOG_IO
+		std::cout << "I: " << stringify_bytes(buf, size) << " (" << t << ")" << std::endl;
+#	endif
+		return size;//FIXME
+	}
 
-	void write(void* buf, size_t size) /* override */;
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(in_->tellg());
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		in_->seekg(pos);
+	}
+
 protected:
-	std::ostream* fout_;
+	std::istream* in_;
+};
+
+class StdWriter : public ISeekWriter
+{
+public:
+	StdWriter(std::ostream* out) : out_(out)  {}
+
+	virtual void write(const void* buf, size_t size) S11N_OVERRIDE {
+#	ifdef S11N_DEBUG_LOG_IO
+		std::cout << "W: " << stringify_bytes(buf, size) << " (" << tell() << ")" << std::endl;
+#	endif
+		out_->write((const char*) buf, size);
+	}
+
+	virtual uint64_t tell() S11N_OVERRIDE {
+		return uint64_t(out_->tellp());
+	}
+
+	virtual void seek(uint64_t pos) S11N_OVERRIDE {
+		out_->seekp(pos);
+	}
+
+protected:
+	std::ostream* out_;
 };
 
 struct UnsignedNumber {
