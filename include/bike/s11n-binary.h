@@ -834,7 +834,20 @@ SN_RAW(UnsignedNumber);
 SN_RAW(float);
 SN_RAW(double);
 
-SN_RAW(std::string);
+template <typename Elem, typename Traits, typename Alloc>
+class OutputBinarySerializerCall<std::basic_string<Elem, Traits, Alloc>&> {
+public:
+	static void call(std::basic_string<Elem, Traits, Alloc>& t, OutputBinarySerializerNode& node) {
+		EncoderImpl< std::basic_string<Elem, Traits, Alloc> >::encode(node.writer(), t);
+	}
+};
+template <typename Elem, typename Traits, typename Alloc>
+class InputBinarySerializerCall<std::basic_string<Elem, Traits, Alloc>&> {
+public:
+	static void call(std::basic_string<Elem, Traits, Alloc>& t, InputBinarySerializerNode& node) {
+		DecoderImpl< std::basic_string<Elem, Traits, Alloc> >::decode(node.reader(), t);
+	}
+}; 
 
 #undef SN_RAW
 

@@ -82,6 +82,42 @@ public:
 
 } // namespace bike {
 
+namespace bike {
+template <class F, class S>
+class OutputBinarySerializerCall<std::pair<F, S>&> {
+public:
+	static void call(std::pair<F, S>& t, OutputBinarySerializerNode& node) {
+		OutputBinarySerializerCall<F&>::call(t.first, node);
+		OutputBinarySerializerCall<S&>::call(t.second, node);
+	}
+};
+template <class F, class S>
+class InputBinarySerializerCall<std::pair<F, S>&> {
+public:
+	static void call(std::pair<F, S>& t, InputBinarySerializerNode& node) {
+		InputBinarySerializerCall<F&>::call(t.first, node);
+		InputBinarySerializerCall<S&>::call(t.second, node);
+	}
+}; 
+
+template <class F, class S>
+class OutputBinarySerializerCall<std::pair<const F, S>&> {
+public:
+	static void call(std::pair<const F, S>& t, OutputBinarySerializerNode& node) {
+		OutputBinarySerializerCall<F&>::call(const_cast<F&>(t.first), node);
+		OutputBinarySerializerCall<S&>::call(t.second, node);
+	}
+};
+template <class F, class S>
+class InputBinarySerializerCall<std::pair<const F, S>&> {
+public:
+	static void call(std::pair<const F, S>& t, InputBinarySerializerNode& node) {
+		InputBinarySerializerCall<F&>::call(const_cast<F&>(t.first), node);
+		InputBinarySerializerCall<S&>::call(t.second, node);
+	}
+}; 
+} // namespace bike {
+
 #ifdef S11N_USE_VECTOR
 #include <vector>
 namespace bike {
@@ -121,6 +157,26 @@ public:
 };
 } // namespace bike {
 #endif // #ifdef S11N_USE_LIST
+
+#ifdef S11N_USE_MAP
+#include <map>
+namespace bike {
+template <class K, class V>
+class OutputBinarySerializerCall<std::map<K, V>&> {
+public:
+	static void call(std::map<K, V>& t, OutputBinarySerializerNode& node) {
+		BinarySequence::write(t, node);
+	}
+};
+template <class K, class V>
+class InputBinarySerializerCall<std::map<K, V>&> {
+public:
+	static void call(std::map<K, V>& t, InputBinarySerializerNode& node) {
+		BinarySequence::read(t, node);
+	}
+};
+} // namespace bike {
+#endif // #ifdef S11N_USE_MAP
 
 #ifdef S11N_USE_MEMORY
 #ifndef S11N_CPP03

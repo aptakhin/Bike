@@ -355,21 +355,20 @@ public:
 //
 // std::string
 //
-template <>
-class EncoderImpl<std::string> {
+template <typename Elem, typename Traits, typename Alloc>
+class EncoderImpl< std::basic_string<Elem, Traits, Alloc> > {
 public:
-	static void encode(IWriter* writer, const std::string& v) {
+	static void encode(IWriter* writer, const std::basic_string<Elem, Traits, Alloc>& v) {
 		UnsignedNumber size = v.size();
 		EncoderImpl<UnsignedNumber>::encode(writer, size);
 		if (size)
 			writer->write(&v[0], (size_t) size);
 	}
 };
-template <>
-class DecoderImpl<std::string> {
+template <typename Elem, typename Traits, typename Alloc>
+class DecoderImpl< std::basic_string<Elem, Traits, Alloc> > {
 public:
-	static void decode(IReader* reader, std::string& v) {
-		v = "";
+	static void decode(IReader* reader, std::basic_string<Elem, Traits, Alloc>& v) {
 		UnsignedNumber size;
 		DecoderImpl<UnsignedNumber>::decode(reader, size);
 		if (size) {
@@ -400,7 +399,7 @@ public:
 		v.clear();
 		UnsignedNumber size;
 		DecoderImpl<UnsignedNumber>::decode(reader, size);
-		v.reserve(size_t(size));
+		v.reserve(cut_return<size_t>(size));
 		for (size_t i = 0; i < size; ++i) {
 			T tmp;
 			DecoderImpl<T>::decode(reader, tmp);

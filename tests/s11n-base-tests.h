@@ -514,6 +514,14 @@ TYPED_TEST_P(BaseTest, Optional) {
 	test_val(conf);
 }
 
+TYPED_TEST_P(BaseTest, StlMap) {
+	std::map<std::string, int> map;
+	test_val(map);
+
+	map["a"] = 1, map["b"] = 2, map["c"] = 3;
+	test_val(map);
+}
+
 REGISTER_TYPED_TEST_CASE_P(
 	BaseTest, 
 	Base, 
@@ -527,7 +535,8 @@ REGISTER_TYPED_TEST_CASE_P(
 	Inheritance,
 	Benchmark,
 	OutOfClass,
-	Optional
+	Optional,
+	StlMap
 );
 
 INSTANTIATE_TYPED_TEST_CASE_P(Test, BaseTest, TestSerializers);
