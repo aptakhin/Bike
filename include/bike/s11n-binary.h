@@ -1030,7 +1030,24 @@ public:
 	public:\
 		static void call(Type& t, bike::InputBinarySerializerNode& node) {\
 			unsigned int version = node.version();\
+			t.serialize(node, version);\
+		}\
+	};\
+	template <>\
+	class OutputBinarySerializerCall<Type*&> {\
+	public:\
+		static void call(Type*& t, bike::OutputBinarySerializerNode& node) {\
+			unsigned int version = node.version();\
+			t->serialize(node, version);\
+		}\
+	};\
+	template <>\
+	class InputBinarySerializerCall<Type*&> {\
+	public:\
+		static void call(Type*& t, bike::InputBinarySerializerNode& node) {\
+			unsigned int version = node.version();\
 		}\
 	};
+
 
 } // namespace bike {

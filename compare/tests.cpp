@@ -2,7 +2,7 @@
 
 Serializers<BinarySerializer> serializers;
 
-City c("Default");
+City city("Default");
 
 const size_t Size = 10;
 size_t bin_boost = 0;
@@ -10,28 +10,28 @@ size_t bin_s11n = 0;
 
 TEST(City, Boost) {
 	for (size_t i = 0; i < Size; ++i) {
-		std::ofstream ofs("compare.boost.bin");
-		boost::archive::binary_oarchive oa(ofs);
-		oa & c;
-		bin_boost = size_t(ofs.tellp());
+		std::ofstream fout("compare.boost.bin");
+		boost::archive::binary_oarchive arch(fout);
+		arch & city;
+		if (!bin_boost) bin_boost = size_t(fout.tellp());
 	}
 }
 
 TEST(City, S11n) {
 	for (size_t i = 0; i < Size; ++i) {
 		std::ofstream fout("compare.s11n.bin");
-		StdWriter o2(&fout);
-		OutputStreamingBinary out(&o2);
-		out << c;
-		bin_s11n = size_t(fout.tellp());
+		StdWriter writer(&fout);
+		OutputBinarySerializer out(&writer);
+		out << city;
+		if (!bin_s11n) bin_s11n = size_t(fout.tellp());
 	}
 }
 
 GTEST_API_ int main(int argc, char **argv) {
-	for (size_t i = 1; i <= 50000; ++i) {
+	for (size_t i = 1; i <= 5000; ++i) {
 		std::ostringstream o;
 		o << i << "street";
-		c.add_street(o.str().c_str());
+		city.add_street(o.str().c_str());
 	}
 
 	testing::InitGoogleTest(&argc, argv);

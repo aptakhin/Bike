@@ -331,7 +331,6 @@ void encode_array(IWriter* writer, const T(&v)[N]) {
 template <class T, size_t N>
 void decode_array(IReader* reader, T(&v)[N]) {
 	T* dst = v;
-	auto q = dynamic_cast<ISeekReader*>(reader)->tell();
 	for (size_t i = 0; i < N; ++i, ++dst)
 		DecoderImpl<T&>::decode(reader, *dst);
 }

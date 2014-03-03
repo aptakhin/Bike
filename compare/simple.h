@@ -57,7 +57,7 @@ public:
 	City() {}
 	City(const char* str) : name_(str) {}
 
-	void add_street(const char* street) {
+	void add_street(const Street& street) {
 		streets_.push_back(street);
 	}
 
@@ -70,7 +70,7 @@ public:
 
 protected:
 	std::string      name_;
-	std::vector<std::string> streets_;
+	std::vector<Street> streets_;
 };
 S11N_BINARY_BOOST(City);
 S11N_SBINARY_BOOST(City);
