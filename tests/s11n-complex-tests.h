@@ -50,8 +50,7 @@ void serialize_widget(Widget& widget, Node& node) {
 
 S11N_XML_OUT(Widget, serialize_widget);
 
-bool operator == (const Widget& a, const Widget& b)
-{
+bool operator == (const Widget& a, const Widget& b) {
 	return a.name() == b.name();// FIXME: add child widgets comparison
 }
 

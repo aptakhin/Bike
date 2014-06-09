@@ -11,8 +11,7 @@
 
 using namespace bike;
 
-class StrWriter : public IWriter
-{
+class StrWriter : public IWriter {
 public:
 	StrWriter(std::string& str) : out_(str) {}
 
@@ -25,8 +24,7 @@ public:
 	std::string& out_;
 };
 
-class StrReader : public IReader
-{
+class StrReader : public IReader {
 public:
 	StrReader(const std::string& str) : out_(str), offset_(0) {}
 
