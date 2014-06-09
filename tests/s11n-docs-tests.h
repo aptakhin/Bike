@@ -27,7 +27,7 @@ TEST(Docs, Integer) {
 	int saved = 5, loaded;
 	write_only_int(saved);
 	read_only_int(loaded);
-	std::cout << loaded;
+	ASSERT_EQ(saved, loaded);
 }
 
 struct Vector2
@@ -43,6 +43,10 @@ struct Vector2
 		node & x & y;
 	}
 };
+
+bool operator == (const Vector2& a, const Vector2& b) {
+	return a.x == b.x && a.y == b.y; // Need exact match
+}
 
 // Code of serialization is mostly the same
 void write_only_vec2(Vector2& v)
@@ -63,5 +67,5 @@ TEST(Docs, Vec2) {
 	Vector2 saved(-1, 1), loaded;
 	write_only_vec2(saved);
 	read_only_vec2(loaded);
-	std::cout << "(" << loaded.x << ", " << loaded.y << ")" << std::endl;
+	ASSERT_EQ(saved, loaded);
 }

@@ -36,14 +36,14 @@ int main()
 	int saved = 5, loaded;
 	write_only_int(saved);
 	read_only_int(loaded);
-	return 0;
+	return saved != loaded;
 }
 
 ```
 
 — Hey stop! I can do this with simple standard streams!
 
-— Yep, we go next.
+— Yes, so we go next.
 
 
 ### Structures
@@ -63,6 +63,10 @@ struct Vector2
 		node & x & y;
 	}
 };
+
+bool operator == (const Vector2& a, const Vector2& b) {
+	return a.x == b.x && a.y == b.y; // Need exact match
+}
 
 // Code of serialization is mostly the same
 void write_only_vec2(Vector2& v)
@@ -84,14 +88,14 @@ int main()
 	Vector2 saved(-1, 1), loaded;
 	write_only_vec2(saved);
 	read_only_vec2(loaded);
-	return 0;
+	return !(saved == loaded);
 }
 
 ```
 
 — It's not a problem at all! I can define operators << and >> for streams for my type!
 
-— Yep, but you have to keep structure of format in two places: reading and writing. It's simple for small structures, but not for big and nested ones.
+— Yes, but you have to keep structure of format in two places: reading and writing. It's simple for small structures, but not for big and nested ones.
 
 
 ### Non-default constructors

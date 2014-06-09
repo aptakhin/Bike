@@ -6,9 +6,9 @@ Different stuff. Currently consists of one library — s11n (serialization).
 s11n (unstable)
 ---------------------
 C++ serialization library with Boost.Serialization-like interface with such improvements:
-- Header-only. 2 files and less 2k lines of ubertemplatesgodkillskittenscode per one serializer format. Plus one file for STL support
+- Header-only. 2 files and less 2k lines of ubertemplatesgodkillskittenscode per one serializer format. Add one file for STL support
 - Serialization of objects, which code can't be changed (out of class serialization with few limitations)
-- Decreased compiler error lines per one mistake (it's more useful to read 50 lines of errors than 100, yep?)
+- Decreased compiler error lines per one mistake (it's more useful to read 50 lines of C++ errors than 100, yes?)
 
 Other features:
 - Non-default constructors support
@@ -27,8 +27,8 @@ And also lightweight for machine-independent encoding/decoding *Streamed Binary*
 
 Acknowledgements
 ====================
-This library uses pugixml library (http://pugixml.org).
+Bike uses pugixml library (http://pugixml.org).
 pugixml is Copyright (C) 2006-2012 Arseny Kapoulkine.
 
-This library uses Google Test library (https://code.google.com/p/googletest/).
+Bike uses Google Test library (https://code.google.com/p/googletest/).
 Google Test is Copyright 2005, Google Inc.
