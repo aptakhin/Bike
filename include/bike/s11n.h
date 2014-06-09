@@ -171,12 +171,12 @@ public:
 		const TypeIndex type = typeid(T);
 		typename Storage::TypesT::const_iterator i = Storage::t().begin();
 		for (; i != Storage::t().end(); ++i) {
-			if (i->info == type || i->alias == alias && alias != "" || i->alias == type.name()) 
+			if (i->info == type || (i->alias == alias && !alias.empty()) || i->alias == type.name()) 
 				return true;
 		}
 		return false;
 	}
-
+ 	
 	template <class T>
 	static void register_type(BasePlant* ctor, const std::string& alias) {
 		assert(!is_registered<T>(alias));

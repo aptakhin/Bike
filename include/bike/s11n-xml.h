@@ -33,7 +33,7 @@ public:
 	OutputXmlSerializerNode& base(Base* base_ptr) {
 		Base* base = static_cast<Base*>(base_ptr);
 		if (typeid(*base_ptr) != typeid(Base))
-			assert(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Serializers your types!");
+			assert(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Can't serialize type!");
 		return *this & (*base);
 	}
 
@@ -51,7 +51,6 @@ public:
 			xml_node.append_attribute("name").set_value(name);
 
 		OutputXmlSerializerCall<T&>::call(t, node);
-
 		xml_node.append_attribute("ver").set_value(node.version());
 
 		TypeWriter<T&>::write(t, xml_node);

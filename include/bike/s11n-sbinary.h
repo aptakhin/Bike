@@ -73,7 +73,7 @@ public:
 		fclose(fout_);
 	}
 
-	void write(const void* buf, size_t size) /* override */{
+	void write(const void* buf, size_t size) /* override */ {
 		fwrite(buf, 1, size, fout_);
 	}
 
@@ -125,12 +125,12 @@ T same_endian(T u) {
 
 template <typename T>
 T swap_endian(T u) {
-	union {
+	union Place {
 		T u;
 		uint8_t u8[sizeof(T)];
-	} source, dest;
+	} dest;
 
-	source.u = u;
+	Place& source = (Place&) u;
 
 	for (size_t i = 0; i < sizeof(T); ++i)
 		dest.u8[i] = source.u8[sizeof(T) - i - 1];
@@ -295,7 +295,7 @@ uint32_t msb64(uint64_t x)
 }
 
 class UnsignedNumberEncoding {
-protected:
+public:
 	const static uint8_t NEXT_MASK  = 0x80;
 	const static uint8_t VALUE_MASK = 0x7F;
 };
@@ -304,11 +304,10 @@ template <>
 class EncoderImpl<UnsignedNumber> : public UnsignedNumberEncoding {
 public:
 	static void encode(IWriter* writer, const UnsignedNumber& v) {
-		uint32_t msb     = msb64(v);
-		uint32_t maskmsb = msb32(VALUE_MASK);
-		int enc_ofs = ((msb + 6) / 7) * 7; // FIXME: Need next divisor of 7. Not sure about compiler not-optimization
+		uint32_t msb = msb64(v);
+		int enc_ofs = ((msb + 6) / 7) * 7;
 		do {
-			enc_ofs -= maskmsb;
+			enc_ofs -= 7;
 			uint32_t flmask = VALUE_MASK << enc_ofs;
 			uint8_t w = uint8_t((v & flmask) >> enc_ofs);
 			if (enc_ofs > 0)
