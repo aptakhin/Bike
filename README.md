@@ -15,7 +15,7 @@ Other features:
 - Serialization of inherited objects
 - Serialization of shared objects
 - Support for optional data with default values
-- C++03 compatible, C++11 ready
+- C++11 ready, C++03 compatible
 
 Has full-featured formats:
 - XML
@@ -24,6 +24,7 @@ Has full-featured formats:
 And also lightweight for machine-independent encoding/decoding *Streamed Binary*.
 
 [Read how to use s11n](docs/using-s11n.md)
+_Warning_ Library is not ready for production purposes, because there is no warranty of stability of serialization format and API until stable version releases.
 
 Acknowledgements
 ====================

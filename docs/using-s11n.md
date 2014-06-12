@@ -94,7 +94,6 @@ int main()
 ```
 
 — It's not a problem at all! I can define operators << and >> for streams for my type!
-
 — Yes, but you have to keep structure of format in two places: reading and writing. It's simple for small structures, but not for big and nested ones.
 
 
