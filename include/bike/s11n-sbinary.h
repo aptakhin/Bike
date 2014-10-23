@@ -350,7 +350,7 @@ template <>
 class DecoderImpl<std::string> {
 public:
 	static void decode(IReader* reader, std::string& v) {
-		v = "";
+		v.clear();
 		UnsignedNumber size;
 		DecoderImpl<UnsignedNumber>::decode(reader, size);
 		if (size) {

@@ -44,8 +44,7 @@ TYPED_TEST_P(TemplateTest, Multiply0) {
 	ASSERT_EQ(bw, br);
 }
 
-struct X1 
-{
+struct X1 {
 	int x;
 
 	X1(int x) : x(x) {}
@@ -56,8 +55,7 @@ struct X1
 	}
 };
 
-struct X2 
-{
+struct X2 {
 	int x, y;
 
 	X2() : x(0), y(0) {}
