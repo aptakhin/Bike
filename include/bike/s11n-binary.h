@@ -7,7 +7,6 @@
 namespace bike {
 
 class OutputBinarySerializerNode {
-
 public:
 	OutputBinarySerializerNode(IWriter* writer)
 	:	writer_(writer) {}
@@ -25,7 +24,6 @@ protected:
 };
 
 class InputBinarySerializerNode {
-
 public:
 	InputBinarySerializerNode(IReader* reader)
 	:	reader_(reader) {}

@@ -14,17 +14,26 @@ public:
 		w1_(_mm_setzero_ps()) {
 	}
 
-	explicit UString(const char* str, size_t size=~0)
+	explicit UString(const char* str)
 	:	w0_(_mm_setzero_ps()),
 		w1_(_mm_setzero_ps()) {
-		if (!~size) 
-			size = strlen(str);
+		set(str, strlen(str));
+	}
+
+	explicit UString(const char* str, size_t size)
+	:	w0_(_mm_setzero_ps()),
+		w1_(_mm_setzero_ps()) {
 		set(str, size);
 	}
 
 	UString(const UString& cpy)
 	:	w0_(cpy.w0_),
 		w1_(cpy.w1_) {
+	}
+
+	const UString& operator = (const UString& b) {
+		set(b);
+		return *this;
 	}
 
 	static bool equals(const UString& a, const UString& b) {
@@ -43,6 +52,37 @@ public:
 		return !*i;
 	}
 
+	static bool less(const UString& a, const UString& b) {
+		if (a.size() < b.size())
+			return true;
+		if (a.size() > b.size())
+			return false;
+
+		if (a.size_ < InternalSize) {
+			__m128i a, b;
+			__m128i r0 = _mm_cmplt_epi8(a, b);
+
+			for (int i = 0; i < 4; ++i) {
+				if (r0.m128i_u32[i])
+					return false;
+			}
+			__m128i r1 = _mm_cmplt_epi8(a, b);
+
+			for (int i = 0; i < 2; ++i) {
+				if (r1.m128i_u32[i])
+					return false;
+			}
+			return true;
+		}
+		else {
+
+		}
+		
+		//__m128 r1 = _mm_cmplt_ps(a.w1_, b.w1_);
+
+		return false;
+	}
+
 	void set(const char* str, size_t set_size) {
 		if (set_size < InternalSize) {
 			if (size_ >= InternalSize) 
@@ -54,24 +94,22 @@ public:
 		} else {
 			if (size_ < set_size) {
 				char* new_ptr = new char[set_size + 1];
-				try {
-					memcpy(new_ptr, str, set_size);
-				}
-				catch (...) {
-					delete[] new_ptr;
-				}
-				new_ptr[set_size] = 0;
-				if (size_ < InternalSize) 
+				memcpy(new_ptr, str, set_size);
+				new_ptr[set_size] = '\0';
+				if (size_ >= InternalSize)
 					delete[] ptr_;
-				ptr_  = new_ptr;
-			}
-			else {
+				ptr_ = new_ptr;
+			} else {
 				memcpy(ptr_, str, set_size);
-				ptr_[set_size] = 0;
+				ptr_[set_size] = '\0';
 			}
 			size_ = set_size;
-			hash_ = hash_impl((char*)ptr_, size_);
+			hash_ = hash_impl(ptr_, size_);
 		}
+	}
+
+	void set(const UString& b) {
+		set(b.c_str(), b.size());
 	}
 
 	void cat(const char* str, size_t add_size) {
@@ -82,15 +120,10 @@ public:
 			hash_ = hash_impl(str, size_, hash_);
 		} else {
 			char* new_ptr = new char[size_ + add_size + 1];
-			try {
-				memcpy(new_ptr,         (void*)ptr_, size_t(size_));
-				memcpy(new_ptr + size_, (void*)str,  add_size);
-			}
-			catch (...) {
-				delete[] new_ptr;
-			}
+			memcpy(new_ptr,         ptr_, size_t(size_));
+			memcpy(new_ptr + size_, str,  add_size);
 			size_ += add_size;
-			new_ptr[add_size] = 0;
+			new_ptr[add_size] = '\0';
 			delete[] ptr_;
 			ptr_  = new_ptr;
 			hash_ = hash_impl(str, add_size, hash_);
@@ -101,13 +134,17 @@ public:
 		return size_ < InternalSize? (const char*) struct_offset(0) : (const char*) ptr_;
 	}
 
+	size_t size() const {
+		return size_;
+	}
+
 protected:
 	char* struct_offset(uint64_t off) const {
 		return ((char*) this) + off;
 	}
 
 	uint64_t hash_impl(const char* buf, uint64_t size, uint64_t seed = 0) {
-		// The simplest [http://stackoverflow.com/a/107657/79674]
+		// The simplest hash [http://stackoverflow.com/a/107657/79674]
 		uint64_t hash = seed;
 		for (size_t i = 0; i < size; ++i) {
 			hash = hash * 101 + buf[i];
@@ -120,10 +157,9 @@ protected:
 protected:
 	union {
 	struct {
-	union {
-	//uint64_t ptr_;
 	char*    ptr_;
-	};
+	uint64_t cap_;
+	//uint32_t refcnt_;
 	};
 	__m128   w0_;
 	};
@@ -143,6 +179,14 @@ bool operator == (const UString& a, const UString& b) {
 
 bool operator == (const UString& a, const char* b) {
 	return UString::equals(a, b);
+}
+
+bool operator == (const char* a, const UString& b) {
+	return UString::equals(b, a);
+}
+
+bool operator < (const UString& a, const UString& b) {
+	return UString::less(a, b);
 }
 
 } // namespace bike {

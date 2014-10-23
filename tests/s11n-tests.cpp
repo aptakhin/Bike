@@ -27,6 +27,10 @@ GTEST_API_ int main(int argc, char **argv) {
 	serializers.reg<Superman>();
 
 	testing::InitGoogleTest(&argc, argv);
+
+	__m128 a = _mm_setzero_ps();
+	__m128 b = a;
+
 	int code = RUN_ALL_TESTS();
 	if (code != 0)
 		int p = 0; // Breakpoint here

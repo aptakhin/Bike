@@ -29,6 +29,7 @@ source_group("s11n" FILES
   include/bike/s11n-xml.h
   include/bike/s11n-binary.h
   include/bike/snabix.h
+  include/bike/ustring.h
 )
 
 source_group("gtest" FILES 
