@@ -93,7 +93,7 @@ class InputXmlSerializerCall<std::string&> {
 public:
 	static void call(std::string& t, InputXmlSerializerNode& node) {
 		pugi::xml_attribute attr = node.xml().attribute("value");
-		assert(attr);
+		S11N_ASSERT(attr);
 		t = std::string(attr.as_string());
 	}
 };

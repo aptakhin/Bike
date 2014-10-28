@@ -33,7 +33,7 @@ public:
 	OutputXmlSerializerNode& base(Base* base_ptr) {
 		Base* base = static_cast<Base*>(base_ptr);
 		if (typeid(*base_ptr) != typeid(Base))
-			assert(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Can't serialize type!");
+			S11N_ASSERT(TypeStorageAccessor<XmlSerializerStorage>::find(typeid(*base_ptr).name()) != 0 && "Can't serialize type!");
 		return *this & (*base);
 	}
 
@@ -60,7 +60,7 @@ public:
 	template <class T>
 	void optional(T& t, const char* name, const T& def)
 	{
-		assert(name && name[0] != 0);
+		S11N_ASSERT(name && name[0] != '\0');
 		if (t != def)
 			named(t, name);
 	}
@@ -147,7 +147,7 @@ public:
 
 	template <class T>
 	OutputXmlSerializer& operator << (T& t) {
-		assert(out_);
+		S11N_ASSERT(out_);
 		xml_ = doc_.append_child("serializable");
 		xml_.append_attribute("fmtver").set_value(fmtver_);
 		static_cast<OutputXmlSerializer&>(*this & t);
@@ -198,7 +198,7 @@ public:
 	template <class T>
 	void optional(T& t, const char* name, const T& def)
 	{
-		assert(name && name[0] != 0);
+		S11N_ASSERT(name && name[0] != '\0');
 		pugi::xml_node found = xml_.find_child_by_attribute("name", name);
 		if (!found.empty())
 			make_call(t, found);
@@ -209,7 +209,7 @@ public:
 	template <class T>
 	bool search(T& t, const char* attr_name) {
 		pugi::xml_node found = xml_.find_child_by_attribute("name", attr_name);
-		assert(!found.empty());
+		S11N_ASSERT(!found.empty());
 		make_call(t, found);
 		return true;
 	}
@@ -224,7 +224,7 @@ public:
 	template <class T>
 	void ptr_impl(T*& t) {
 		pugi::xml_attribute ref_attr = xml_.attribute("ref");
-		assert(ref_attr);
+		S11N_ASSERT(ref_attr);
 		unsigned ref = ref_attr.as_uint();
 		if (ref != 0) {
 			void* ptr = refs_->get(ref);
@@ -406,10 +406,10 @@ class InputXmlSerializerCall<char(&)[Size]> {
 public:
 	static void call(char(&t)[Size], InputXmlSerializerNode& node) {
 		pugi::xml_attribute attr = node.xml().attribute("value");
-		assert(attr);
+		S11N_ASSERT(attr);
 		const pugi::char_t* orig = attr.as_string();
 		size_t size = strlen(orig);
-		assert(size < Size);
+		S11N_ASSERT(size < Size);
 		memcpy(t, orig, size + 1);
 	}
 };

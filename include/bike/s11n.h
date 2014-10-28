@@ -17,12 +17,11 @@
 
 #ifdef _MSC_VER
 #	include <crtdbg.h>
-#	undef assert
 #	// My bike is better!
 #	ifdef _DEBUG
-#		define assert(Expr) { if (!(Expr)) { _CrtDbgBreak(); _wassert(_CRT_WIDE(#Expr), _CRT_WIDE(__FILE__), __LINE__); } }
+#		define S11N_ASSERT(Expr) { if (!(Expr)) { _CrtDbgBreak(); _wassert(_CRT_WIDE(#Expr), _CRT_WIDE(__FILE__), __LINE__); } }
 #	else
-#		define assert(Expr) {}
+#		define S11N_ASSERT(Expr) {}
 #	endif	
 #endif
 
@@ -179,7 +178,7 @@ public:
  	
 	template <class T>
 	static void register_type(BasePlant* ctor, const std::string& alias) {
-		assert(!is_registered<T>(alias));
+		S11N_ASSERT(!is_registered<T>(alias));
 		Type t(typeid(T));
 		t.ctor  = ctor;
 		t.alias = alias;
@@ -252,14 +251,14 @@ public:
 	/// Constructing object from node data
 	PtrHolder create(PtrHolder holder) /* override */ {
 		InNode* orig = holder.get<InNode>();
-		assert(orig);
+		S11N_ASSERT(orig);
 		return PtrHolder(Ctor<T*, InNode>::ctor(*orig));
 	}
 
 	/// Reading object from node data
 	void read(void* rd, PtrHolder node) /* override */ {
 		InNode* orig = node.get<InNode>();
-		assert(orig);
+		S11N_ASSERT(orig);
 		T& r = *static_cast<T*>(rd);
 		typename Serializer::input_call<T&>(r, *orig); 
 	}
@@ -267,7 +266,7 @@ public:
 	/// Writing object to node data
 	void write(void* wr, PtrHolder node) /* override */ {
 		OutNode* orig = node.get<OutNode>();
-		assert(orig);
+		S11N_ASSERT(orig);
 		T& w = *static_cast<T*>(wr);
 		typename Serializer::output_call<T&>(w, *orig); 
 	}

@@ -216,7 +216,7 @@ class EncoderImpl
 {
 public:
 	static void encode(IWriter*, const T&) {
-		assert(0);
+		S11N_ASSERT(0);
 	}
 };
 
@@ -225,7 +225,7 @@ class DecoderImpl
 {
 public:
 	static void decode(IReader*, T&) {
-		assert(0);
+		S11N_ASSERT(0);
 	}
 };
 
